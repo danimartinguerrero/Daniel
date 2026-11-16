@@ -212,7 +212,9 @@ export const PlayerControls = ({ playback, duration, onToggle, onPrevious, onNex
   const remaining = playing ? (
     <TickingTime source={{ kind: "remaining", until: playback.startedAt + duration }} format={(ms) => `\u2212${formatClock(ms)}`} />
   ) : (
-    <TickingTime source={{ kind: "fixed", ms: duration - playback.position }} format={(ms) => `\u2212${formatClock(ms)}`} />
+    // Local change (personal site): a running countdown shows whole seconds rounded up, so the
+    // paused one rounds up too; rounding it down made the time left jump a second on every pause.
+    <TickingTime source={{ kind: "fixed", ms: Math.ceil((duration - playback.position) / 1000) * 1000 }} format={(ms) => `\u2212${formatClock(ms)}`} />
   );
   const anyControl = onToggle !== undefined || onPrevious !== undefined || onNext !== undefined || onOutput !== undefined;
   return (

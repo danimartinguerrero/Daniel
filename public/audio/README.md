@@ -2,6 +2,7 @@
 
 - `feather.m4a`: "Feather" by Nujabes (Modal Soul, 2005), from the owner's own FLAC, with a needle drop mixed onto its start. AAC 160 kbps, 44.1 kHz, 177.45 s.
 - The needle drop is "Record Player Needle is dropped & Vinyl crackling" by Breviceps, CC0 (public domain): https://freesound.org/people/Breviceps/sounds/556722/ (its 128 kbps HQ preview).
+- `feather.levels.bin`: the song's spectrum for the island's meter, measured once from `feather.m4a`: six bands, 30 frames a second, one byte each. Rebuild it whenever the audio changes: `node scripts/audio-levels.mjs public/audio/feather.m4a public/audio/feather.levels.bin`.
 - `modal-soul.jpg`: the album cover, 192 px.
 
 Rebuild `feather.m4a` (needle 7 dB down, trimmed 50 ms and faded out from 4.8 s over 1.8 s; the song comes in at 0.95 s):

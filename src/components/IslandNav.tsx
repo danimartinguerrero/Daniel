@@ -24,7 +24,7 @@ const links = [
   { href: '#contact', label: 'Contact' },
 ] as const;
 
-const song = { title: 'Feather', artist: 'Nujabes', src: '/audio/feather.m4a', cover: '/audio/modal-soul.jpg', duration: 177_450 } as const;
+const song = { title: 'Feather', artist: 'Nujabes', src: '/audio/feather.m4a', cover: '/audio/modal-soul.jpg', levels: '/audio/feather.levels.bin', duration: 177_450 } as const;
 const seed = `${song.title} ${song.artist}`;
 /** The meter takes the cover's red, lifted so it reads on black. */
 const tone = '#ff7a5c';
@@ -69,11 +69,11 @@ export const IslandNav = () => {
   const [sound, setSound] = useState<IslandAudio | null>(null);
   const [playback, setPlayback] = useState<PlaybackState>({ kind: 'paused', position: 0 });
 
-  // The sound graph, and the autostart unless the visitor paused it earlier in this visit.
+  // The sound, and the autostart unless the visitor paused it earlier in this visit.
   useEffect(() => {
     const el = audio.current;
     if (!el) return;
-    const created = createIslandAudio(el);
+    const created = createIslandAudio(el, song.levels);
     setSound(created);
     let declined = false;
     try { declined = sessionStorage.getItem('island-music') === 'paused'; } catch { /* storage blocked: autostart */ }
@@ -82,34 +82,44 @@ export const IslandNav = () => {
     return created.autostart({ skip: (target) => target instanceof Element && target.closest('[data-islandcn] .icn-button') !== null });
   }, []);
 
-  // The player follows the audio element, whatever started or stopped it.
+  // The player shows what the audio element is doing and nothing else: every change of the
+  // button and the clock comes from the element's own events, whatever started or stopped it
+  // (the island, the autostart, the lock screen), so the two can't disagree.
   useEffect(() => {
     const el = audio.current;
-    if (!el || !sound) return;
+    if (!el) return;
     const playing = () => setPlayback({ kind: 'playing', startedAt: Date.now() - el.currentTime * 1000 });
     const paused = () => setPlayback({ kind: 'paused', position: el.currentTime * 1000 });
     const ended = () => { el.currentTime = 0; setPlayback({ kind: 'paused', position: 0 }); };
     const seeked = () => (el.paused ? paused() : playing());
+    // The clock runs on its own between events; if the audio stalled or skipped, put it back.
+    const drift = () => {
+      if (el.paused) return;
+      setPlayback((now) => {
+        const startedAt = Date.now() - el.currentTime * 1000;
+        return now.kind === 'playing' && Math.abs(now.startedAt - startedAt) < 400 ? now : { kind: 'playing', startedAt };
+      });
+    };
+    // "play" is the press being heard (the button turns at once); "playing" is sound coming out.
+    el.addEventListener('play', playing);
     el.addEventListener('playing', playing);
     el.addEventListener('pause', paused);
     el.addEventListener('ended', ended);
     el.addEventListener('seeked', seeked);
+    el.addEventListener('timeupdate', drift);
     return () => {
+      el.removeEventListener('play', playing);
       el.removeEventListener('playing', playing);
       el.removeEventListener('pause', paused);
       el.removeEventListener('ended', ended);
       el.removeEventListener('seeked', seeked);
+      el.removeEventListener('timeupdate', drift);
     };
-  }, [sound]);
+  }, []);
 
   const toggle = useCallback(() => {
-    const el = audio.current;
-    if (!el || !sound) return;
+    if (!sound) return;
     const nowPlaying = sound.toggle();
-    // The button answers the press at once; the element catches up when its fade ends.
-    setPlayback(nowPlaying
-      ? { kind: 'playing', startedAt: Date.now() - el.currentTime * 1000 }
-      : { kind: 'paused', position: el.currentTime * 1000 });
     try { sessionStorage.setItem('island-music', nowPlaying ? 'on' : 'paused'); } catch { /* storage blocked */ }
   }, [sound]);
 
