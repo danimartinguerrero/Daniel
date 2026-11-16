@@ -163,3 +163,9 @@ math { font-family: var(--math); }
 @media (hover: hover) and (pointer: fine) {
   .more:hover { text-decoration: underline; }
 }
+
+/* The song opening its page (scripts/song-transition.ts): for that one change of page the island
+   has its own layer, and it shows live, where it is, in front of both pages. */
+::view-transition-group(song-island) { animation: none; z-index: 2; }
+::view-transition-new(song-island) { animation: none; }
+::view-transition-old(song-island) { animation: none; opacity: 0; }

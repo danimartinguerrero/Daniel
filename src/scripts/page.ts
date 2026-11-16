@@ -9,6 +9,7 @@
  * Also here, once per visit: what the router would otherwise drop on the way to a new page.
  */
 import type { TransitionBeforeSwapEvent } from 'astro:transitions/client';
+import './song-transition';
 
 export function onPage(setup: (signal: AbortSignal) => void) {
   let shown: HTMLElement | null = null;
