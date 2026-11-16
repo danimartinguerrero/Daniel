@@ -17,23 +17,20 @@ import { IslandNav } from './IslandNav';
 </noscript>
 
 <style is:global>
-  /* The hit area sits exactly over the resting pill (islandMetrics.idle, 13.91 from the top). */
+  /* The hit area sits over the resting compact pill (13.91 from the top, as tall as idle). On dark
+     pages the engine draws its own keyline around it. */
   .island-nav__hit {
     position: fixed; top: 13.91px; left: 50%; z-index: 51;
     translate: -50% 0;
-    width: 94.85px; height: 36.84px; border-radius: 18.42px;
+    width: 155px; height: 36.84px; border-radius: 18.42px; /* the compact player measures 154.98 */
     border: 0; padding: 0; background: none; cursor: pointer;
     -webkit-tap-highlight-color: transparent;
-    transition: box-shadow 200ms ease;
   }
   .island-nav__hit:focus-visible { outline-offset: 3px; }
-  /* On a dark page the resting pill would melt into it: a hairline ring keeps it findable. Open, the
-     engine's own keyline takes over. */
-  .island-nav[data-dark]:not([data-open]) .island-nav__hit { box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.22); }
 
+  .island-nav__bottom { display: grid; gap: 10px; min-width: 0; }
   .island-nav__links {
     display: flex; align-items: center; justify-content: center; gap: 2px;
-    padding-top: 2px;
     white-space: nowrap;
   }
   .island-nav__link {
@@ -49,11 +46,13 @@ import { IslandNav } from './IslandNav';
   .island-nav__link:not(:last-child):active { background: rgba(255, 255, 255, 0.14); transition-duration: 0ms; }
   .island-nav__link:last-child:active { background: #d2d2d7; transition-duration: 0ms; }
 
-  /* Narrow phones: two by two, so every label keeps its size. */
+  /* Narrow phones: still one row, a size down, so the card stays short (the engine's springs were
+     fitted to cards up to 180 pt; a taller one reads heavy as it opens and closes). Taller pads keep
+     a 40 px touch target. */
   @media (max-width: 400px) {
-    .island-nav__links { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
-    .island-nav__link { text-align: center; padding: 10px 12px; font-size: 16px; }
-    .island-nav__link:last-child { margin: 0; }
+    .island-nav__links { gap: 0; }
+    .island-nav__link { padding: 10px 8px; font-size: 14px; }
+    .island-nav__link:last-child { margin-left: 2px; padding-inline: 11px; }
   }
 
   .island-fallback {
