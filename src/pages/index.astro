@@ -1,5 +1,6 @@
 ---
 import '@/styles/global.css';
+import { ClientRouter } from 'astro:transitions';
 import NotesScan from '@/components/NotesScan.astro';
 import NotesPipeline from '@/components/NotesPipeline.astro';
 import Island from '@/components/Island.astro';
@@ -30,7 +31,7 @@ const sparkEnd = `190 ${(38.7 - (Math.log1p(daily[daily.length - 1]!) / Math.log
 // commits from GitHub (main, 3 November 2026), libraries and sources from the 0.3 release notes and the README.
 ---
 <!doctype html>
-<html lang="en">
+<html lang="en" transition:animate="none">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
@@ -56,13 +57,16 @@ const sparkEnd = `190 ${(38.7 - (Math.log1p(daily[daily.length - 1]!) / Math.log
     <link rel="icon" href="/favicon-192.png" type="image/png" sizes="192x192" />
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
     <script is:inline>document.documentElement.classList.add('js');</script>
+    <!-- The site changes page without leaving the document, so the island and its song carry on
+         (scripts/page.ts). No animation between pages: the page cuts, the island stays put. -->
+    <ClientRouter />
   </head>
   <body>
     <a class="skip sr-only" href="#main">Skip to content</a>
 
     <Island />
 
-    <main id="main">
+    <main id="main" data-home>
       <section class="hero section--dark" id="top" aria-labelledby="hero-title">
         <canvas class="hero__waves" data-waves aria-hidden="true"></canvas>
         <div class="hero__copy container">
@@ -504,20 +508,31 @@ const sparkEnd = `190 ${(38.7 - (Math.log1p(daily[daily.length - 1]!) / Math.log
     </footer>
 
     <script>
-      import '@/scripts/scroll';
-      import '@/scripts/goto';
+      import { onPage } from '@/scripts/page';
+      import { initScroll } from '@/scripts/scroll';
+      import { initGoto } from '@/scripts/goto';
       import { initWaves } from '@/scripts/waves';
       import { playHello } from '@/scripts/hello';
       import { initContact } from '@/scripts/contact';
-      const hello = document.querySelector<SVGSVGElement>('[data-hello]');
-      if (hello) playHello(hello, [...document.querySelectorAll<HTMLElement>('.hero [data-after]')]);
-      const waves = document.querySelector<HTMLCanvasElement>('[data-waves]');
-      if (waves) initWaves(waves);
-      const contact = document.querySelector<HTMLElement>('[data-contact]');
-      if (contact) initContact(contact);
-      // The contact section and the footer share the last screen (see .contact): keep the footer's height current.
-      const footer = document.querySelector<HTMLElement>('.footer');
-      if (footer) new ResizeObserver(() => document.documentElement.style.setProperty('--footer-h', `${footer.getBoundingClientRect().height}px`)).observe(footer);
+      // Every time the home page is shown, first load included; it all stops when the page is swapped out.
+      onPage((signal) => {
+        if (!document.querySelector('[data-home]')) return;
+        initScroll(signal);
+        initGoto(signal);
+        const hello = document.querySelector<SVGSVGElement>('[data-hello]');
+        if (hello) playHello(hello, [...document.querySelectorAll<HTMLElement>('.hero [data-after]')]);
+        const waves = document.querySelector<HTMLCanvasElement>('[data-waves]');
+        if (waves) initWaves(waves, signal);
+        const contact = document.querySelector<HTMLElement>('[data-contact]');
+        if (contact) initContact(contact, signal);
+        // The contact section and the footer share the last screen (see .contact): keep the footer's height current.
+        const footer = document.querySelector<HTMLElement>('.footer');
+        if (footer) {
+          const sized = new ResizeObserver(() => document.documentElement.style.setProperty('--footer-h', `${footer.getBoundingClientRect().height}px`));
+          sized.observe(footer);
+          signal.addEventListener('abort', () => sized.disconnect());
+        }
+      });
     </script>
   </body>
 </html>
@@ -1610,8 +1625,10 @@ const sparkEnd = `190 ${(38.7 - (Math.log1p(daily[daily.length - 1]!) / Math.log
 </style>
 
 <script>
-  // The reader demo: the segmented control swaps the rewrite level.
-  document.querySelectorAll<HTMLElement>('[data-reader]').forEach((reader) => {
+  import { onPage } from '@/scripts/page';
+  // The reader demo: the segmented control swaps the rewrite level. Set up on every page shown
+  // (scripts/page.ts); its listeners are on the demo's own buttons and go with the page.
+  onPage(() => document.querySelectorAll<HTMLElement>('[data-reader]').forEach((reader) => {
     const buttons = reader.querySelectorAll<HTMLButtonElement>('[data-level]');
     const texts = reader.querySelectorAll<HTMLElement>('[data-level-text]');
     const group = reader.querySelector<HTMLElement>('.segmented')!;
@@ -1624,5 +1641,5 @@ const sparkEnd = `190 ${(38.7 - (Math.log1p(daily[daily.length - 1]!) / Math.log
       moving = window.setTimeout(() => group.classList.remove('is-moving'), 220);
       texts.forEach((t) => { t.hidden = t.dataset.levelText !== b.dataset.level; });
     }));
-  });
+  }));
 </script>

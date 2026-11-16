@@ -3,13 +3,18 @@
  * The navigation as the island. The shape, springs and crossfades are islandcn's engine
  * (src/lib/island, MIT, vendored from github.com/opencoredev/islandcn); IslandNav.tsx decides when it
  * opens and what it holds. Without JavaScript the links show as a plain bar instead.
+ *
+ * The site changes page with Astro's client router, and the island is the one thing that stays:
+ * `transition:persist` carries the same island, mounted and with its song playing, into every page.
+ * Its props are not persisted: each page renders it with its own `home`, and the router hands those
+ * to the island already there, which re-renders its links and keeps its state.
  */
 import { IslandNav } from './IslandNav';
 
 // The links point at sections of the home page: bare anchors there, "/#..." from any other page.
 const home = Astro.url.pathname === '/' ? '' : '/';
 ---
-<IslandNav client:load home={home} />
+<IslandNav client:load home={home} transition:persist="island" />
 <noscript>
   <nav class="island-fallback" aria-label="Primary">
     <a href={`${home}#projects`}>Projects</a>

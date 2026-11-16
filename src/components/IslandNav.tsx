@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { Artwork } from '@/components/islandcn/artwork';
 import { PlayerControls, PlayerCover, PlayerTitle, type PlaybackState } from '@/components/islandcn/now-playing-activity';
-import { createIslandAudio, type IslandAudio } from '@/components/island-audio';
+import { islandAudio, type IslandAudio } from '@/components/island-audio';
 import { LiveMeter } from '@/components/LiveMeter';
 import { IslandView, islandMetrics, type IslandMetricsOverrides, type IslandMotionOverrides, type IslandPresentation } from '@/lib/island';
 
@@ -105,41 +105,25 @@ export const IslandNav = ({ home = '' }: {
   const root = useRef<HTMLDivElement | null>(null);
   const trigger = useRef<HTMLButtonElement | null>(null);
   const fine = useRef(false);
-  const audio = useRef<HTMLAudioElement | null>(null);
   const [sound, setSound] = useState<IslandAudio | null>(null);
   const [playback, setPlayback] = useState<PlaybackState>({ kind: 'paused', position: 0 });
 
-  // The sound, and the autostart unless the visitor paused it earlier in this visit.
+  // The song: one for the whole visit, made on first use (island-audio.ts). It plays on through
+  // every change of page, so the island only ever attaches to it.
   useEffect(() => {
-    const el = audio.current;
-    if (!el) return;
-    const created = createIslandAudio(el, song.levels);
-    setSound(created);
-    let declined = false;
-    try { declined = sessionStorage.getItem('island-music') === 'paused'; } catch { /* storage blocked: autostart */ }
-    // Going to another page of the site (the song's own page, say) loads a new document: carry
-    // on from where the song was instead of dropping the needle again.
-    const keep = () => { try { sessionStorage.setItem('island-music-at', String(el.currentTime)); } catch { /* storage blocked */ } };
-    window.addEventListener('pagehide', keep);
-    try {
-      const at = Number(sessionStorage.getItem('island-music-at'));
-      if (at > 0) el.currentTime = at;
-    } catch { /* storage blocked: from the top */ }
-    if (declined) return () => window.removeEventListener('pagehide', keep);
     // The island's own play button is the visitor choosing; it starts the song itself.
-    const stop = created.autostart({ skip: (target) => target instanceof Element && target.closest('[data-islandcn] .icn-button') !== null });
-    return () => { stop(); window.removeEventListener('pagehide', keep); };
+    setSound(islandAudio({ src: song.src, levels: song.levels, duration: song.duration / 1000, skip: (target) => target instanceof Element && target.closest('[data-islandcn] .icn-button') !== null }));
   }, []);
 
   // The player shows what the audio element is doing and nothing else: every change of the
   // button and the clock comes from the element's own events, whatever started or stopped it
   // (the island, the autostart, the lock screen), so the two can't disagree.
   useEffect(() => {
-    const el = audio.current;
-    if (!el) return;
+    if (!sound) return;
+    const el = sound.element;
     const playing = () => setPlayback({ kind: 'playing', startedAt: Date.now() - el.currentTime * 1000 });
     const paused = () => setPlayback({ kind: 'paused', position: el.currentTime * 1000 });
-    const ended = () => { el.currentTime = 0; setPlayback({ kind: 'paused', position: 0 }); };
+    const ended = () => setPlayback({ kind: 'paused', position: 0 });
     const seeked = () => (el.paused ? paused() : playing());
     // The clock runs on its own between events; if the audio stalled or skipped, put it back.
     const drift = () => {
@@ -156,6 +140,8 @@ export const IslandNav = ({ home = '' }: {
     el.addEventListener('ended', ended);
     el.addEventListener('seeked', seeked);
     el.addEventListener('timeupdate', drift);
+    // Where it is now: already playing, if the island attaches to a song under way.
+    if (el.paused) paused(); else playing();
     return () => {
       el.removeEventListener('play', playing);
       el.removeEventListener('playing', playing);
@@ -164,21 +150,13 @@ export const IslandNav = ({ home = '' }: {
       el.removeEventListener('seeked', seeked);
       el.removeEventListener('timeupdate', drift);
     };
-  }, []);
-
-  const toggle = useCallback(() => {
-    if (!sound) return;
-    const nowPlaying = sound.toggle();
-    try { sessionStorage.setItem('island-music', nowPlaying ? 'on' : 'paused'); } catch { /* storage blocked */ }
   }, [sound]);
 
+  // The visitor's choice, remembered for the rest of the visit (island-audio.ts).
+  const toggle = useCallback(() => { sound?.toggle(); }, [sound]);
+
   // The scrubber: jump there. The element's "seeked" event puts the clock and the meter on it.
-  const seek = useCallback((ms: number) => {
-    const el = audio.current;
-    if (!el) return;
-    const length = Number.isFinite(el.duration) ? el.duration : song.duration / 1000;
-    el.currentTime = Math.min(length, Math.max(0, ms / 1000));
-  }, []);
+  const seek = useCallback((ms: number) => { sound?.seek(ms / 1000); }, [sound]);
 
   useEffect(() => {
     const media = matchMedia('(hover: hover) and (pointer: fine)');
@@ -204,10 +182,13 @@ export const IslandNav = ({ home = '' }: {
     read();
     addEventListener('scroll', sense, { passive: true });
     addEventListener('resize', sense);
+    // The island stays as the site changes page under it (Island.astro); a new page is new ground.
+    document.addEventListener('astro:after-swap', sense);
     return () => {
       clearTimeout(settle);
       removeEventListener('scroll', sense);
       removeEventListener('resize', sense);
+      document.removeEventListener('astro:after-swap', sense);
     };
   }, []);
 
@@ -328,7 +309,6 @@ export const IslandNav = ({ home = '' }: {
         metrics={metrics}
         motion={motion}
       />
-      <audio ref={audio} src={song.src} preload="auto" />
     </div>
   );
 };

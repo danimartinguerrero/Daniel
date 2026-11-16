@@ -139,142 +139,151 @@ const steps = [
 </section>
 
 <script>
-  // The crew's threads, laid out from where the pills really are, and redrawn when the tile resizes.
-  const R = 10; // corner radius of each elbow, in px
-  for (const crew of document.querySelectorAll<HTMLElement>('[data-crew]')) {
-    const svg = crew.querySelector<SVGSVGElement>('.lx-threads');
-    const lead = crew.querySelector<HTMLElement>('.lx-node--lead');
-    const team = [...crew.querySelectorAll<HTMLElement>('.lx-crew__team .lx-node')];
-    if (!svg || !lead) continue;
-    const threads = [...svg.querySelectorAll('.lx-thread')], comets = [...svg.querySelectorAll('.lx-comet')];
-    const layout = () => {
-      const box = crew.getBoundingClientRect(), l = lead.getBoundingClientRect();
-      svg.setAttribute('viewBox', `0 0 ${box.width} ${box.height}`);
-      const cx = l.left + l.width / 2 - box.left, y0 = l.bottom - box.top;
-      team.forEach((node, i) => {
-        const n = node.getBoundingClientRect();
-        const nx = n.left + n.width / 2 - box.left, y1 = n.top - box.top, m = (y0 + y1) / 2;
-        const dx = nx - cx, s = Math.sign(dx), r = Math.min(R, Math.abs(dx) / 2, (y1 - y0) / 2);
-        const d = Math.abs(dx) < 1
-          ? `M${cx} ${y0}V${y1}`
-          : `M${cx} ${y0}V${m - r}Q${cx} ${m} ${cx + s * r} ${m}H${nx - s * r}Q${nx} ${m} ${nx} ${m + r}V${y1}`;
-        threads[i]?.setAttribute('d', d);
-        comets[i]?.setAttribute('d', d);
-      });
-    };
-    new ResizeObserver(layout).observe(crew);
-  }
-
-  // The numbers roll in once, the first time their tile is mostly on screen, and again when the part is
-  // reached from the island (scripts/goto.ts). Each digit is a reel, a strip of digits that slides up and
-  // stops on its own value: the reels land left to right, the units travel furthest, as on an odometer, and a
-  // little blur carries the speed at the start. Transforms only, so the compositor runs it. Not with reduced
-  // motion, or without the script, where the number is plain text.
-  const root = document.documentElement;
-  const still = () => root.classList.contains('reduce') || matchMedia('(prefers-reduced-motion: reduce)').matches;
-  const tiles = document.querySelectorAll<HTMLElement>('[data-counts]');
-  if (!still()) {
-    const EASE = 'cubic-bezier(0.22, 1, 0.36, 1)'; // a long, critically damped settle: no overshoot
-    // One reel per digit: a hidden copy of the digit holds the width and the baseline; the strip above it starts
-    // on 0, as an odometer at rest, and runs up through the digits before its own, more of them the further
-    // right it sits.
-    const build = (el: HTMLElement) => {
-      const value = el.textContent ?? '';
-      el.textContent = '';
-      [...value].forEach((ch, j) => {
-        const d = Number(ch), n = 6 + 4 * j;
-        const reel = document.createElement('span');
-        reel.className = 'lx-reel';
-        reel.setAttribute('aria-hidden', 'true');
-        const cells = ['0', ...Array.from({ length: n }, (_, k) => String((d - (n - 1 - k) + 100) % 10))];
-        reel.innerHTML = `<span class="lx-reel__ghost">${ch}</span><span class="lx-reel__strip">${cells.map((c) => `<span>${c}</span>`).join('')}</span>`;
-        reel.dataset.cells = String(cells.length);
-        el.append(reel);
-      });
-      const label = document.createElement('span');
-      label.className = 'sr-only';
-      label.textContent = value;
-      el.append(label);
-    };
-    const reels = (el: HTMLElement) => [...el.querySelectorAll<HTMLElement>('.lx-reel')];
-    const reset = (el: HTMLElement) => reels(el).forEach((reel) => {
-      reel.getAnimations({ subtree: true }).forEach((a) => a.cancel());
-    });
-    const count = (el: HTMLElement, i = 0) => {
-      reset(el);
-      reels(el).forEach((reel, j) => {
-        const strip = reel.lastElementChild as HTMLElement;
-        const cells = Number(reel.dataset.cells);
-        const delay = i * 180 + j * 70, duration = 1150 + j * 220;
-        strip.animate([{ transform: 'translateY(0)' }, { transform: `translateY(${(-(cells - 1) / cells) * 100}%)` }], { duration, delay, easing: EASE, fill: 'both' });
-        reel.animate([{ filter: 'blur(0.025em)' }, { filter: 'blur(0)' }], { duration: duration * 0.6, delay, easing: 'ease-out', fill: 'backwards' });
-      });
-    };
-    const seen = new IntersectionObserver((entries) => {
-      for (const entry of entries) {
-        if (!entry.isIntersecting) continue;
-        seen.unobserve(entry.target);
-        entry.target.querySelectorAll<HTMLElement>('[data-count]').forEach((el, i) => count(el, i));
-      }
-    }, { threshold: 0.6 });
-    tiles.forEach((tile) => {
-      tile.querySelectorAll<HTMLElement>('[data-count]').forEach(build);
-      seen.observe(tile);
-    });
-    // Reset once the tile is off screen, so a tile still in view as the trip begins doesn't count unseen.
-    const away = new IntersectionObserver((entries) => {
-      for (const entry of entries) {
-        if (entry.isIntersecting) continue;
-        away.unobserve(entry.target);
-        entry.target.querySelectorAll<HTMLElement>('[data-count]').forEach(reset);
-        seen.observe(entry.target);
-      }
-    });
-    document.addEventListener('replay', (e) => {
-      const { has } = (e as CustomEvent<{ has: (el: Element) => boolean }>).detail;
-      tiles.forEach((tile) => { if (has(tile)) { seen.unobserve(tile); away.observe(tile); } });
-    });
-  }
-
-  // The damped oscillation keeps running once it has been drawn: x(t) = e^(−γt) cos(ωt − φ) with the phase φ
-  // advancing, so the swings travel right inside envelopes that stay put. One cycle every 2.8 s, eased in
-  // from rest; it rests while the figure is off screen, and never moves with reduced motion. Same constants
-  // as the drawing in the markup, so at φ = 0 the curve is exactly the one drawn there.
-  {
-    const wave = document.querySelector<SVGPathElement>('.lx-fig__wave');
-    const fig = wave?.closest<HTMLElement>('.lx-fig');
-    if (wave && fig) {
-      const N = 180, T = 5, g = 0.42, w = 2 * Math.PI * 0.9, x0 = 22, y0 = 60, sx = 262 / T, A = 44;
-      const ts = Array.from({ length: N + 1 }, (_, i) => (i * T) / N);
-      const xs = ts.map((t) => (x0 + t * sx).toFixed(1));
-      const amp = ts.map((t) => A * Math.exp(-g * t));
-      const SPEED = (2 * Math.PI) / 2800; // radians of phase per ms
-      const EASE_IN = 900; // ms from rest to full speed
-      let phase = 0, last = 0, since = 0, on = false, drawn = false, frame = 0;
-      const step = (now: number) => {
-        if (!on || still()) { frame = 0; return; }
-        const dt = last ? Math.min(now - last, 50) : 0;
-        last = now;
-        since += dt;
-        const k = Math.min(1, since / EASE_IN);
-        phase += SPEED * dt * k * k * (3 - 2 * k); // smoothstep: it starts moving the way a pendulum would
-        let d = '';
-        for (let i = 0; i <= N; i++) d += `${i ? ' L' : 'M'}${xs[i]} ${(y0 - amp[i]! * Math.cos(w * ts[i]! - phase)).toFixed(1)}`;
-        wave.setAttribute('d', d);
-        frame = requestAnimationFrame(step);
+  import { onPage } from '@/scripts/page';
+  // Set up each time the home page is shown (scripts/page.ts); it all stops when the page is swapped out.
+  onPage((signal) => {
+    // The crew's threads, laid out from where the pills really are, and redrawn when the tile resizes.
+    const R = 10; // corner radius of each elbow, in px
+    for (const crew of document.querySelectorAll<HTMLElement>('[data-crew]')) {
+      const svg = crew.querySelector<SVGSVGElement>('.lx-threads');
+      const lead = crew.querySelector<HTMLElement>('.lx-node--lead');
+      const team = [...crew.querySelectorAll<HTMLElement>('.lx-crew__team .lx-node')];
+      if (!svg || !lead) continue;
+      const threads = [...svg.querySelectorAll('.lx-thread')], comets = [...svg.querySelectorAll('.lx-comet')];
+      const layout = () => {
+        const box = crew.getBoundingClientRect(), l = lead.getBoundingClientRect();
+        svg.setAttribute('viewBox', `0 0 ${box.width} ${box.height}`);
+        const cx = l.left + l.width / 2 - box.left, y0 = l.bottom - box.top;
+        team.forEach((node, i) => {
+          const n = node.getBoundingClientRect();
+          const nx = n.left + n.width / 2 - box.left, y1 = n.top - box.top, m = (y0 + y1) / 2;
+          const dx = nx - cx, s = Math.sign(dx), r = Math.min(R, Math.abs(dx) / 2, (y1 - y0) / 2);
+          const d = Math.abs(dx) < 1
+            ? `M${cx} ${y0}V${y1}`
+            : `M${cx} ${y0}V${m - r}Q${cx} ${m} ${cx + s * r} ${m}H${nx - s * r}Q${nx} ${m} ${nx} ${m + r}V${y1}`;
+          threads[i]?.setAttribute('d', d);
+          comets[i]?.setAttribute('d', d);
+        });
       };
-      const start = () => {
-        if (!on || !drawn || frame || still()) return;
-        last = 0; since = 0;
-        frame = requestAnimationFrame(step);
-      };
-      wave.addEventListener('animationend', (e) => { if (e.animationName.includes('lx-pen')) { drawn = true; start(); } });
-      new IntersectionObserver(([entry]) => {
-        on = !!entry?.isIntersecting;
-        if (on) start(); else if (frame) { cancelAnimationFrame(frame); frame = 0; }
-      }).observe(fig);
+      const sized = new ResizeObserver(layout);
+      sized.observe(crew);
+      signal.addEventListener('abort', () => sized.disconnect());
     }
-  }
+
+    // The numbers roll in once, the first time their tile is mostly on screen, and again when the part is
+    // reached from the island (scripts/goto.ts). Each digit is a reel, a strip of digits that slides up and
+    // stops on its own value: the reels land left to right, the units travel furthest, as on an odometer, and a
+    // little blur carries the speed at the start. Transforms only, so the compositor runs it. Not with reduced
+    // motion, or without the script, where the number is plain text.
+    const root = document.documentElement;
+    const still = () => root.classList.contains('reduce') || matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const tiles = document.querySelectorAll<HTMLElement>('[data-counts]');
+    if (!still()) {
+      const EASE = 'cubic-bezier(0.22, 1, 0.36, 1)'; // a long, critically damped settle: no overshoot
+      // One reel per digit: a hidden copy of the digit holds the width and the baseline; the strip above it starts
+      // on 0, as an odometer at rest, and runs up through the digits before its own, more of them the further
+      // right it sits.
+      const build = (el: HTMLElement) => {
+        const value = el.textContent ?? '';
+        el.textContent = '';
+        [...value].forEach((ch, j) => {
+          const d = Number(ch), n = 6 + 4 * j;
+          const reel = document.createElement('span');
+          reel.className = 'lx-reel';
+          reel.setAttribute('aria-hidden', 'true');
+          const cells = ['0', ...Array.from({ length: n }, (_, k) => String((d - (n - 1 - k) + 100) % 10))];
+          reel.innerHTML = `<span class="lx-reel__ghost">${ch}</span><span class="lx-reel__strip">${cells.map((c) => `<span>${c}</span>`).join('')}</span>`;
+          reel.dataset.cells = String(cells.length);
+          el.append(reel);
+        });
+        const label = document.createElement('span');
+        label.className = 'sr-only';
+        label.textContent = value;
+        el.append(label);
+      };
+      const reels = (el: HTMLElement) => [...el.querySelectorAll<HTMLElement>('.lx-reel')];
+      const reset = (el: HTMLElement) => reels(el).forEach((reel) => {
+        reel.getAnimations({ subtree: true }).forEach((a) => a.cancel());
+      });
+      const count = (el: HTMLElement, i = 0) => {
+        reset(el);
+        reels(el).forEach((reel, j) => {
+          const strip = reel.lastElementChild as HTMLElement;
+          const cells = Number(reel.dataset.cells);
+          const delay = i * 180 + j * 70, duration = 1150 + j * 220;
+          strip.animate([{ transform: 'translateY(0)' }, { transform: `translateY(${(-(cells - 1) / cells) * 100}%)` }], { duration, delay, easing: EASE, fill: 'both' });
+          reel.animate([{ filter: 'blur(0.025em)' }, { filter: 'blur(0)' }], { duration: duration * 0.6, delay, easing: 'ease-out', fill: 'backwards' });
+        });
+      };
+      const seen = new IntersectionObserver((entries) => {
+        for (const entry of entries) {
+          if (!entry.isIntersecting) continue;
+          seen.unobserve(entry.target);
+          entry.target.querySelectorAll<HTMLElement>('[data-count]').forEach((el, i) => count(el, i));
+        }
+      }, { threshold: 0.6 });
+      tiles.forEach((tile) => {
+        tile.querySelectorAll<HTMLElement>('[data-count]').forEach(build);
+        seen.observe(tile);
+      });
+      // Reset once the tile is off screen, so a tile still in view as the trip begins doesn't count unseen.
+      const away = new IntersectionObserver((entries) => {
+        for (const entry of entries) {
+          if (entry.isIntersecting) continue;
+          away.unobserve(entry.target);
+          entry.target.querySelectorAll<HTMLElement>('[data-count]').forEach(reset);
+          seen.observe(entry.target);
+        }
+      });
+      document.addEventListener('replay', (e) => {
+        const { has } = (e as CustomEvent<{ has: (el: Element) => boolean }>).detail;
+        tiles.forEach((tile) => { if (has(tile)) { seen.unobserve(tile); away.observe(tile); } });
+      }, { signal });
+      signal.addEventListener('abort', () => { seen.disconnect(); away.disconnect(); });
+    }
+
+    // The damped oscillation keeps running once it has been drawn: x(t) = e^(−γt) cos(ωt − φ) with the phase φ
+    // advancing, so the swings travel right inside envelopes that stay put. One cycle every 2.8 s, eased in
+    // from rest; it rests while the figure is off screen, and never moves with reduced motion. Same constants
+    // as the drawing in the markup, so at φ = 0 the curve is exactly the one drawn there.
+    {
+      const wave = document.querySelector<SVGPathElement>('.lx-fig__wave');
+      const fig = wave?.closest<HTMLElement>('.lx-fig');
+      if (wave && fig) {
+        const N = 180, T = 5, g = 0.42, w = 2 * Math.PI * 0.9, x0 = 22, y0 = 60, sx = 262 / T, A = 44;
+        const ts = Array.from({ length: N + 1 }, (_, i) => (i * T) / N);
+        const xs = ts.map((t) => (x0 + t * sx).toFixed(1));
+        const amp = ts.map((t) => A * Math.exp(-g * t));
+        const SPEED = (2 * Math.PI) / 2800; // radians of phase per ms
+        const EASE_IN = 900; // ms from rest to full speed
+        let phase = 0, last = 0, since = 0, on = false, drawn = false, frame = 0;
+        const step = (now: number) => {
+          if (!on || still()) { frame = 0; return; }
+          const dt = last ? Math.min(now - last, 50) : 0;
+          last = now;
+          since += dt;
+          const k = Math.min(1, since / EASE_IN);
+          phase += SPEED * dt * k * k * (3 - 2 * k); // smoothstep: it starts moving the way a pendulum would
+          let d = '';
+          for (let i = 0; i <= N; i++) d += `${i ? ' L' : 'M'}${xs[i]} ${(y0 - amp[i]! * Math.cos(w * ts[i]! - phase)).toFixed(1)}`;
+          wave.setAttribute('d', d);
+          frame = requestAnimationFrame(step);
+        };
+        const start = () => {
+          if (!on || !drawn || frame || still()) return;
+          last = 0; since = 0;
+          frame = requestAnimationFrame(step);
+        };
+        wave.addEventListener('animationend', (e) => { if (e.animationName.includes('lx-pen')) { drawn = true; start(); } });
+        const shown = new IntersectionObserver(([entry]) => {
+          on = !!entry?.isIntersecting;
+          if (on) start(); else if (frame) { cancelAnimationFrame(frame); frame = 0; }
+        });
+        shown.observe(fig);
+        signal.addEventListener('abort', () => { shown.disconnect(); on = false; cancelAnimationFrame(frame); frame = 0; });
+      }
+    }
+  });
 </script>
 
 <style>

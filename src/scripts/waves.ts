@@ -1,7 +1,8 @@
 /**
  * The hero background: two coherent sources just below the fold, interfering, at a fixed slit separation.
  * Renders at reduced resolution, only while on screen, and holds a single still frame when motion is
- * reduced. Without WebGL the hero keeps its CSS glow.
+ * reduced. Without WebGL the hero keeps its CSS glow. When the page is swapped out (scripts/page.ts),
+ * the loop stops and the GL context is given back, so coming back to the page makes one, never a pile.
  */
 const VERTEX = `attribute vec2 p; void main() { gl_Position = vec4(p, 0.0, 1.0); }`;
 
@@ -31,7 +32,7 @@ void main() {
 
 const RESOLUTION = 0.5; // of device pixels: the waves are soft, full resolution buys nothing
 
-export function initWaves(canvas: HTMLCanvasElement) {
+export function initWaves(canvas: HTMLCanvasElement, signal: AbortSignal) {
   const host = canvas.parentElement!;
   const gl = canvas.getContext('webgl', { antialias: false, alpha: false, powerPreference: 'low-power' });
   if (!gl) return;
@@ -91,12 +92,21 @@ export function initWaves(canvas: HTMLCanvasElement) {
     gl!.viewport(0, 0, canvas.width, canvas.height);
     if (!frame) draw(performance.now());
   }
-  new ResizeObserver(resize).observe(host);
+  const sized = new ResizeObserver(resize);
+  sized.observe(host);
 
-  new IntersectionObserver(([entry]) => { visible = !!entry?.isIntersecting; sync(); }).observe(host);
-  document.addEventListener('visibilitychange', sync);
-  reduce.addEventListener('change', sync);
+  const seen = new IntersectionObserver(([entry]) => { visible = !!entry?.isIntersecting; sync(); });
+  seen.observe(host);
+  document.addEventListener('visibilitychange', sync, { signal });
+  reduce.addEventListener('change', sync, { signal });
   canvas.addEventListener('webglcontextlost', () => { cancelAnimationFrame(frame); frame = 0; canvas.hidden = true; });
+  signal.addEventListener('abort', () => {
+    sized.disconnect();
+    seen.disconnect();
+    cancelAnimationFrame(frame);
+    frame = 0;
+    gl.getExtension('WEBGL_lose_context')?.loseContext();
+  });
 
   resize();
   host.classList.add('has-waves');

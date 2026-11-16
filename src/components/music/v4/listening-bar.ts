@@ -10,11 +10,15 @@
  */
 import { musicCopy, vinyls, type Vinyl } from '@/data/music';
 import { Spring, VelocityTracker, clamp, project, rubberband } from './physics';
+import { onPage } from '@/scripts/page';
 
-const page = document.querySelector<HTMLElement>('[data-music-page].v4');
-if (page) init(page);
+// Set up each time the page is shown; what it starts outside the page stops when the page is swapped out.
+onPage((signal) => {
+  const page = document.querySelector<HTMLElement>('[data-music-page].v4');
+  if (page) init(page, signal);
+});
 
-function init(root: HTMLElement) {
+function init(root: HTMLElement, signal: AbortSignal) {
   const q = <T extends Element = HTMLElement>(sel: string, scope: ParentNode = root) => scope.querySelector<T>(sel)!;
 
   const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)');
@@ -174,8 +178,8 @@ function init(root: HTMLElement) {
     }
   };
   // On the window: a press that never became a drag isn't captured, and can end anywhere.
-  window.addEventListener('pointerup', endRowDrag);
-  window.addEventListener('pointercancel', endRowDrag);
+  window.addEventListener('pointerup', endRowDrag, { signal });
+  window.addEventListener('pointercancel', endRowDrag, { signal });
   row.addEventListener('dragstart', (e) => e.preventDefault());
 
   // A trackpad's sideways swipe moves the row too (a mouse wheel still scrolls the page).
@@ -735,7 +739,7 @@ function init(root: HTMLElement) {
       e.preventDefault();
       closeRecord();
     }
-  });
+  }, { signal });
 
   /* ---------------------------------------------------------------- the clock */
 
@@ -814,5 +818,11 @@ function init(root: HTMLElement) {
       if (openIndex !== null && lift.settled && lift.value === 1) measureOpen();
       renderAll();
     });
+  }, { signal });
+  signal.addEventListener('abort', () => {
+    cancelAnimationFrame(raf);
+    cancelAnimationFrame(resizeFrame);
+    clearTimeout(wheelIdle);
+    clearTimeout(hintTimer);
   });
 }

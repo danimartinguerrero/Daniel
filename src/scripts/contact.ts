@@ -13,6 +13,9 @@
  * back as a transform, so the layout changes once and the motion is all on the compositor). It runs while
  * the section is on screen, rests under the pointer or keyboard focus and while the tab is hidden, and
  * never moves with reduced motion.
+ *
+ * The home page calls initContact each time it is shown (scripts/page.ts); it all stops when the page
+ * is swapped out.
  */
 import type { Replay } from './goto';
 
@@ -25,7 +28,7 @@ const SPRING = CSS.supports('animation-timing-function', 'linear(0, 1)')
   : 'cubic-bezier(0.23, 1, 0.32, 1)';
 const EASE_OUT = 'cubic-bezier(0.23, 1, 0.32, 1)';
 
-export function initContact(section: HTMLElement) {
+export function initContact(section: HTMLElement, signal: AbortSignal) {
   const thread = section.querySelector<HTMLElement>('[data-thread]');
   const reply = section.querySelector<HTMLElement>('[data-reply]');
   const receipt = section.querySelector<HTMLElement>('[data-receipt]');
@@ -46,7 +49,8 @@ export function initContact(section: HTMLElement) {
     reply.addEventListener('focus', finish);
     // Asked for again from the island or "Get in touch" (scripts/goto.ts), the exchange plays again, from
     // the start, when it is next mostly on screen; at once if it already is.
-    document.addEventListener('replay', (e) => { if ((e as Replay).detail.has(section)) { finish(); arm(); } });
+    document.addEventListener('replay', (e) => { if ((e as Replay).detail.has(section)) { finish(); arm(); } }, { signal });
+    signal.addEventListener('abort', () => io.disconnect());
   }
 
   const greet = section.querySelector<HTMLElement>('[data-greet]');
@@ -117,11 +121,12 @@ export function initContact(section: HTMLElement) {
     timer = window.setTimeout(() => { show(current + 1, true); schedule(); }, HOLD);
   };
 
-  new IntersectionObserver(([entry]) => {
+  const seen = new IntersectionObserver(([entry]) => {
     inView = !!entry?.isIntersecting;
     if (!inView) show(0, false); // every arrival starts from "hi"
     schedule();
-  }).observe(section);
+  });
+  seen.observe(section);
   greet.addEventListener('pointerenter', (e) => { if (e.pointerType === 'mouse') { resting = true; schedule(); } });
   greet.addEventListener('pointerleave', () => { resting = false; schedule(); });
   // Focus on a control inside rests it; focus on the section itself is where the island and "Get in
@@ -129,6 +134,7 @@ export function initContact(section: HTMLElement) {
   const within = (n: EventTarget | null) => n instanceof Node && n !== section && section.contains(n);
   section.addEventListener('focusin', (e) => { if (within(e.target)) { resting = true; schedule(); } });
   section.addEventListener('focusout', (e) => { if (!within(e.relatedTarget)) { resting = false; schedule(); } });
-  document.addEventListener('visibilitychange', schedule);
-  reduce.addEventListener('change', () => { if (reduce.matches) show(0, false); schedule(); });
+  document.addEventListener('visibilitychange', schedule, { signal });
+  reduce.addEventListener('change', () => { if (reduce.matches) show(0, false); schedule(); }, { signal });
+  signal.addEventListener('abort', () => { seen.disconnect(); clearTimeout(timer); });
 }
