@@ -15,6 +15,11 @@ import '@/components/music/v4/listening-bar.css';
 // The record the carousel opens on (the script uses the same index).
 const START = 3;
 const first = vinyls[START]!;
+// The headline in its parts for the intro (intro.ts): "I love", then the word that takes the rainbow,
+// then what follows it.
+const at = musicCopy.headline.lastIndexOf('music');
+const love = musicCopy.headline.slice(0, at).trimEnd();
+const tail = musicCopy.headline.slice(at + 'music'.length);
 // The carousel's resting pose before the script takes over (it recomputes the same pose in px). It is
 // a ring: a record more than half-way round is counted from the other side.
 const pose = (i: number) => {
@@ -33,17 +38,17 @@ const pose = (i: number) => {
 };
 ---
 <MusicShell title="Music">
-  <main id="main" class="v4" data-music-page>
+  <main id="main" class="v4" data-music-page data-intro>
     <div class="v4-page" data-v4-page>
       <section class="v4-intro" aria-labelledby="v4-title">
         <div class="container v4-intro__inner">
-          <p class="eyebrow v4-eyebrow">{musicCopy.eyebrow}</p>
-          <h1 class="headline v4-intro__title" id="v4-title">{musicCopy.headline}</h1>
-          <p class="lede">{musicCopy.lede}</p>
+          <p class="eyebrow v4-eyebrow" data-intro-rest>{musicCopy.eyebrow}</p>
+          <h1 class="headline v4-intro__title" id="v4-title"><span class="v4-love" data-intro-love>{love.split(' ').map((w, i) => <>{i > 0 && ' '}<span data-intro-w>{w}</span></>)}</span> <span class="v4-word" data-intro-word><span class="v4-music">music<span class="v4-music__bands" aria-hidden="true"><span class="v4-music__rainbow" data-rainbow></span></span></span><span class="v4-tail">{tail}</span></span></h1>
+          <p class="lede" data-intro-rest>{musicCopy.lede}</p>
         </div>
       </section>
 
-      <section class="v4-shelf" aria-labelledby="v4-shelf-title">
+      <section class="v4-shelf" aria-labelledby="v4-shelf-title" data-intro-rest>
         <div class="v4-bar">
           <div class="v4-bar__wall" aria-hidden="true"></div>
           <!-- The heading hangs on the wall above the records, on the page's left edge. -->
@@ -182,4 +187,5 @@ const pose = (i: number) => {
 
 <script>
   import '@/components/music/v4/listening-bar';
+  import '@/components/music/v4/intro';
 </script>

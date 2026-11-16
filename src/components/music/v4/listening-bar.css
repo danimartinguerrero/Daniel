@@ -40,6 +40,42 @@
 .v4-intro__title { font-size: clamp(3rem, 9vw, 6rem); line-height: 1; letter-spacing: -0.03em; }
 .v4-intro .lede { max-width: 30rem; }
 
+/* The headline's parts move on their own in the intro (intro.ts), so they are boxes. */
+.v4-love, .v4-word, .v4-love > [data-intro-w] { display: inline-block; }
+/* On their way home the two cross; "I love" passes in front of the black behind "music". */
+.v4-love { position: relative; z-index: 1; transform-origin: 100% 50%; }
+/* The full stop sits on the edge of the black behind "music", so it goes in front of it too. */
+.v4-tail { position: relative; z-index: 1; }
+.v4-word { transform-origin: 0 50%; }
+/* "music" in the six bands of Apple's old logo, slanted, drifting right. The bands are a layer laid
+   over the white word and blended with `darken`: on the white letters it leaves the colour, on the
+   black around them it leaves black. The word's own black box is what the bands blend against, since
+   the word moves on its own layer. The layer is one period wider than the word and slides by one
+   period (--rb-p, measured along the line of text) at a time, so its motion is a transform. */
+.v4-music {
+  --rb-p: 2.4em;
+  position: relative; display: inline-block; isolation: isolate;
+  padding-inline: 0.08em; margin-inline: -0.08em; /* room for the letters' ink past their boxes */
+  background: var(--dark);
+}
+/* The bands are cut a little inside the black, so no edge of them ever meets the page. */
+.v4-music__bands { position: absolute; inset: 0.04em; overflow: hidden; mix-blend-mode: darken; pointer-events: none; }
+.v4-music__rainbow {
+  position: absolute; inset: 0 auto 0 calc(var(--rb-p) * -1); width: calc(100% + var(--rb-p));
+  /* Six bands of 1/6 period each; along the gradient a period is --rb-p × sin(115deg). */
+  --b: calc(var(--rb-p) * 0.9063 / 6);
+  background: repeating-linear-gradient(115deg,
+    #61bb46 0 var(--b), #fdb827 0 calc(var(--b) * 2), #f5821f 0 calc(var(--b) * 3),
+    #e03a3e 0 calc(var(--b) * 4), #963d97 0 calc(var(--b) * 5), #009ddc 0 calc(var(--b) * 6));
+}
+/* Before the intro has run, its parts wait unseen, so the first frame is its first frame. If the script
+   never comes, they show after a few seconds anyway. */
+@media (prefers-reduced-motion: no-preference) {
+  html.js .v4[data-intro] :is([data-intro-love], [data-intro-word], [data-intro-rest]),
+  html.js .v4[data-intro] ~ .music-footer { opacity: 0; animation: v4-intro-failsafe 1ms 6s both; }
+}
+@keyframes v4-intro-failsafe { to { opacity: 1; } }
+
 /* ---------------------------------------------------------------- the carousel
    A graphite wall with one low lamp, the shelf's heading on it, and the records in a ring that turns
    sideways: the one in front faces you, its neighbours turn away, and past the last comes the first. */
