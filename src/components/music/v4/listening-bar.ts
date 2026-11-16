@@ -300,6 +300,13 @@ function init(root: HTMLElement, signal: AbortSignal) {
   // The film: a top piece and a bottom piece.
   const films = [q('[data-v4-film="top"]'), q('[data-v4-film="bottom"]')] as const;
   const filmMid = q('[data-v4-film-mid]'); // the film where the tape goes, shown until the tape is there
+  // Each piece's drawn edge, and the faint body it gets once it is off the sleeve (renderShed).
+  const filmEdges = [...root.querySelectorAll<HTMLElement>('[data-v4-film-edge]')];
+  const filmBodies = [...root.querySelectorAll<HTMLElement>('[data-v4-film-body]')];
+  // The light a sleeve has in the row (the lamp, and the film's edge as the row draws it): the record
+  // takes it on as it lands, so the sleeve in the row takes over from it unchanged.
+  const lamp = q('[data-v4-lamp]');
+  const discShadow = q('[data-v4-disc-shadow]');
   const sweep = q('[data-v4-sweep]');
   const hintCaption = q('[data-v4-hint]');
 
@@ -318,6 +325,8 @@ function init(root: HTMLElement, signal: AbortSignal) {
   const away = new Spring(0, { response: 0.42, damping: 1 }, 0.0005); // 0 film on the sleeve, 1 gone
   const tilt = new Spring(0, { response: 0.3, damping: 1 }, 0.0005); // the lean, once the record is on its way back
   let shedding = false; // the film is coming away, or coming back on
+  // Putting it back: how much of the film showed when it turned round (renderShed).
+  let shedFrom = { a: 1, fade: 0 };
 
   /** Pulling the tape leans on the record: its right side tips away by this much, and it sinks a little. */
   const TILT = 8; // degrees
@@ -479,11 +488,13 @@ function init(root: HTMLElement, signal: AbortSignal) {
 
     const rewrap = unwrapped;
     if (rewrap) {
+      // The tab stays off until the film is nearly back on (the 'tape' step, in the frame loop): the
+      // reverse of the unwrapping, where it slipped off before the film came away.
       unwrapped = false;
-      overlay.removeAttribute('data-record-unwrapped'); // the tab and tape are back, at the far end
       handle.tabIndex = 0;
       shedding = true; // the film comes back the way it left
       overlay.classList.add('is-shedding');
+      shedFrom = { a: Math.max(away.value, 0.001), fade: shedFade(away.value) };
     }
 
     // Scrolled down the details: scroll back to the top but leave everything where it is on screen, the
@@ -504,7 +515,7 @@ function init(root: HTMLElement, signal: AbortSignal) {
     if (rewrap) {
       closeStep = 'film';
       reveal.to(0, { response: 0.32, damping: 1 });
-      away.to(0, { response: 0.3, damping: 1 }); // if it was still leaving, it turns round
+      away.to(0, { response: 0.42, damping: 1 }); // as it left; if it was still leaving, it turns round
     } else {
       closeStep = 'fly';
       peel.to(0, { response: 0.3, damping: 1 });
@@ -560,6 +571,10 @@ function init(root: HTMLElement, signal: AbortSignal) {
     css(edge, 'opacity', dim); // the scroll edge is the backdrop's colour: it comes and goes with it
     // A sleeve in the row casts no shadow; the record in front does.
     css(shadow, 'opacity', a.toFixed(3));
+    // And it is lit as the row lights it: the record trades its own film edge for the row's as it flies,
+    // so nothing changes on the frame the sleeve in the row takes its place.
+    css(lamp, 'opacity', (1 - a).toFixed(3));
+    for (const el of filmEdges) css(el, 'opacity', a.toFixed(3));
     const late = clamp((t - 0.65) / 0.35, 0, 1);
     const lateS = late.toFixed(3);
     css(titles, 'opacity', lateS);
@@ -595,9 +610,11 @@ function init(root: HTMLElement, signal: AbortSignal) {
     const tilted = t === 0 ? '' : ` perspective(${(So * 3.8).toFixed(0)}px) rotateY(${(TILT * t).toFixed(3)}deg)`;
     css(group, 'transform', r === 0 && t === 0 ? 'none' : `translate3d(${shift.toFixed(2)}px,0,0) scale(${s.toFixed(4)})${tilted}`);
     // The disc rolls out: it turns by as much as it travels, and comes to rest with its label upright.
-    // All the way in, it is out of sight: its shadow would show under the sleeve in the row.
+    // All the way in, it is out of sight: its shadow would show under the sleeve in the row. So its
+    // shadow goes as it slides in, rather than all at once when it is home.
     css(disc, 'transform', r === 0 ? 'none' : `translate3d(${(0.5 * So * r).toFixed(2)}px,0,0) rotate(${((r - 1) * 60).toFixed(2)}deg)`);
     css(disc, 'visibility', r === 0 ? 'hidden' : '');
+    css(discShadow, 'opacity', clamp(r / 0.35, 0, 1).toFixed(3));
   }
 
   /* The tear strip. The tab's right edge is the tear: behind it the strip is gone and the bare sleeve
@@ -628,16 +645,27 @@ function init(root: HTMLElement, signal: AbortSignal) {
 
   /* The film coming away once the tape is off: the top piece goes up and the bottom one down, each
      swinging about the end the tab left by. Put back, it comes back on along the same path. */
+  /** Leaving, the film is gone well before the end of its way: a third of the way out it is fading. */
+  const shedFade = (a: number) => clamp(1 - a * 1.45, 0, 1);
+
   function renderShed() {
     const a = away.value;
     // A short way: far enough to read as leaving, not so far that it crosses the title below.
     const d = a * So * 0.17;
-    const fade = a === 0 ? '' : clamp(1 - a * 1.45, 0, 1).toFixed(3);
+    // Coming back it shows from the start of its way and is all there as it lands, so it closes over
+    // the sleeve instead of appearing at the last moment; it starts from what showed as it turned round.
+    let f = shedFade(a);
+    if (phase === 'closing') f = shedFrom.fade + (1 - shedFrom.fade) * clamp(1 - a / shedFrom.a, 0, 1);
+    const fade = a === 0 ? '' : f.toFixed(3);
     for (let i = 0; i < 2; i++) {
       const up = i === 0 ? -1 : 1;
       css(films[i]!, 'transform', a === 0 ? 'none' : `translate3d(0,${(up * d).toFixed(2)}px,0) rotate(${(up * a * 3.5).toFixed(3)}deg)`);
       css(films[i]!, 'opacity', fade);
     }
+    // Off the sleeve clear film would only show as stray lines, so it gets the faintest body there. It
+    // comes with the distance: none on the sleeve, where it would grey the sleeve over.
+    const body = clamp(a * 4, 0, 1).toFixed(3);
+    for (const el of filmBodies) css(el, 'opacity', body);
   }
 
   function renderAll() {
@@ -850,13 +878,14 @@ function init(root: HTMLElement, signal: AbortSignal) {
       }
       if (phase === 'open' && !unwrapped && peel.target === 1 && peel.value >= 0.995) commitUnwrap();
       // Putting it back unwrapped: each part starts as the one before is nearly done, not after it.
-      if (phase === 'closing' && closeStep === 'film' && away.value < 0.75) {
-        closeStep = 'tape'; // the film is nearly on: the tab sets off back along the sleeve
+      if (phase === 'closing' && closeStep === 'film' && away.value < 0.4) {
+        closeStep = 'tape'; // the film is nearly on: the tab slips back on and sets off along the sleeve
+        overlay.removeAttribute('data-record-unwrapped');
         peel.to(0, { response: 0.34, damping: 1 });
         busy = true;
       }
-      if (phase === 'closing' && closeStep === 'tape' && peel.value < 0.3) {
-        closeStep = 'fly'; // most of the way sealed: it heads home as the tab finishes
+      if (phase === 'closing' && closeStep === 'tape' && peel.value < 0.18) {
+        closeStep = 'fly'; // nearly sealed: it heads home as the tab finishes
         lift.to(0, { response: 0.44, damping: 1 });
         busy = true;
       }

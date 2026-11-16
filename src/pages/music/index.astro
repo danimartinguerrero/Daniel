@@ -91,6 +91,7 @@ const pose = (i: number) => {
             <div class="v4-rec" data-v4-hero>
               <div class="v4-rec__group" data-v4-group>
                 <div class="v4-disc" data-v4-disc aria-hidden="true">
+                  <div class="v4-disc__shadow" data-v4-disc-shadow></div>
                   <div class="v4-disc__sheen"></div>
                   <div class="v4-disc__label"></div>
                 </div>
@@ -103,7 +104,7 @@ const pose = (i: number) => {
                   <div class="v4-plastic" data-v4-plastic aria-hidden="true">
                     {(['top', 'bottom'] as const).map((side) => (
                       <div class={`v4-film v4-film--${side}`} data-v4-film={side}>
-                        <div class="v4-film__win"><div class="v4-film__sheet" data-v4-sheet></div><div class="v4-film__slack" data-v4-slack></div><div class="v4-film__edge"></div></div>
+                        <div class="v4-film__win"><div class="v4-film__body" data-v4-film-body></div><div class="v4-film__sheet" data-v4-sheet></div><div class="v4-film__slack" data-v4-slack></div><div class="v4-film__edge" data-v4-film-edge></div></div>
                       </div>
                     ))}
                     <!-- In the row the film is one unbroken sheet. This piece is the film where the tape
@@ -112,6 +113,9 @@ const pose = (i: number) => {
                       <div class="v4-film__win"><div class="v4-film__sheet"></div></div>
                     </div>
                   </div>
+                  <!-- The lamp's light and the film's edge as a sleeve in the row has them: the record
+                       takes them on as it flies back, and lets them go as it comes out. -->
+                  <div class="v4-rec__lamp" data-v4-lamp aria-hidden="true"></div>
                   <div class="v4-strip" data-unwrap>
                     <div class="v4-strip__win" data-v4-strip-win>
                       <div class="v4-strip__band" data-v4-strip-band>
