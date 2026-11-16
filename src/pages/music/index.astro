@@ -3,7 +3,8 @@
  * Music: the "Listening bar" (design 4 of the four that were tried). The records stand in a carousel
  * that turns sideways and comes round again; the one in the middle faces you. Tap it and it comes to
  * the front, still sealed, and its tear tape appears. Pull the
- * tab across the plastic to unwrap it; the disc slides out of the sleeve and the details follow.
+ * tab across the plastic to unwrap it; the disc slides out of the sleeve and the details follow. Put
+ * it back and it goes back sealed, ready to be unwrapped again.
  * Behaviour lives in components/music/v4/listening-bar.ts.
  */
 import MusicShell from '@/components/music/MusicShell.astro';
@@ -23,7 +24,7 @@ const pose = (i: number) => {
   const x = sg * (near * 66 + Math.max(0, ad - 1) * 26);
   return {
     transform: `translate3d(${x}%,0,0) perspective(572px) rotateY(${-sg * near * 60}deg) scale(${1 - near * 0.14})`,
-    zIndex: String(1000 - Math.round(ad * 10)),
+    zIndex: String(1000 - Math.round(ad)),
     shade: String(Math.min(0.78, near * 0.38 + Math.max(0, ad - 1) * 0.12)),
     opacity: String(Math.max(0, Math.min(1, n / 2 - ad))),
   };
@@ -94,6 +95,7 @@ const pose = (i: number) => {
                   <div class="v4-disc__label"></div>
                 </div>
                 <div class="v4-rec__sleeve">
+                  <div class="v4-rec__shadow" data-v4-shadow aria-hidden="true"></div>
                   <div class="v4-art v4-rec__art" data-v4-art aria-hidden="true"></div>
                   <!-- The shrink-wrap: clear film in two pieces either side of the tear strip. Each piece
                        carries two lights: the film pulled taut, and the same film gone slack, which shows
@@ -167,6 +169,7 @@ const pose = (i: number) => {
           </div>
         </div>
       </div>
+      <div class="v4-open__edge" data-v4-edge aria-hidden="true"></div>
     </div>
   </main>
 </MusicShell>
