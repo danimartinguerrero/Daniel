@@ -1,1 +1,1 @@
-Vendored from https://github.com/opencoredev/islandcn (components/islandcn, commit 0011a41), MIT: the now-playing preset and the kit it imports. Unmodified; see LICENSE.
+Vendored from https://github.com/opencoredev/islandcn (components/islandcn, commit 0011a41), MIT: the now-playing preset and the kit it imports. Unmodified except now-playing-activity.tsx, where play and pause cross over (PlayPauseSwap) instead of swapping in one frame. See LICENSE.

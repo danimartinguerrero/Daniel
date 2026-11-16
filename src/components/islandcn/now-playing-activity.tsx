@@ -11,6 +11,7 @@ import { ExpandedBottom } from "./island-layout";
 import { ExpandedSubtitle, ExpandedTitle, MinimalPair, tabularFigures } from "./island-text";
 import { LevelMeter } from "./level-meter";
 import { TimeProgress } from "./linear-progress";
+import { IslandStyle } from "./island-style";
 import { islandFont, islandInk } from "./theme";
 import { formatClock, TickingTime } from "./ticking-time";
 import { useActivity, useLatest } from "./use-activity";
@@ -96,6 +97,31 @@ const timeText = {
   whiteSpace: "nowrap",
   WebkitFontSmoothing: "antialiased",
 } as const satisfies CSSProperties;
+
+/*
+ * Local change to the vendored file (personal site): play and pause cross over instead of swapping
+ * in one frame. Both glyphs stay mounted; the leaving one shrinks, blurs and fades in 140 ms, the
+ * arriving one grows in from 0.6 with a slight blur over 240 ms on a strong ease-out, so the press
+ * reads at once and settles soft. Reduced motion keeps only a short crossfade.
+ */
+const swapCss = `
+.icn-swap { position: relative; display: grid; place-items: center; }
+.icn-swap > span { grid-area: 1 / 1; display: grid; transition: opacity 140ms ease-out, transform 140ms ease-out, filter 140ms ease-out; }
+.icn-swap > span[data-on] { transition-duration: 240ms; transition-timing-function: cubic-bezier(0.23, 1, 0.32, 1); }
+.icn-swap > span:not([data-on]) { opacity: 0; transform: scale(0.6); filter: blur(3px); }
+@media (prefers-reduced-motion: reduce) {
+  .icn-swap > span, .icn-swap > span[data-on] { transition: opacity 120ms ease; }
+  .icn-swap > span:not([data-on]) { transform: none; filter: none; }
+}
+`;
+
+const PlayPauseSwap = ({ playing, size }: { playing: boolean; size: number }) => (
+  <span className="icn-swap">
+    <IslandStyle id="swap" css={swapCss} />
+    <span data-on={playing ? "" : undefined}><PlayerPauseGlyph size={size} /></span>
+    <span data-on={playing ? undefined : ""}><PlayerPlayGlyph size={size} /></span>
+  </span>
+);
 
 /** A transport button centred `offset` pt from the island's centre line. */
 const transportSlot = (offset: number): CSSProperties => ({
@@ -227,7 +253,7 @@ export const PlayerControls = ({ playback, duration, onToggle, onPrevious, onNex
           {onToggle === undefined ? null : (
             <span style={transportSlot(0)}>
               <IslandRoundButton label={playing ? "Pause" : "Play"} color="transparent" size={player.button} onPress={onToggle}>
-                {playing ? <PlayerPauseGlyph size={player.glyph.pause} /> : <PlayerPlayGlyph size={player.glyph.pause} />}
+                <PlayPauseSwap playing={playing} size={player.glyph.pause} />
               </IslandRoundButton>
             </span>
           )}

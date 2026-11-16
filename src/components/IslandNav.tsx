@@ -1,7 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { Artwork } from '@/components/islandcn/artwork';
-import { PlayerControls, PlayerCover, PlayerMeter, PlayerTitle, type PlaybackState } from '@/components/islandcn/now-playing-activity';
+import { PlayerControls, PlayerCover, PlayerTitle, type PlaybackState } from '@/components/islandcn/now-playing-activity';
+import { createIslandAudio, type IslandAudio } from '@/components/island-audio';
+import { LiveMeter } from '@/components/LiveMeter';
 import { IslandView, islandMetrics, type IslandMetricsOverrides, type IslandPresentation } from '@/lib/island';
 
 /**
@@ -10,6 +12,10 @@ import { IslandView, islandMetrics, type IslandMetricsOverrides, type IslandPres
  * pointers), tapped (touch) or focused, it opens into islandcn's expanded player (cover, title,
  * meter, times and play/pause) with the links below, and closes when left. The engine solves the
  * springs, the shape and the crossfades; this file decides when it is open and what it holds.
+ *
+ * The song starts by itself with a needle drop (island-audio.ts): at once where the browser allows
+ * it, otherwise on the visitor's first tap, click or key. A visitor who pauses it isn't played at
+ * again for the rest of the visit, reloads included. The meter shows the song's real spectrum.
  */
 const links = [
   { href: '#projects', label: 'Projects' },
@@ -60,12 +66,28 @@ export const IslandNav = () => {
   const trigger = useRef<HTMLButtonElement | null>(null);
   const fine = useRef(false);
   const audio = useRef<HTMLAudioElement | null>(null);
+  const [sound, setSound] = useState<IslandAudio | null>(null);
   const [playback, setPlayback] = useState<PlaybackState>({ kind: 'paused', position: 0 });
+
+  // The sound graph, and the autostart unless the visitor paused it earlier in this visit.
+  useEffect(() => {
+    const el = audio.current;
+    if (!el) return;
+    const created = createIslandAudio(el);
+    setSound(created);
+    let declined = false;
+    try { declined = sessionStorage.getItem('island-music') === 'paused'; } catch { /* storage blocked: autostart */ }
+    if (declined) return;
+    // The island's own play button is the visitor choosing; it starts the song itself.
+    return created.autostart({ skip: (target) => target instanceof Element && target.closest('[data-islandcn] .icn-button') !== null });
+  }, []);
 
   // The player follows the audio element, whatever started or stopped it.
   useEffect(() => {
     const el = audio.current;
-    if (!el) return;
+    if (!el || !sound) return;
+    // While the needle drops the element already plays, silent; the time reads 0:00 until it
+    // lands and rewinds, and the seek puts the clock back on the song.
     const playing = () => setPlayback({ kind: 'playing', startedAt: Date.now() - el.currentTime * 1000 });
     const paused = () => setPlayback({ kind: 'paused', position: el.currentTime * 1000 });
     const ended = () => { el.currentTime = 0; setPlayback({ kind: 'paused', position: 0 }); };
@@ -80,14 +102,18 @@ export const IslandNav = () => {
       el.removeEventListener('ended', ended);
       el.removeEventListener('seeked', seeked);
     };
-  }, []);
+  }, [sound]);
 
   const toggle = useCallback(() => {
     const el = audio.current;
-    if (!el) return;
-    if (el.paused) void el.play().catch(() => undefined);
-    else el.pause();
-  }, []);
+    if (!el || !sound) return;
+    const nowPlaying = sound.toggle();
+    // The button answers the press at once; the element catches up when its fade ends.
+    setPlayback(nowPlaying
+      ? { kind: 'playing', startedAt: Date.now() - el.currentTime * 1000 }
+      : { kind: 'paused', position: el.currentTime * 1000 });
+    try { sessionStorage.setItem('island-music', nowPlaying ? 'on' : 'paused'); } catch { /* storage blocked */ }
+  }, [sound]);
 
   useEffect(() => {
     const media = matchMedia('(hover: hover) and (pointer: fine)');
@@ -162,7 +188,7 @@ export const IslandNav = () => {
         kind: 'expanded',
         leading: <PlayerCover seed={seed} src={song.cover} />,
         center: <PlayerTitle title={song.title} artist={song.artist} />,
-        trailing: <PlayerMeter color={tone} size="expanded" active={playing} />,
+        trailing: <LiveMeter audio={sound} color={tone} size="expanded" />,
         bottom: (
           <div className="island-nav__bottom">
             <PlayerControls playback={playback} duration={song.duration} onToggle={toggle} />
@@ -177,7 +203,7 @@ export const IslandNav = () => {
     : {
         kind: 'compact',
         leading: <Artwork seed={seed} src={song.cover} size={22} radius={6} />,
-        trailing: <PlayerMeter color={tone} size="compact" active={playing} />,
+        trailing: <LiveMeter audio={sound} color={tone} size="compact" />,
       };
 
   const dark = luma(backdrop) < 80;
@@ -219,7 +245,7 @@ export const IslandNav = () => {
         backdrop={backdrop}
         metrics={metrics}
       />
-      <audio ref={audio} src={song.src} preload="none" />
+      <audio ref={audio} src={song.src} preload="auto" />
     </div>
   );
 };
