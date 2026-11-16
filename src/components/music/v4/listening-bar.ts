@@ -52,6 +52,9 @@ function init(root: HTMLElement, signal: AbortSignal) {
 
   const HOME = 4000; // the track's resting scroll offset (see the CSS)
   const ROT = 60; // how far the neighbours turn away, in degrees
+  const TUCK = 0.6; // how far, in spacings, the pile at each end reaches past the third record
+  const MAX_SPEED = 12; // records per second the row turns at most once let go: faster, and they strobe
+  const MAX_THROW = 5; // records a single throw travels at most (half the ring)
 
   let W = 0; // row width
   let S = 0; // sleeve size in the row
@@ -75,18 +78,28 @@ function init(root: HTMLElement, signal: AbortSignal) {
   /** A distance in records, taken the short way round the ring: -n/2..n/2. */
   const around = (d: number) => d - n * Math.round(d / n);
 
-  /** The pose of a record d places from the middle of the row. */
+  /** The pose of a record d places from the middle of the row. Shared with the page (index.astro), which
+      draws the same pose before the script runs. */
   function pose(d: number) {
     const ad = Math.abs(d);
     const sg = Math.sign(d);
     const near = Math.min(ad, 1);
+    const far = Math.max(0, ad - 1);
+    // Past the third record on each side they slide in under it and go dark: the ends of the row are a
+    // pile in the shadow, and a record goes round from one pile to the other unseen, however fast the
+    // row turns. Eased (no kink) so a record doesn't change speed as it reaches the pile.
+    const deep = Math.max(0, far - 2);
+    const spread = far - deep + TUCK * (1 - Math.exp(-deep / TUCK));
     return {
-      x: sg * (near * A + Math.max(0, ad - 1) * B),
+      // Half-way between two records the one leaving and the one arriving are pushed just clear of each
+      // other, so the moment they change places on top (z, below) has nothing on screen to swap.
+      x: sg * (near * A + Math.sin(Math.PI * near) * S * 0.05 + spread * B),
       rot: -sg * near * ROT,
-      s: 1 - near * 0.14,
-      shade: Math.min(0.78, near * 0.38 + Math.max(0, ad - 1) * 0.12),
-      // The far side of the ring is out of sight: a record fades out before it crosses from one end to the other.
-      alpha: clamp(n / 2 - ad, 0, 1),
+      s: 1 - near * 0.14 - Math.min(deep, 1) * 0.04,
+      // Black by the time it is half-way to the back of the ring, whatever the number of records.
+      shade: near * 0.38 + Math.min(far, 2) * 0.12 + 0.38 * Math.min(1, (deep / Math.max(0.5, n / 2 - 3)) * 1.6),
+      // It only fades once it is black and under the pile, the last half record before it crosses over.
+      alpha: clamp((n / 2 - ad) * 2, 0, 1),
       // Nearer the middle is on top. Whole steps are enough to keep that order (neighbours are a record
       // apart), and then it changes once per record passed rather than on nearly every frame.
       z: 1000 - Math.round(ad),
@@ -119,20 +132,50 @@ function init(root: HTMLElement, signal: AbortSignal) {
       css(b, 'opacity', g.alpha.toFixed(3));
       css(b, 'pointerEvents', g.alpha < 0.2 ? 'none' : ''); // nothing to press on the far side
     }
-    const c = mod(Math.round(pos.value));
-    if (c !== captionIndex) {
+    renderCaption();
+  }
+
+  /* The name under the row. It changes a little past half-way (not at it), so a finger resting between
+     two records doesn't flick it back and forth; and while the row spins it steps back instead of
+     flashing every name that goes by, and comes back with the record the row slows down on. */
+  let speed = 0; // how fast the row is turning, records/s, smoothed
+  let speedFrom = START; // where the row was at the last frame
+  let captionFlash: Animation | null = null;
+  function renderCaption() {
+    const off = around(pos.value - captionIndex);
+    const atRest = pos.settled && !rowDrag?.active;
+    if (Math.abs(off) > 0.62 || (atRest && Math.abs(off) > 0.5)) {
+      const c = mod(Math.round(pos.value));
       captionIndex = c;
       const v = records[c]!;
       capTitle.textContent = v.title;
       capMeta.textContent = `${v.artist}, ${v.year}`;
-      caption.animate([{ opacity: 0.2 }, { opacity: 1 }], { duration: 180, easing: 'ease-out' });
+      captionFlash?.cancel();
+      captionFlash = speed < 5 ? caption.animate([{ opacity: 0.2 }, { opacity: 1 }], { duration: 180, easing: 'ease-out' }) : null;
     }
+    css(caption, 'opacity', clamp(1 - (speed - 5) / 6, 0, 1).toFixed(3));
   }
 
   /** Bring record i to the middle, the short way round. */
   function goTo(i: number, velocity?: number) {
     thrown = false;
-    pos.to(pos.value + around(i - pos.value), { response: 0.5, damping: 1, velocity });
+    pos.to(Math.round(pos.value + around(i - pos.value)), { response: 0.5, damping: 1, velocity });
+    tick();
+  }
+
+  /** Let the row go at `v` records/s: it coasts to the whole record it would come to rest near, and
+      slows from the speed it was let go at. */
+  function release(v: number, bounce: boolean) {
+    v = clamp(v, -MAX_SPEED, MAX_SPEED);
+    const landing = Math.round(pos.value + clamp(project(v * A) / A, -MAX_THROW, MAX_THROW));
+    const D = landing - pos.value;
+    const damping = bounce ? 0.82 : 1;
+    // A spring stiffer than the throw would pull the row faster than it was let go, a lurch you can see.
+    // Heading where it was thrown, soften it until it only slows down: its pull at the start (w²·D) must
+    // not beat its drag (2ζw·v), so w ≤ 2ζv/D, i.e. response ≥ πD/(ζv).
+    const response = D * v > 0 ? clamp((Math.PI * Math.abs(D)) / (damping * Math.abs(v)), 0.55, 1.2) : 0.55;
+    pos.to(landing, { response, damping, velocity: v });
+    thrown = true;
     tick();
   }
 
@@ -148,7 +191,9 @@ function init(root: HTMLElement, signal: AbortSignal) {
     if (openIndex !== null || rowDrag?.active || (e.pointerType === 'mouse' && e.button !== 0)) return;
     dragged = false;
     caught = thrown && Math.abs(pos.velocity) > 0.6;
-    pos.set(pos.value); // catch it where it is
+    // A throw is caught where it is. A row easing into place carries on: stopping it here would leave
+    // it between two records if the press never becomes a drag.
+    if (caught) pos.set(pos.value);
     rowDrag = { id: e.pointerId, x0: e.clientX, y0: e.clientY, pos0: pos.value, active: false };
     tracker.reset(e.clientX, e.timeStamp);
   });
@@ -161,6 +206,8 @@ function init(root: HTMLElement, signal: AbortSignal) {
       // Clearly sideways: it is ours. Track from here, so nothing jumps by the threshold.
       rowDrag.active = true;
       rowDrag.x0 = e.clientX;
+      pos.set(pos.value); // from wherever it has got to
+      rowDrag.pos0 = pos.value;
       dragged = true;
       row.setPointerCapture(e.pointerId);
       row.classList.add('is-dragging');
@@ -177,13 +224,9 @@ function init(root: HTMLElement, signal: AbortSignal) {
     row.classList.remove('is-dragging');
     if (wasActive) {
       const v = e.type === 'pointercancel' ? 0 : tracker.velocity(e.timeStamp); // px/s, finger
-      const vIdx = -v / A;
-      const landing = Math.round(pos.value + -project(v) / A);
       // A flick earns a little bounce as it lands; a slow drag settles without one.
-      pos.to(landing, { response: 0.55, damping: Math.abs(v) > 500 ? 0.82 : 1, velocity: vIdx });
-      thrown = true;
-      tick();
-    } else if (caught || e.type === 'pointercancel') {
+      release(-v / A, Math.abs(v) > 500);
+    } else if (caught || e.type === 'pointercancel' || pos.target !== Math.round(pos.target)) {
       goTo(Math.round(pos.value));
     }
   };
@@ -192,17 +235,32 @@ function init(root: HTMLElement, signal: AbortSignal) {
   window.addEventListener('pointercancel', endRowDrag, { signal });
   row.addEventListener('dragstart', (e) => e.preventDefault());
 
-  // A trackpad's sideways swipe moves the row too (a mouse wheel still scrolls the page).
+  /* A trackpad's sideways swipe moves the row too (a mouse wheel still scrolls the page). When the
+     swipe and its momentum end, the row is let go at the speed it was turning, as from a drag, instead
+     of stopping and then setting off again for the nearest record. */
   let wheelIdle = 0;
+  let wheelX = 0;
+  let wheelLast = 0;
+  const wheelTracker = new VelocityTracker();
   row.addEventListener(
     'wheel',
     (e) => {
       if (openIndex !== null || Math.abs(e.deltaX) <= Math.abs(e.deltaY)) return;
       e.preventDefault();
-      pos.set(pos.value + e.deltaX / A);
+      if (!wheelIdle) wheelTracker.reset((wheelX = 0), e.timeStamp);
+      // A hard fling sends big steps: no more than a fifth of a record per event, or the row strobes.
+      const step = clamp(e.deltaX / A, -0.2, 0.2);
+      wheelX += step;
+      wheelLast = e.timeStamp;
+      wheelTracker.push(wheelX, wheelLast);
+      thrown = false;
+      pos.set(pos.value + step);
       tick();
       clearTimeout(wheelIdle);
-      wheelIdle = window.setTimeout(() => goTo(Math.round(pos.value)), 120);
+      wheelIdle = window.setTimeout(() => {
+        wheelIdle = 0;
+        release(wheelTracker.velocity(wheelLast), false);
+      }, 60);
     },
     { passive: false },
   );
@@ -217,8 +275,8 @@ function init(root: HTMLElement, signal: AbortSignal) {
         return;
       }
       if (openIndex !== null) return;
-      // Off-centre: it comes to the middle and out in the same motion.
-      if (Math.abs(around(i - pos.value)) > 0.5) goTo(i);
+      // Off-centre, even a little: it comes to the middle and out in the same motion.
+      if (around(i - pos.value) !== 0 || pos.target !== pos.value) goTo(i);
       openRecord(i);
     });
   }
@@ -228,6 +286,9 @@ function init(root: HTMLElement, signal: AbortSignal) {
   row.addEventListener('focusin', (e) => {
     const i = buttons.indexOf(e.target as HTMLButtonElement);
     if (i < 0 || openIndex !== null) return;
+    // Only focus from the keyboard. A browser that focuses a button as it is pressed (Chrome) would
+    // otherwise send the row towards a sleeve the finger is only starting to drag.
+    if (!(e.target as HTMLElement).matches(':focus-visible')) return;
     focusGuard = true;
     requestAnimationFrame(() => (focusGuard = false));
     if (Math.abs(around(i - pos.target)) > 0.01) goTo(i);
@@ -856,6 +917,10 @@ function init(root: HTMLElement, signal: AbortSignal) {
       }
       busy = moving || busy;
     }
+    // How fast the row turns, from frame to frame, whether a finger or a spring is turning it.
+    if (pos.settled && !rowDrag?.active) speed = 0;
+    else if (dt > 0) speed += (Math.abs(around(pos.value - speedFrom)) / dt - speed) * (1 - Math.exp(-dt / 0.1));
+    speedFrom = pos.value;
     if (openIndex !== null) {
       busy = !lift.step(dt) || busy;
       busy = !reveal.step(dt) || busy;
