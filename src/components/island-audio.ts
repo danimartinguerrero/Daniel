@@ -1,16 +1,14 @@
 /**
- * The island's sound: the song through Web Audio, so the meter can read its real spectrum, and a
- * needle drop synthesised in front of it (no recorded sample: a thump as the stylus lands, a short
- * scrape as it settles into the groove, then surface crackle that carries into the music and fades).
+ * The island's sound: the song through Web Audio, so the meter can read its real spectrum. The
+ * needle drop is in the file itself (a CC0 recording mixed onto the start of the song, see
+ * public/audio/README.md), so starting is just playing from the top.
  *
- * Browsers only let a page make sound after a user gesture (Safari on iPhone always; Chrome unless
- * the visitor has played media on the site before). `autostart` tries at once and otherwise starts
- * on the first tap, click or key anywhere on the page. On Safari, `play()` has to run inside that
- * gesture, so the song starts at once, silent, and is rewound and faded in when the needle lands.
+ * Browsers only let a page make sound after a user gesture (Safari on iPhone always; Chrome and
+ * Safari on the desktop unless the visitor has played media on the site before). `autostart` tries
+ * at once and otherwise starts on the first gesture the browser counts: it asks
+ * `navigator.userActivation` on every tap, click and key and keeps listening until the song really
+ * plays, since which event of a tap grants it differs between browsers (Safari: the touch's end).
  */
-
-/** When the music comes in after the needle starts, in seconds. */
-const needleLead = 0.85;
 
 /** Fades on pause and resume, in seconds: quick enough to answer the press, long enough not to click. */
 const pauseFade = 0.16;
@@ -20,96 +18,18 @@ const resumeFade = 0.24;
 const bandEdges = [45, 110, 260, 600, 1400, 3300, 9000];
 
 export interface IslandAudio {
-  /** Needle drop, then the song from the start. Call inside a user gesture. Resolves false when the browser refused. */
+  /** The song from the top, needle drop first. Call inside a user gesture. Resolves false when the browser refused. */
   start(): Promise<boolean>;
   /**
-   * Play or pause; the first play (or one after the song ended) drops the needle. Pausing fades the
-   * song out before it stops and resuming fades it in, and a press during the fade turns it back.
-   * Returns whether it is now playing, so the button can change at once.
+   * Play or pause. Pausing fades the song out before it stops and resuming fades it in, and a press
+   * during the fade turns it back. Returns whether it is now playing, so the button can change at once.
    */
   toggle(): boolean;
   /** Tries to start now and otherwise on the first gesture. Returns a function that stops waiting. */
   autostart(options: { skip: (target: EventTarget | null) => boolean }): () => void;
   /** The six levels, 0 to 1, every frame while anyone listens. */
   subscribe(listener: (levels: readonly number[]) => void): () => void;
-  /** True between the gesture and the needle landing: the element plays, silent. */
-  readonly prerolling: boolean;
 }
-
-const noise = (ctx: BaseAudioContext, seconds: number, fill: (data: Float32Array, rate: number) => void) => {
-  const buffer = ctx.createBuffer(1, Math.ceil(seconds * ctx.sampleRate), ctx.sampleRate);
-  fill(buffer.getChannelData(0), ctx.sampleRate);
-  return buffer;
-};
-
-/** White noise. */
-const hiss = (data: Float32Array) => {
-  for (let i = 0; i < data.length; i++) data[i] = Math.random() * 2 - 1;
-};
-
-/** Surface noise: a low hiss with sparse pops, each a sharp spike with a few samples of tail. */
-const crackle = (data: Float32Array, rate: number) => {
-  for (let i = 0; i < data.length; i++) data[i] = (Math.random() * 2 - 1) * 0.035;
-  const pops = Math.round((data.length / rate) * 22);
-  for (let p = 0; p < pops; p++) {
-    const at = Math.floor(Math.random() * data.length);
-    const size = (Math.random() < 0.15 ? 0.9 : 0.35) * (0.5 + Math.random() * 0.5) * (Math.random() < 0.5 ? -1 : 1);
-    const tail = 2 + Math.floor(Math.random() * 10);
-    for (let k = 0; k < tail && at + k < data.length; k++) data[at + k] += size * Math.exp(-k / (tail / 3));
-  }
-};
-
-/** Schedules the needle drop on `out` from `t`. */
-const dropNeedle = (ctx: AudioContext, out: AudioNode, t: number) => {
-  // The landing: a low thump falling in pitch.
-  const thump = ctx.createOscillator();
-  thump.frequency.setValueAtTime(75, t);
-  thump.frequency.exponentialRampToValueAtTime(36, t + 0.14);
-  const thumpGain = ctx.createGain();
-  thumpGain.gain.setValueAtTime(0.0001, t);
-  thumpGain.gain.exponentialRampToValueAtTime(0.85, t + 0.006);
-  thumpGain.gain.exponentialRampToValueAtTime(0.0001, t + 0.32);
-  thump.connect(thumpGain).connect(out);
-  thump.start(t);
-  thump.stop(t + 0.35);
-
-  // The stylus touching vinyl: a bright click, then a short scrape as it finds the groove.
-  const burst = ctx.createBufferSource();
-  burst.buffer = noise(ctx, 0.5, hiss);
-  const bright = ctx.createBiquadFilter();
-  bright.type = 'bandpass';
-  bright.frequency.setValueAtTime(3200, t);
-  bright.frequency.exponentialRampToValueAtTime(900, t + 0.3);
-  bright.Q.value = 0.9;
-  const burstGain = ctx.createGain();
-  burstGain.gain.setValueAtTime(0.0001, t);
-  burstGain.gain.exponentialRampToValueAtTime(0.5, t + 0.003);
-  burstGain.gain.exponentialRampToValueAtTime(0.06, t + 0.05);
-  burstGain.gain.exponentialRampToValueAtTime(0.0001, t + 0.42);
-  burst.connect(bright).connect(burstGain).connect(out);
-  burst.start(t);
-
-  // Surface crackle from the landing on, under the first seconds of the song, then gone.
-  const surface = ctx.createBufferSource();
-  surface.buffer = noise(ctx, 3, crackle);
-  surface.loop = true;
-  const low = ctx.createBiquadFilter();
-  low.type = 'highpass';
-  low.frequency.value = 380;
-  const high = ctx.createBiquadFilter();
-  high.type = 'lowpass';
-  high.frequency.value = 7000;
-  const surfaceGain = ctx.createGain();
-  const music = t + needleLead;
-  surfaceGain.gain.setValueAtTime(0.0001, t);
-  surfaceGain.gain.exponentialRampToValueAtTime(0.32, t + 0.06);
-  surfaceGain.gain.setValueAtTime(0.32, music);
-  surfaceGain.gain.exponentialRampToValueAtTime(0.1, music + 1.5);
-  surfaceGain.gain.exponentialRampToValueAtTime(0.0001, music + 6);
-  surface.connect(low).connect(high).connect(surfaceGain).connect(out);
-  surface.start(t);
-  surface.stop(music + 6.1);
-};
 
 /**
  * An element can be wired to Web Audio only once, ever, so its graph outlives any one controller:
@@ -117,13 +37,17 @@ const dropNeedle = (ctx: AudioContext, out: AudioNode, t: number) => {
  */
 const graphs = new WeakMap<HTMLAudioElement, { ctx: AudioContext; songGain: GainNode; analyser: AnalyserNode }>();
 
+/** Whether this event lets the page make sound. Without the API, trust the event types we listen to. */
+const activated = () => {
+  const ua = (navigator as Navigator & { userActivation?: { isActive: boolean } }).userActivation;
+  return ua ? ua.isActive : true;
+};
+
 export const createIslandAudio = (el: HTMLAudioElement): IslandAudio => {
   let ctx: AudioContext | null = null;
   let songGain: GainNode | null = null;
   let analyser: AnalyserNode | null = null;
   let spectrum: Float32Array<ArrayBuffer> | null = null;
-  let prerolling = false;
-  let landing: number | undefined;
   /** Set while a pause fades out: the element still plays until it ends. */
   let stopping: number | undefined;
 
@@ -131,7 +55,7 @@ export const createIslandAudio = (el: HTMLAudioElement): IslandAudio => {
   const levels = bandEdges.slice(1).map(() => 0);
   let frame = 0;
 
-  /** The graph, built on first use: song, gain, analyser, out; the needle goes straight out. */
+  /** The graph, built on first use (inside a gesture): song, gain, analyser, out. */
   const graph = () => {
     if (ctx && songGain && analyser) return { ctx, songGain, analyser };
     const existing = graphs.get(el);
@@ -159,10 +83,9 @@ export const createIslandAudio = (el: HTMLAudioElement): IslandAudio => {
     if (!analyser || !spectrum || !ctx) return;
     analyser.getFloatFrequencyData(spectrum);
     const binHz = ctx.sampleRate / analyser.fftSize;
-    const sounding = !el.paused && !prerolling;
     for (let b = 0; b < levels.length; b++) {
       let target = 0;
-      if (sounding) {
+      if (!el.paused) {
         const from = Math.max(1, Math.floor(bandEdges[b] / binHz));
         const to = Math.max(from + 1, Math.ceil(bandEdges[b + 1] / binHz));
         let power = 0;
@@ -182,44 +105,27 @@ export const createIslandAudio = (el: HTMLAudioElement): IslandAudio => {
     readLevels();
     for (const listener of listeners) listener(levels);
     // Paused and settled: stop reading until the song plays again.
-    const idle = (el.paused || prerolling) && levels.every((l) => l < 0.002);
+    const idle = el.paused && levels.every((l) => l < 0.002);
     frame = listeners.size > 0 && !idle ? requestAnimationFrame(tick) : 0;
   };
   const wake = () => {
     if (!frame && listeners.size > 0) frame = requestAnimationFrame(tick);
   };
   el.addEventListener('playing', wake);
-  el.addEventListener('seeked', wake);
 
   const start = (): Promise<boolean> => {
     const { ctx, songGain } = graph();
-    clearTimeout(landing);
-    // Silent until the needle lands; play() and resume() now, while the gesture still counts.
-    prerolling = true;
+    clearTimeout(stopping);
+    stopping = undefined;
     songGain.gain.cancelScheduledValues(ctx.currentTime);
-    songGain.gain.setValueAtTime(0, ctx.currentTime);
+    songGain.gain.setValueAtTime(1, ctx.currentTime);
     el.currentTime = 0;
+    // Both now, while the gesture still counts.
     const playing = el.play().then(() => true, () => false);
     const resumed = ctx.resume().then(() => ctx.state === 'running', () => false);
     return Promise.all([playing, resumed]).then(([played, running]) => {
-      // Refused: undo, and schedule nothing on a suspended context (it would sound on the next try).
-      if (!played || !running) {
-        prerolling = false;
-        if (played) el.pause();
-        return false;
-      }
-      if (!prerolling) return false; // paused before it got going
-      dropNeedle(ctx, ctx.destination, ctx.currentTime + 0.02);
-      landing = window.setTimeout(() => {
-        prerolling = false;
-        if (el.paused) return;
-        el.currentTime = 0;
-        const now = ctx.currentTime;
-        songGain.gain.setValueAtTime(0, now);
-        songGain.gain.linearRampToValueAtTime(1, now + 0.35);
-        wake();
-      }, (needleLead + 0.02) * 1000);
-      return true;
+      if (played && !running) el.pause();
+      return played && running;
     });
   };
 
@@ -234,13 +140,6 @@ export const createIslandAudio = (el: HTMLAudioElement): IslandAudio => {
         songGain.gain.setValueAtTime(songGain.gain.value, now);
         songGain.gain.linearRampToValueAtTime(to, now + seconds);
       };
-      if (prerolling) {
-        clearTimeout(landing);
-        prerolling = false;
-        el.pause();
-        el.currentTime = 0;
-        return false;
-      }
       if (stopping !== undefined) {
         // Pressed again while fading out: come back up instead.
         clearTimeout(stopping);
@@ -267,10 +166,9 @@ export const createIslandAudio = (el: HTMLAudioElement): IslandAudio => {
       return false;
     },
     autostart({ skip }) {
-      // The events that count as a gesture for sound: a mouse press, a finger lifted (not put
-      // down: Safari only lets a touch play on release), a key.
-      const events = ['pointerdown', 'pointerup', 'touchend', 'keydown', 'click'] as const;
+      const events = ['pointerdown', 'pointerup', 'touchend', 'mousedown', 'keydown', 'click'] as const;
       let waiting = false;
+      let trying = false;
       const listen = (on: boolean) => {
         waiting = on;
         for (const type of events) {
@@ -278,33 +176,33 @@ export const createIslandAudio = (el: HTMLAudioElement): IslandAudio => {
           else window.removeEventListener(type, onGesture, true);
         }
       };
+      const attempt = () => {
+        trying = true;
+        void start().then((ok) => {
+          trying = false;
+          if (ok || !el.paused) listen(false);
+        });
+      };
       function onGesture(event: Event) {
-        if (!waiting) return;
-        if (event instanceof PointerEvent && (event.type === 'pointerdown') !== (event.pointerType === 'mouse')) return;
-        listen(false);
+        if (!waiting || trying) return;
         // A press on the island's own play button is the visitor choosing: it starts the song itself.
-        if (skip(event.target)) return;
-        // A touch that ended a scroll doesn't count in some browsers: wait for the next one.
-        void start().then((ok) => { if (!ok && el.paused) listen(true); });
+        if (skip(event.target)) { listen(false); return; }
+        // Only an event the browser counts as a gesture can start sound; the rest of a tap's
+        // events go by until one does (on iPhone, the touch's end, not its start).
+        if (!activated()) return;
+        attempt();
       }
       listen(true);
-      // Without a gesture yet, try anyway: browsers that allow it (a returning visitor in Chrome)
-      // start now; the others leave the context suspended, and the first gesture does it.
-      const probe = new AudioContext();
-      const allowed = probe.state === 'running';
-      void probe.close();
-      if (allowed) { listen(false); void start().then((ok) => { if (!ok && el.paused) listen(true); }); }
+      // A browser that allows sound without a gesture (a returning visitor) starts now.
+      attempt();
       return () => listen(false);
     },
     subscribe(listener) {
       listeners.add(listener);
-      if (!frame) frame = requestAnimationFrame(tick);
+      wake();
       return () => {
         listeners.delete(listener);
       };
-    },
-    get prerolling() {
-      return prerolling;
     },
   };
   return audio;

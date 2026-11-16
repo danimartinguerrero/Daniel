@@ -13,8 +13,8 @@ import { IslandView, islandMetrics, type IslandMetricsOverrides, type IslandPres
  * meter, times and play/pause) with the links below, and closes when left. The engine solves the
  * springs, the shape and the crossfades; this file decides when it is open and what it holds.
  *
- * The song starts by itself with a needle drop (island-audio.ts): at once where the browser allows
- * it, otherwise on the visitor's first tap, click or key. A visitor who pauses it isn't played at
+ * The song, with a needle drop recorded onto its start, plays by itself (island-audio.ts): at once
+ * where the browser allows it, otherwise on the visitor's first tap, click or key. A visitor who pauses it isn't played at
  * again for the rest of the visit, reloads included. The meter shows the song's real spectrum.
  */
 const links = [
@@ -24,7 +24,7 @@ const links = [
   { href: '#contact', label: 'Contact' },
 ] as const;
 
-const song = { title: 'Feather', artist: 'Nujabes', src: '/audio/feather.m4a', cover: '/audio/modal-soul.jpg', duration: 176_500 } as const;
+const song = { title: 'Feather', artist: 'Nujabes', src: '/audio/feather.m4a', cover: '/audio/modal-soul.jpg', duration: 177_450 } as const;
 const seed = `${song.title} ${song.artist}`;
 /** The meter takes the cover's red, lifted so it reads on black. */
 const tone = '#ff7a5c';
@@ -86,8 +86,6 @@ export const IslandNav = () => {
   useEffect(() => {
     const el = audio.current;
     if (!el || !sound) return;
-    // While the needle drops the element already plays, silent; the time reads 0:00 until it
-    // lands and rewinds, and the seek puts the clock back on the song.
     const playing = () => setPlayback({ kind: 'playing', startedAt: Date.now() - el.currentTime * 1000 });
     const paused = () => setPlayback({ kind: 'paused', position: el.currentTime * 1000 });
     const ended = () => { el.currentTime = 0; setPlayback({ kind: 'paused', position: 0 }); };
