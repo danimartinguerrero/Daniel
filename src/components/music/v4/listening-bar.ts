@@ -951,8 +951,10 @@ function init(root: HTMLElement, signal: AbortSignal) {
       const moving = !pos.step(dt);
       if (!moving) {
         thrown = false;
-        // At rest, back into 0..n: the same place on the ring, so nothing on screen changes.
-        if (pos.value < -0.5 || pos.value >= n - 0.5) pos.set(mod(Math.round(pos.value)));
+        // At rest, back into 0..n by whole turns: the same place on the ring, so nothing on screen
+        // changes. "At rest" isn't always on a record: a trackpad swipe sets the row between two on
+        // every event, and rounding it here made the whole row jump half a record once per turn.
+        if (pos.value < -0.5 || pos.value >= n - 0.5) pos.set(pos.value - n * Math.floor((pos.value + 0.5) / n));
       }
       busy = moving || busy;
     }
