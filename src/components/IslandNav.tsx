@@ -1,10 +1,10 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { prefetch } from 'astro:prefetch';
 
 import { Artwork } from '@/components/islandcn/artwork';
 import { PlayerControls, PlayerCover, PlayerTitle, type PlaybackState } from '@/components/islandcn/now-playing-activity';
 import { islandAudio, type IslandAudio } from '@/components/island-audio';
 import { LiveMeter } from '@/components/LiveMeter';
+import { warm } from '@/scripts/warm';
 import { IslandView, islandMetrics, type IslandMetricsOverrides, type IslandMotionOverrides, type IslandPresentation } from '@/lib/island';
 
 /**
@@ -229,9 +229,9 @@ export const IslandNav = ({ home = '' }: {
 
   const close = useCallback(() => setNow(false), [setNow]);
 
-  // Open, the song is one press from its page: fetch it now, so the page can open out of the island
-  // the moment it is pressed (scripts/song-transition.ts) rather than after a wait.
-  useEffect(() => { if (open && location.pathname.replace(/\/+$/, '') !== musicPage) prefetch(musicPage, { ignoreSlowConnection: true }); }, [open]);
+  // Open, the song is one press from its page: fetch it and its scripts now, so the page opens out of
+  // the island the moment it is pressed, carousel and all (scripts/warm.ts).
+  useEffect(() => { if (open) warm(musicPage); }, [open]);
 
   // When a touch on the trigger closed the island (its click is then spent).
   const pressClosed = useRef<number | null>(null);
