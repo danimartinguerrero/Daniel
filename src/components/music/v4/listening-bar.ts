@@ -1,5 +1,5 @@
 /**
- * Music, design 4: "Listening bar". The row of records on the ledge, the record pulled out of it, the
+ * Music, design 4: "Listening bar". The carousel of records, the record pulled out of it, the
  * shrink-wrap opened with its tear strip, and the disc sliding out of the sleeve.
  *
  * Everything that moves is a spring (physics.ts) stepped in one requestAnimationFrame loop and written
@@ -51,6 +51,12 @@ function init(root: HTMLElement) {
     row.scrollTop = 0;
   }
 
+  /* The row is a ring: after the last record comes the first. `pos` runs freely (it is brought back
+     into 0..n when it rests), and each record sits at its shortest way round from it. */
+  const mod = (i: number) => ((i % n) + n) % n;
+  /** A distance in records, taken the short way round the ring: -n/2..n/2. */
+  const around = (d: number) => d - n * Math.round(d / n);
+
   /** The pose of a record d places from the middle of the row. */
   function pose(d: number) {
     const ad = Math.abs(d);
@@ -61,6 +67,8 @@ function init(root: HTMLElement) {
       rot: -sg * near * ROT,
       s: 1 - near * 0.14,
       shade: Math.min(0.78, near * 0.38 + Math.max(0, ad - 1) * 0.12),
+      // The far side of the ring is out of sight: a record fades out before it crosses from one end to the other.
+      alpha: clamp(n / 2 - ad, 0, 1),
       z: 1000 - Math.round(ad * 10),
     };
   }
@@ -70,12 +78,13 @@ function init(root: HTMLElement) {
   const START = Math.max(0, buttons.findIndex((b) => b.hasAttribute('data-start')));
   const pos = new Spring(START, { response: 0.5, damping: 1 }, 0.0004);
   const zs = buttons.map(() => -1);
+  const alphas = buttons.map(() => -1);
   let captionIndex = START;
 
   function renderRow() {
     const part = openIndex === null ? 0 : clamp(lift.value, 0, 1);
     for (let i = 0; i < n; i++) {
-      const d = i - pos.value;
+      const d = around(i - pos.value);
       const g = pose(d);
       let x = g.x;
       let shade = g.shade;
@@ -90,8 +99,13 @@ function init(root: HTMLElement) {
         zs[i] = g.z;
         buttons[i]!.style.zIndex = String(g.z);
       }
+      if (alphas[i] !== g.alpha) {
+        alphas[i] = g.alpha;
+        buttons[i]!.style.opacity = g.alpha.toFixed(3);
+        buttons[i]!.style.pointerEvents = g.alpha < 0.2 ? 'none' : ''; // nothing to press on the far side
+      }
     }
-    const c = clamp(Math.round(pos.value), 0, n - 1);
+    const c = mod(Math.round(pos.value));
     if (c !== captionIndex) {
       captionIndex = c;
       const v = records[c]!;
@@ -101,9 +115,10 @@ function init(root: HTMLElement) {
     }
   }
 
+  /** Bring record i to the middle, the short way round. */
   function goTo(i: number, velocity?: number) {
     thrown = false;
-    pos.to(clamp(i, 0, n - 1), { response: 0.5, damping: 1, velocity });
+    pos.to(pos.value + around(i - pos.value), { response: 0.5, damping: 1, velocity });
     tick();
   }
 
@@ -138,10 +153,7 @@ function init(root: HTMLElement) {
       return;
     }
     tracker.push(e.clientX, e.timeStamp);
-    let p = rowDrag.pos0 - dx / A;
-    if (p < 0) p = -rubberband(-p * A, W) / A;
-    else if (p > n - 1) p = n - 1 + rubberband((p - n + 1) * A, W) / A;
-    pos.set(p);
+    pos.set(rowDrag.pos0 - dx / A); // no ends to pull against: it goes round
     tick();
   });
   const endRowDrag = (e: PointerEvent) => {
@@ -152,7 +164,7 @@ function init(root: HTMLElement) {
     if (wasActive) {
       const v = e.type === 'pointercancel' ? 0 : tracker.velocity(e.timeStamp); // px/s, finger
       const vIdx = -v / A;
-      const landing = Math.round(clamp(pos.value + -project(v) / A, 0, n - 1));
+      const landing = Math.round(pos.value + -project(v) / A);
       // A flick earns a little bounce as it lands; a slow drag settles without one.
       pos.to(landing, { response: 0.55, damping: Math.abs(v) > 500 ? 0.82 : 1, velocity: vIdx });
       thrown = true;
@@ -173,12 +185,7 @@ function init(root: HTMLElement) {
     (e) => {
       if (openIndex !== null || Math.abs(e.deltaX) <= Math.abs(e.deltaY)) return;
       e.preventDefault();
-      let p = pos.value + e.deltaX / A;
-      if (p < 0 || p > n - 1) {
-        const over = p < 0 ? p : p - (n - 1);
-        p = (p < 0 ? 0 : n - 1) + rubberband(over * A, W) / A * 0.5;
-      }
-      pos.set(p);
+      pos.set(pos.value + e.deltaX / A);
       tick();
       clearTimeout(wheelIdle);
       wheelIdle = window.setTimeout(() => goTo(Math.round(pos.value)), 120);
@@ -188,14 +195,16 @@ function init(root: HTMLElement) {
 
   for (const [i, b] of buttons.entries()) {
     b.addEventListener('click', (e) => {
-      if (dragged || caught) {
+      // The click that ends a drag opens nothing. A click from the keyboard (detail 0) is never that one.
+      const fromDrag = (dragged || caught) && e.detail !== 0;
+      dragged = caught = false;
+      if (fromDrag) {
         e.preventDefault();
-        dragged = caught = false;
         return;
       }
       if (openIndex !== null) return;
       // Off-centre: it comes to the middle and out in the same motion.
-      if (Math.abs(i - pos.value) > 0.5) goTo(i);
+      if (Math.abs(around(i - pos.value)) > 0.5) goTo(i);
       openRecord(i);
     });
   }
@@ -207,13 +216,14 @@ function init(root: HTMLElement) {
     if (i < 0 || openIndex !== null) return;
     focusGuard = true;
     requestAnimationFrame(() => (focusGuard = false));
-    if (Math.abs(i - pos.target) > 0.01) goTo(i);
+    if (Math.abs(around(i - pos.target)) > 0.01) goTo(i);
   });
   row.addEventListener('keydown', (e) => {
     const i = buttons.indexOf(e.target as HTMLButtonElement);
     if (i < 0) return;
-    const to = e.key === 'ArrowRight' ? i + 1 : e.key === 'ArrowLeft' ? i - 1 : e.key === 'Home' ? 0 : e.key === 'End' ? n - 1 : -1;
-    if (to < 0 || to >= n || to === i) return;
+    // The arrows go round: right of the last record is the first.
+    const to = e.key === 'ArrowRight' ? mod(i + 1) : e.key === 'ArrowLeft' ? mod(i - 1) : e.key === 'Home' ? 0 : e.key === 'End' ? n - 1 : -1;
+    if (to < 0 || to === i) return;
     e.preventDefault();
     buttons[to]!.focus({ preventScroll: true });
   });
@@ -472,7 +482,7 @@ function init(root: HTMLElement) {
       hero.style.transform = 'none';
     } else {
       // From the record's pose in the row (wherever the row is right now) to its place in front.
-      const g = pose(openIndex! - pos.value);
+      const g = pose(around(openIndex! - pos.value));
       const k = (g.s * S) / So;
       const u = 1 - t;
       const scrolled = scroller.scrollTop - scrollAt;
@@ -745,7 +755,11 @@ function init(root: HTMLElement) {
     let busy = false;
     if (!rowDrag?.active) {
       const moving = !pos.step(dt);
-      if (!moving) thrown = false;
+      if (!moving) {
+        thrown = false;
+        // At rest, back into 0..n: the same place on the ring, so nothing on screen changes.
+        if (pos.value < -0.5 || pos.value >= n - 0.5) pos.set(mod(Math.round(pos.value)));
+      }
       busy = moving || busy;
     }
     if (openIndex !== null) {

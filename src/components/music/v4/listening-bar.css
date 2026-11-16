@@ -40,35 +40,25 @@
 .v4-intro__title { font-size: clamp(3rem, 9vw, 6rem); line-height: 1; letter-spacing: -0.03em; }
 .v4-intro .lede { max-width: 30rem; }
 
-/* ---------------------------------------------------------------- the bar
-   A graphite wall with one low lamp, the shelf's heading on it, the records leaning in a row, and a
-   lacquered bar top in front that holds their reflections. */
+/* ---------------------------------------------------------------- the carousel
+   A graphite wall with one low lamp, the shelf's heading on it, and the records in a ring that turns
+   sideways: the one in front faces you, its neighbours turn away, and past the last comes the first. */
 .v4-shelf { padding-bottom: clamp(4.5rem, 9vw, 7rem); }
 .v4-bar {
   --s: clamp(196px, 56vw, 300px);
   --lift: 24px;
-  --top: 88px;
+  --foot: 32px; /* room under the sleeves for their turn in perspective */
   position: relative; isolation: isolate;
 }
 .v4-bar__wall {
-  position: absolute; z-index: -1; inset: 0 0 var(--top);
+  position: absolute; z-index: -1; inset: 0;
   background:
     radial-gradient(44% 56% at 50% 0%, rgba(255, 240, 224, 0.1), rgba(255, 240, 224, 0.03) 56%, transparent 80%),
     linear-gradient(180deg, #0c0c0d, #000);
-  -webkit-mask-image: linear-gradient(90deg, transparent, #000 14%, #000 86%, transparent), linear-gradient(180deg, transparent, #000 32%);
+  -webkit-mask-image: linear-gradient(90deg, transparent, #000 14%, #000 86%, transparent), linear-gradient(180deg, transparent, #000 32%, #000 70%, transparent);
   -webkit-mask-composite: source-in;
-  mask-image: linear-gradient(90deg, transparent, #000 14%, #000 86%, transparent), linear-gradient(180deg, transparent, #000 32%);
+  mask-image: linear-gradient(90deg, transparent, #000 14%, #000 86%, transparent), linear-gradient(180deg, transparent, #000 32%, #000 70%, transparent);
   mask-composite: intersect;
-}
-.v4-bar__top {
-  position: absolute; z-index: -1; left: 0; right: 0; bottom: 0; height: var(--top);
-  background:
-    radial-gradient(32% 64% at 50% 0%, rgba(255, 240, 224, 0.06), transparent 72%),
-    radial-gradient(calc(var(--s) * 0.42) 8px at 50% 0, rgba(0, 0, 0, 0.7), transparent),
-    linear-gradient(180deg, #232325 0, #161617 1px, #0e0e0f 8px, #050505 52%, var(--dark));
-  box-shadow: 0 -1px 0 rgba(255, 244, 232, 0.2);
-  -webkit-mask-image: linear-gradient(90deg, transparent, #000 10%, #000 90%, transparent);
-  mask-image: linear-gradient(90deg, transparent, #000 10%, #000 90%, transparent);
 }
 
 /* The heading, on the page's left edge like the intro, one step smaller. */
@@ -78,7 +68,7 @@
 
 .v4-row {
   position: relative;
-  height: calc(var(--lift) + var(--s) + var(--top));
+  height: calc(var(--lift) + var(--s) + var(--foot));
   overflow: hidden;
   touch-action: pan-y pinch-zoom;
   -webkit-user-select: none; user-select: none;
@@ -98,7 +88,7 @@
   touch-action: pan-y pinch-zoom;
   -webkit-user-select: none; user-select: none; -webkit-touch-callout: none;
   transform-origin: 50% 50%;
-  will-change: transform;
+  will-change: transform, opacity;
 }
 .v4-vinyl:focus-visible { outline: none; }
 .v4-vinyl__face {
@@ -106,8 +96,6 @@
   border-radius: 4px;
   background: #111;
   transition: transform 140ms var(--ease-out), opacity 120ms ease;
-  /* Its reflection in the lacquered bar top. */
-  -webkit-box-reflect: below 2px linear-gradient(180deg, transparent 64%, rgba(0, 0, 0, 0.3));
 }
 .v4-vinyl:focus-visible .v4-vinyl__face { outline: 2px solid var(--blue); outline-offset: 4px; }
 .v4-row:not(.is-dragging) .v4-vinyl:active .v4-vinyl__face { transform: scale(0.97); }
@@ -132,16 +120,16 @@
 .v4-caption {
   position: relative; z-index: 1;
   display: grid; justify-items: center; gap: 0.25rem;
-  margin-top: -1.75rem; padding-inline: var(--gutter);
+  margin-top: 0.5rem; padding-inline: var(--gutter);
   text-align: center;
 }
 .v4-caption__title { font-size: 1.3125rem; line-height: 1.2; font-weight: 600; text-wrap: balance; }
 .v4-caption__meta { font-size: 1rem; line-height: 1.25; color: var(--on-dark-2); font-variant-numeric: tabular-nums; }
 
 /* Without the script the row is simply a row you can scroll. */
-html:not(.js) .v4-row { overflow-x: auto; height: auto; padding-block: var(--lift) var(--top); }
+html:not(.js) .v4-row { overflow-x: auto; height: auto; padding-block: var(--lift) var(--foot); }
 html:not(.js) .v4-row__track { position: static; width: max-content; display: flex; gap: 1rem; padding-inline: var(--gutter); }
-html:not(.js) .v4-vinyl { position: relative; top: auto; left: auto; transform: none !important; }
+html:not(.js) .v4-vinyl { position: relative; top: auto; left: auto; transform: none !important; opacity: 1 !important; }
 html:not(.js) .v4-vinyl__shade { opacity: 0 !important; }
 
 /* ---------------------------------------------------------------- the record, out of the row */
