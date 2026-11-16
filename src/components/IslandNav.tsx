@@ -76,7 +76,13 @@ const luma = (colour: string | undefined) => {
   return 0.2126 * r + 0.7152 * g + 0.0722 * b;
 };
 
-export const IslandNav = () => {
+/** Where the song's page lives. */
+const musicPage = '/music';
+
+export const IslandNav = ({ home = '' }: {
+  /** Prefix for the section links: "" on the home page, "/" anywhere else. Defaults to "". */
+  home?: string;
+}) => {
   const [open, setOpen] = useState(false);
   const [pressed, setPressed] = useState(false);
   const [backdrop, setBackdrop] = useState<string | undefined>(undefined);
@@ -95,9 +101,18 @@ export const IslandNav = () => {
     setSound(created);
     let declined = false;
     try { declined = sessionStorage.getItem('island-music') === 'paused'; } catch { /* storage blocked: autostart */ }
-    if (declined) return;
+    // Going to another page of the site (the song's own page, say) loads a new document: carry
+    // on from where the song was instead of dropping the needle again.
+    const keep = () => { try { sessionStorage.setItem('island-music-at', String(el.currentTime)); } catch { /* storage blocked */ } };
+    window.addEventListener('pagehide', keep);
+    try {
+      const at = Number(sessionStorage.getItem('island-music-at'));
+      if (at > 0) el.currentTime = at;
+    } catch { /* storage blocked: from the top */ }
+    if (declined) return () => window.removeEventListener('pagehide', keep);
     // The island's own play button is the visitor choosing; it starts the song itself.
-    return created.autostart({ skip: (target) => target instanceof Element && target.closest('[data-islandcn] .icn-button') !== null });
+    const stop = created.autostart({ skip: (target) => target instanceof Element && target.closest('[data-islandcn] .icn-button') !== null });
+    return () => { stop(); window.removeEventListener('pagehide', keep); };
   }, []);
 
   // The player shows what the audio element is doing and nothing else: every change of the
@@ -220,15 +235,16 @@ export const IslandNav = () => {
   const presentation: IslandPresentation = open
     ? {
         kind: 'expanded',
-        leading: <PlayerCover seed={seed} src={song.cover} />,
-        center: <PlayerTitle title={song.title} artist={song.artist} />,
+        // The song is the way to its page: the cover and the title are each a link to it.
+        leading: <a className="island-nav__song" href={musicPage} aria-label={`${song.title} by ${song.artist}: my music`} onClick={close}><PlayerCover seed={seed} src={song.cover} /></a>,
+        center: <a className="island-nav__song" href={musicPage} tabIndex={-1} aria-hidden="true" onClick={close}><PlayerTitle title={song.title} artist={song.artist} /></a>,
         trailing: <LiveMeter audio={sound} color={tone} size="expanded" />,
         bottom: (
           <div className="island-nav__bottom">
             <PlayerControls playback={playback} duration={song.duration} onToggle={toggle} onSeek={seek} />
             <nav className="island-nav__links" aria-label="Primary">
               {links.map((l) => (
-                <a key={l.href} className="island-nav__link" href={l.href} onClick={close}>{l.label}</a>
+                <a key={l.href} className="island-nav__link" href={`${home}${l.href}`} onClick={close}>{l.label}</a>
               ))}
             </nav>
           </div>

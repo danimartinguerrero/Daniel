@@ -1,0 +1,174 @@
+---
+/**
+ * Music: the "Listening bar" (design 4 of the four that were tried). The records lean in a single row
+ * on the ledge behind a listening bar, browsed sideways; the one in the middle faces you. Tap it and it
+ * stands up off the ledge and comes to the front, still sealed, and its tear tape appears. Pull the
+ * tab across the plastic to unwrap it; the disc slides out of the sleeve and the details follow.
+ * Behaviour lives in components/music/v4/listening-bar.ts.
+ */
+import MusicShell from '@/components/music/MusicShell.astro';
+import { musicCopy, vinyls } from '@/data/music';
+import { sleeveSvg, stripTone } from '@/components/music/v4/sleeve';
+import '@/components/music/v4/listening-bar.css';
+
+// The row opens on a record in the middle, with neighbours on both sides (the script uses the same index).
+const START = 3;
+const first = vinyls[START]!;
+// The row's resting pose before the script takes over (it recomputes the same pose in px).
+const pose = (i: number) => {
+  const d = i - START;
+  const ad = Math.abs(d), near = Math.min(ad, 1), sg = Math.sign(d);
+  const x = sg * (near * 66 + Math.max(0, ad - 1) * 26);
+  return {
+    transform: `translate3d(${x}%,0,0) perspective(572px) rotateY(${-sg * near * 60}deg) scale(${1 - near * 0.14})`,
+    zIndex: String(1000 - Math.round(ad * 10)),
+    shade: String(Math.min(0.78, near * 0.38 + Math.max(0, ad - 1) * 0.12)),
+  };
+};
+---
+<MusicShell title="Music">
+  <main id="main" class="v4" data-music-page>
+    <div class="v4-page" data-v4-page>
+      <section class="v4-intro" aria-labelledby="v4-title">
+        <div class="container v4-intro__inner">
+          <p class="eyebrow v4-eyebrow">{musicCopy.eyebrow}</p>
+          <h1 class="headline v4-intro__title" id="v4-title">{musicCopy.headline}</h1>
+          <p class="lede">{musicCopy.lede}</p>
+        </div>
+      </section>
+
+      <section class="v4-shelf" aria-labelledby="v4-shelf-title">
+        <div class="v4-bar">
+          <div class="v4-bar__wall" aria-hidden="true"></div>
+          <div class="v4-bar__top" aria-hidden="true"></div>
+          <!-- The heading hangs on the wall above the records, on the page's left edge. -->
+          <header class="container v4-shelf__head">
+            <p class="eyebrow v4-eyebrow">{musicCopy.shelf.eyebrow}</p>
+            <h2 class="v4-shelf__title" id="v4-shelf-title">{musicCopy.shelf.headline}</h2>
+            <p class="lede v4-shelf__lede">{musicCopy.shelf.lede}</p>
+          </header>
+          <div class="v4-row" data-v4-row>
+            <div class="v4-row__track">
+              {vinyls.map((v, i) => {
+                const p = pose(i);
+                return (
+                  <button
+                    class="v4-vinyl"
+                    type="button"
+                    data-vinyl={v.id}
+                    data-tone={stripTone(v)}
+                    data-start={i === START ? '' : undefined}
+                    aria-label={`${v.title} by ${v.artist}`}
+                    style={`transform:${p.transform};z-index:${p.zIndex}`}
+                  >
+                    <span class="v4-vinyl__face">
+                      <span class="v4-art" set:html={sleeveSvg(v)} />
+                      <span class="v4-vinyl__gloss" />
+                      <span class="v4-vinyl__shade" data-v4-shade style={`opacity:${p.shade}`} />
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+
+        <p class="v4-caption" aria-hidden="true" data-v4-caption>
+          <span class="v4-caption__title" data-v4-cap-title>{first.title}</span>
+          <span class="v4-caption__meta" data-v4-cap-meta>{first.artist}, {first.year}</span>
+        </p>
+      </section>
+    </div>
+
+    <div class="v4-open" data-v4-open hidden role="dialog" aria-modal="true" aria-labelledby="v4-open-title">
+      <div class="v4-open__scrim" data-v4-scrim></div>
+      <div class="v4-open__scroll" data-v4-scroll>
+        <div class="v4-open__inner">
+          <div class="v4-stage" data-v4-stage>
+            <div class="v4-rec" data-v4-hero>
+              <div class="v4-rec__group" data-v4-group>
+                <div class="v4-disc" data-v4-disc aria-hidden="true">
+                  <div class="v4-disc__sheen"></div>
+                  <div class="v4-disc__label"></div>
+                </div>
+                <div class="v4-rec__sleeve">
+                  <div class="v4-art v4-rec__art" data-v4-art aria-hidden="true"></div>
+                  <!-- The shrink-wrap: clear film in two pieces either side of the tear strip. Each piece
+                       carries two lights: the film pulled taut, and the same film gone slack, which shows
+                       as the strip comes off. -->
+                  <div class="v4-plastic" data-v4-plastic aria-hidden="true">
+                    {(['top', 'bottom'] as const).map((side) => (
+                      <div class={`v4-film v4-film--${side}`} data-v4-film={side}>
+                        <div class="v4-film__win"><div class="v4-film__sheet" data-v4-sheet></div><div class="v4-film__slack" data-v4-slack></div><div class="v4-film__edge"></div></div>
+                      </div>
+                    ))}
+                    <!-- In the row the film is one unbroken sheet. This piece is the film where the tape
+                         will be: it is there as the record comes out and goes as the tape appears. -->
+                    <div class="v4-film v4-film--mid" data-v4-film-mid>
+                      <div class="v4-film__win"><div class="v4-film__sheet"></div></div>
+                    </div>
+                  </div>
+                  <div class="v4-strip" data-unwrap>
+                    <div class="v4-strip__win" data-v4-strip-win>
+                      <div class="v4-strip__band" data-v4-strip-band>
+                        <span class="v4-strip__sweep" data-v4-sweep></span>
+                        <span class="v4-strip__label" data-v4-strip-label aria-hidden="true">{musicCopy.record.unwrap}</span>
+                      </div>
+                    </div>
+                  </div>
+                  <div
+                    class="v4-tab"
+                    data-unwrap-handle
+                    role="slider"
+                    tabindex="0"
+                    aria-label={musicCopy.record.unwrap}
+                    aria-describedby="v4-unwrap-hint"
+                    aria-valuemin="0"
+                    aria-valuemax="100"
+                    aria-valuenow="0"
+                    aria-orientation="horizontal"
+                  >
+                    <span class="v4-tab__knob">
+                      <span class="v4-tab__dot">
+                        <svg viewBox="0 0 16 16" width="10" height="10" aria-hidden="true"><path d="M2.5 8h10.5M8.5 3.5 13 8l-4.5 4.5" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" /></svg>
+                      </span>
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="v4-open__titles" data-v4-titles>
+              <h2 class="v4-open__title" id="v4-open-title" tabindex="-1" data-v4-title></h2>
+              <p class="v4-open__meta" data-v4-meta></p>
+              <p class="v4-open__hint" id="v4-unwrap-hint" data-v4-hint>{musicCopy.record.unwrapHint}</p>
+            </div>
+          </div>
+
+          <div class="v4-details" data-v4-details hidden>
+            <section class="v4-block v4-block--why" data-record-why>
+              <h3 class="v4-block__title">{musicCopy.record.why}</h3>
+              <p class="v4-why" data-v4-why></p>
+            </section>
+            <section class="v4-block v4-block--tracks">
+              <h3 class="v4-block__title">{musicCopy.record.tracklist}</h3>
+              <ol class="v4-tracks" data-tracklist></ol>
+            </section>
+            <section class="v4-block v4-block--info" data-record-info>
+              <h3 class="v4-block__title">{musicCopy.record.info}</h3>
+              <dl class="v4-facts" data-v4-facts></dl>
+            </section>
+          </div>
+
+          <div class="v4-open__bar" data-v4-bar>
+            <button class="pill pill--glass v4-close" type="button" data-record-close>{musicCopy.record.close}</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+</MusicShell>
+
+<script>
+  import '@/components/music/v4/listening-bar';
+</script>

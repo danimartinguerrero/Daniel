@@ -1,0 +1,406 @@
+/* Music, design 4: "Listening bar". Only this page loads this file; every class is prefixed v4-.
+   Spacing sits on a 4px grid. Text uses the site's three dark roles: --on-dark, --on-dark-2 and a
+   muted step (--v4-muted). An open record has no accent of its own: its colour is the sleeve's. */
+
+.v4 {
+  --v4-muted: #6e6e73;
+  --v4-stage: #0b0b0c; /* the open record's backdrop: a neutral near-black, one step above the page */
+  --v4-hair: rgba(245, 245, 247, 0.08);
+  background: var(--dark); color: var(--on-dark); overflow-x: clip;
+}
+.v4 .lede { color: var(--on-dark-2); }
+.v4-eyebrow { color: var(--on-dark-2); }
+
+/* ---------------------------------------------------------------- the plastic, one material
+   The film is clear: only light on it (two photographs of real film), never a wash over the sleeve.
+   The tear tape and its tab are glass, in the site's own language (.pill--glass). What changes with
+   the sleeve (data-tone, worked out from its palette when the page is built) is the tint of that glass
+   and how hard the film's edges are drawn. */
+.v4 {
+  /* Where transparency is turned down, the tape is matte grey instead. */
+  --tape-matte: linear-gradient(90deg, #838385, #b5b1ae 50%, #88888a);
+  --tape-matte-ink: #1d1d1f;
+}
+.v4 [data-tone='dark'] {
+  --film-edge: rgba(255, 255, 255, 0.28);   /* the film's lit edge */
+  --film-edge-dark: rgba(0, 0, 0, 0.24);    /* its shaded edge, bottom and right */
+  --tape-bg: rgba(255, 255, 255, 0.13);     /* clear glass: a little light in it */
+  --tape-sat: 190%;
+}
+.v4 [data-tone='light'] {
+  --film-edge: rgba(255, 255, 255, 0.56);
+  --film-edge-dark: rgba(0, 0, 0, 0.16);
+  --tape-bg: rgba(18, 18, 20, 0.34);        /* smoked glass, so its white label reads on a pale sleeve */
+  --tape-sat: 130%;
+}
+
+/* ---------------------------------------------------------------- intro */
+.v4-intro { padding: calc(5.5rem + env(safe-area-inset-top, 0px)) 0 clamp(2rem, 5vw, 4rem); }
+.v4-intro__inner { display: grid; justify-items: start; gap: 0.75rem; }
+.v4-intro__title { font-size: clamp(3rem, 9vw, 6rem); line-height: 1; letter-spacing: -0.03em; }
+.v4-intro .lede { max-width: 30rem; }
+
+/* ---------------------------------------------------------------- the bar
+   A graphite wall with one low lamp, the shelf's heading on it, the records leaning in a row, and a
+   lacquered bar top in front that holds their reflections. */
+.v4-shelf { padding-bottom: clamp(4.5rem, 9vw, 7rem); }
+.v4-bar {
+  --s: clamp(196px, 56vw, 300px);
+  --lift: 24px;
+  --top: 88px;
+  position: relative; isolation: isolate;
+}
+.v4-bar__wall {
+  position: absolute; z-index: -1; inset: 0 0 var(--top);
+  background:
+    radial-gradient(44% 56% at 50% 0%, rgba(255, 240, 224, 0.1), rgba(255, 240, 224, 0.03) 56%, transparent 80%),
+    linear-gradient(180deg, #0c0c0d, #000);
+  -webkit-mask-image: linear-gradient(90deg, transparent, #000 14%, #000 86%, transparent), linear-gradient(180deg, transparent, #000 32%);
+  -webkit-mask-composite: source-in;
+  mask-image: linear-gradient(90deg, transparent, #000 14%, #000 86%, transparent), linear-gradient(180deg, transparent, #000 32%);
+  mask-composite: intersect;
+}
+.v4-bar__top {
+  position: absolute; z-index: -1; left: 0; right: 0; bottom: 0; height: var(--top);
+  background:
+    radial-gradient(32% 64% at 50% 0%, rgba(255, 240, 224, 0.06), transparent 72%),
+    radial-gradient(calc(var(--s) * 0.42) 8px at 50% 0, rgba(0, 0, 0, 0.7), transparent),
+    linear-gradient(180deg, #232325 0, #161617 1px, #0e0e0f 8px, #050505 52%, var(--dark));
+  box-shadow: 0 -1px 0 rgba(255, 244, 232, 0.2);
+  -webkit-mask-image: linear-gradient(90deg, transparent, #000 10%, #000 90%, transparent);
+  mask-image: linear-gradient(90deg, transparent, #000 10%, #000 90%, transparent);
+}
+
+/* The heading, on the page's left edge like the intro, one step smaller. */
+.v4-shelf__head { display: grid; justify-items: start; gap: 0.75rem; padding-top: clamp(2.5rem, 6vw, 4rem); }
+.v4-shelf__title { font-size: clamp(2.25rem, 6vw, 4rem); line-height: 1.05; font-weight: 600; letter-spacing: -0.025em; }
+.v4-shelf__lede { max-width: 30rem; }
+
+.v4-row {
+  position: relative;
+  height: calc(var(--lift) + var(--s) + var(--top));
+  overflow: hidden;
+  touch-action: pan-y pinch-zoom;
+  -webkit-user-select: none; user-select: none;
+  cursor: grab;
+}
+.v4-row.is-dragging { cursor: grabbing; }
+/* Far wider than the row: the script keeps it scrolled to the middle, so a browser asking to bring a
+   record into view (focus, find, an automation) scrolls it either way and the script turns that into
+   centring the record. Nobody can scroll it by hand. */
+.v4-row__track { position: absolute; top: 0; bottom: 0; left: 0; width: calc(100% + 8000px); }
+
+.v4-vinyl {
+  position: absolute; top: var(--lift); left: calc(50% - var(--s) / 2);
+  width: var(--s); height: var(--s);
+  padding: 0; border: 0; border-radius: 4px; background: none;
+  cursor: inherit;
+  touch-action: pan-y pinch-zoom;
+  -webkit-user-select: none; user-select: none; -webkit-touch-callout: none;
+  transform-origin: 50% 50%;
+  will-change: transform;
+}
+.v4-vinyl:focus-visible { outline: none; }
+.v4-vinyl__face {
+  position: absolute; inset: 0; display: block; overflow: hidden;
+  border-radius: 4px;
+  background: #111;
+  transition: transform 140ms var(--ease-out), opacity 120ms ease;
+  /* Its reflection in the lacquered bar top. */
+  -webkit-box-reflect: below 2px linear-gradient(180deg, transparent 64%, rgba(0, 0, 0, 0.3));
+}
+.v4-vinyl:focus-visible .v4-vinyl__face { outline: 2px solid var(--blue); outline-offset: 4px; }
+.v4-row:not(.is-dragging) .v4-vinyl:active .v4-vinyl__face { transform: scale(0.97); }
+.v4-vinyl.is-out .v4-vinyl__face { opacity: 0; transition: none; }
+.v4-art, .v4-art svg { display: block; width: 100%; height: 100%; }
+/* The lamp's light falling off down the sleeve, and the cardboard's edge. */
+.v4-vinyl__face::after {
+  content: ''; position: absolute; inset: 0; pointer-events: none;
+  background: linear-gradient(180deg, rgba(255, 244, 232, 0.1), transparent 40%, rgba(0, 0, 0, 0.16));
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.06);
+}
+/* Sealed in the row: the same film as the record in your hands, in one unbroken sheet. The tear tape
+   and its tab only appear once a record has been taken out. */
+.v4-vinyl__gloss {
+  position: absolute; inset: 0; pointer-events: none;
+  background-size: 100% 100%; background-repeat: no-repeat;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.4), inset 0 0 0 1px var(--film-edge);
+}
+.v4-vinyl.is-unwrapped .v4-vinyl__gloss { display: none; }
+.v4-vinyl__shade { position: absolute; inset: 0; background: #000; pointer-events: none; }
+
+.v4-caption {
+  position: relative; z-index: 1;
+  display: grid; justify-items: center; gap: 0.25rem;
+  margin-top: -1.75rem; padding-inline: var(--gutter);
+  text-align: center;
+}
+.v4-caption__title { font-size: 1.3125rem; line-height: 1.2; font-weight: 600; text-wrap: balance; }
+.v4-caption__meta { font-size: 1rem; line-height: 1.25; color: var(--on-dark-2); font-variant-numeric: tabular-nums; }
+
+/* Without the script the row is simply a row you can scroll. */
+html:not(.js) .v4-row { overflow-x: auto; height: auto; padding-block: var(--lift) var(--top); }
+html:not(.js) .v4-row__track { position: static; width: max-content; display: flex; gap: 1rem; padding-inline: var(--gutter); }
+html:not(.js) .v4-vinyl { position: relative; top: auto; left: auto; transform: none !important; }
+html:not(.js) .v4-vinyl__shade { opacity: 0 !important; }
+
+/* ---------------------------------------------------------------- the record, out of the row */
+.v4-open {
+  position: fixed; inset: 0; z-index: 40;
+}
+.v4-open[hidden] { display: none; }
+.v4-open.is-fade { transition: opacity 200ms ease; }
+/* Scroll edge: the details fade out as they pass under the island instead of meeting it at a line. */
+.v4-open::after {
+  content: ''; position: absolute; top: 0; left: 0; right: 0; height: calc(env(safe-area-inset-top, 0px) + 72px);
+  background: linear-gradient(180deg, var(--v4-stage) 36%, rgba(11, 11, 12, 0));
+  pointer-events: none;
+}
+.v4-open__scrim { position: absolute; inset: 0; opacity: 0; background: var(--v4-stage); }
+.v4-open__scroll {
+  position: absolute; inset: 0;
+  overflow-x: hidden; overflow-y: auto; overscroll-behavior: contain;
+}
+.v4-open__inner {
+  --so: max(220px, min(360px, 76vw, calc(100svh - 300px)));
+  min-height: 100%;
+  display: flex; flex-direction: column; align-items: center;
+  padding: max(80px, calc(env(safe-area-inset-top, 0px) + 64px)) var(--gutter) 0;
+}
+.v4-rec { position: relative; flex: none; width: var(--so); height: var(--so); transform-origin: 50% 50%; will-change: transform; }
+.v4-rec__group { position: absolute; inset: 0; transform-origin: 50% 50%; }
+.v4-rec__sleeve {
+  --band: max(40px, calc(var(--so) * 0.14));
+  --tabw: max(28px, calc(var(--so) * 0.09));
+  position: absolute; inset: 0; border-radius: 4px;
+  box-shadow: 0 32px 60px -24px rgba(0, 0, 0, 0.9), 0 12px 28px rgba(0, 0, 0, 0.45);
+}
+.v4-rec__art { position: absolute; inset: 0; border-radius: 4px; overflow: hidden; background: #111; }
+.v4-rec__art::after { content: ''; position: absolute; inset: 0; box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.06); }
+
+/* The disc. Grooves, a few gaps between tracks, a plain label, and two opposite wedges of light. */
+.v4-disc {
+  position: absolute; top: 2%; left: 2%; width: 96%; height: 96%;
+  border-radius: 50%;
+  background:
+    radial-gradient(circle closest-side, transparent 0 46%, rgba(0, 0, 0, 0.55) 46.4% 47%, transparent 47.4% 58%, rgba(0, 0, 0, 0.55) 58.4% 59%, transparent 59.4% 71%, rgba(0, 0, 0, 0.55) 71.4% 72%, transparent 72.4% 84%, rgba(0, 0, 0, 0.5) 84.4% 85%, transparent 85.4% 96%, rgba(255, 255, 255, 0.06) 96.5% 98.5%, transparent 99%),
+    repeating-radial-gradient(circle closest-side, #121214 0 1px, #1c1c1f 1.5px 2.2px),
+    #111;
+  box-shadow: 0 24px 48px -16px rgba(0, 0, 0, 0.85), 0 0 0 1px rgba(255, 255, 255, 0.05);
+  will-change: transform;
+}
+.v4-disc__sheen {
+  position: absolute; inset: 0; border-radius: 50%;
+  background: conic-gradient(from 296deg, transparent 0 3%, rgba(255, 255, 255, 0.13) 8%, transparent 14% 50%, rgba(255, 255, 255, 0.13) 58%, transparent 64% 100%);
+  -webkit-mask-image: radial-gradient(circle closest-side, transparent 0 35%, #000 36% 96%, transparent 97%);
+  mask-image: radial-gradient(circle closest-side, transparent 0 35%, #000 36% 96%, transparent 97%);
+}
+.v4-disc__label {
+  position: absolute; top: 32%; left: 32%; width: 36%; height: 36%;
+  border-radius: 50%;
+  background:
+    radial-gradient(circle closest-side, #050505 0 5%, rgba(0, 0, 0, 0.25) 6% 7%, transparent 8%),
+    radial-gradient(circle closest-side, transparent 0 80%, rgba(0, 0, 0, 0.14) 80.5% 81.5%, transparent 82% 94%, rgba(0, 0, 0, 0.25) 96%),
+    var(--label-bg, #444);
+}
+
+/* The shrink-wrap: clear film cut in two along the tape, one piece above and one below. Each piece is
+   a window onto the same full-size sheet, so the light crosses the gap unbroken; the film adds light
+   only. When the tape is off, both pieces swing away on a spring. */
+.v4-plastic { position: absolute; inset: 0; border-radius: 4px; overflow: hidden; pointer-events: none; }
+.v4-film { position: absolute; left: 0; right: 0; height: calc(50% - var(--band) / 2); transform-origin: 100% 50%; will-change: transform, opacity; }
+.v4-film--top { top: 0; }
+.v4-film--bottom { bottom: 0; }
+.v4-film__win { position: absolute; inset: 0; overflow: hidden; }
+.v4-film__sheet, .v4-film__slack, .v4-film__edge { position: absolute; left: 0; right: 0; height: var(--so); }
+.v4-film--top :is(.v4-film__sheet, .v4-film__slack, .v4-film__edge) { top: 0; }
+.v4-film--bottom :is(.v4-film__sheet, .v4-film__slack, .v4-film__edge) { bottom: 0; }
+/* The film under the tape: the same sheet seen through the tape's own gap. */
+.v4-film--mid { top: calc(50% - var(--band) / 2); height: var(--band); }
+.v4-film--mid .v4-film__sheet { top: calc(var(--band) / 2 - var(--so) / 2); }
+/* Light on the film: two photographs of real plastic film, prepared by scripts/film-textures.mjs as
+   white light with a soft shadow under it. Taut: long streaks fanning up across the sleeve from its
+   lower left. Slack: broad crumpled folds; the script fades it in as the tape comes off and the film
+   loses its tension. */
+.v4-film__sheet, .v4-film__slack { background-size: 100% 100%; background-repeat: no-repeat; will-change: opacity; }
+.v4-film__sheet, .v4-vinyl__gloss { background-image: url('./film-taut.webp'); }
+.v4-film__slack { background-image: url('./film-slack.webp'); opacity: 0; }
+/* The film's edge hugs the sleeve: lit along the top and the left, shaded on the right and below. */
+.v4-film__edge {
+  border-radius: 4px;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.6), inset 1px 0 0 var(--film-edge), inset -1px 0 0 var(--film-edge-dark), inset 0 -1px 0 var(--film-edge-dark);
+}
+/* The tear tape: a band of glass across the middle of the sleeve. The sleeve shows through it, a
+   little blurred and richer in colour; its rim catches the light along the top, and light pools in its
+   upper half. It spans exactly the sleeve and is torn away from the left; the window and the band move
+   in opposite directions so the band stays put while less of it shows. The window is 8px taller each
+   way for the band's shadow. */
+.v4-strip {
+  position: absolute; left: 0; right: 0; top: calc(50% - var(--band) / 2); height: var(--band);
+  touch-action: none; cursor: grab;
+  -webkit-user-select: none; user-select: none; -webkit-touch-callout: none;
+}
+.v4-strip::before { content: ''; position: absolute; left: 0; right: 0; top: 50%; height: max(48px, 100%); transform: translateY(-50%); }
+.v4-strip__win { position: absolute; left: 0; right: 0; top: -8px; bottom: -8px; overflow: hidden; will-change: transform; }
+.v4-strip__band {
+  position: absolute; left: 0; right: 0; top: 8px; bottom: 8px; overflow: hidden;
+  display: grid; place-items: center;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.22), rgba(255, 255, 255, 0.03) 46%, rgba(255, 255, 255, 0) 78%, rgba(255, 255, 255, 0.08)),
+    var(--tape-bg);
+  -webkit-backdrop-filter: blur(9px) saturate(var(--tape-sat)) brightness(1.06);
+  backdrop-filter: blur(9px) saturate(var(--tape-sat)) brightness(1.06);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.62), inset 0 -1px 0 rgba(255, 255, 255, 0.16),
+    0 1px 2px rgba(0, 0, 0, 0.3), 0 3px 8px rgba(0, 0, 0, 0.22);
+  will-change: transform;
+}
+.v4-strip__label {
+  position: relative;
+  font-size: 0.9375rem; line-height: 1; font-weight: 500; letter-spacing: 0.01em;
+  color: rgba(255, 255, 255, 0.96); text-shadow: 0 1px 2px rgba(0, 0, 0, 0.4);
+  white-space: nowrap;
+}
+.v4-strip__sweep {
+  position: absolute; inset: 0; opacity: 0;
+  background: linear-gradient(90deg, transparent 36%, rgba(255, 255, 255, 0.34) 50%, transparent 64%);
+}
+
+/* The pull tab: the free end of the tape, in the same clear glass. It is as tall as the band and flush
+   with it, rounded only on its outer side, and at rest it sits wholly off the sleeve's
+   left edge. Its right edge is the tear: band ahead of it, bare sleeve behind. Hit box: at least 48px
+   each way. */
+.v4-tab {
+  position: absolute; left: calc(var(--tabw) * -1); top: calc(50% - var(--band) / 2); width: var(--tabw); height: var(--band);
+  touch-action: none; cursor: grab;
+  -webkit-user-select: none; user-select: none; -webkit-touch-callout: none;
+  will-change: transform;
+}
+.v4-tab::before { content: ''; position: absolute; left: 50%; top: 50%; width: max(48px, 100%); height: max(48px, 100%); transform: translate(-50%, -50%); }
+.v4-tab:focus-visible { outline: none; }
+.v4-tab:focus-visible .v4-tab__knob { outline: 2px solid var(--blue); outline-offset: 3px; }
+.v4-tab.is-pressed { cursor: grabbing; }
+.v4-tab__knob {
+  position: absolute; inset: 0; border-radius: 12px 0 0 12px; isolation: isolate;
+  display: grid; place-items: center;
+  background: rgba(255, 255, 255, 0.16);
+  -webkit-backdrop-filter: blur(9px) saturate(190%) brightness(1.06);
+  backdrop-filter: blur(9px) saturate(190%) brightness(1.06);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.3), -2px 4px 10px rgba(0, 0, 0, 0.26);
+  transition: filter 120ms ease-out, opacity 180ms ease, transform 200ms var(--ease-out);
+}
+.v4-tab__knob::before, .v4-tab__knob::after { content: ''; position: absolute; border-radius: inherit; pointer-events: none; z-index: -1; }
+/* The rim: a 1px ring painted with a gradient, bright where the light hits (top and outer side). */
+.v4-tab__knob::before {
+  inset: 0; padding: 1px 0 1px 1px;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.85), rgba(255, 255, 255, 0.2) 40%, rgba(255, 255, 255, 0.1) 70%, rgba(255, 255, 255, 0.4));
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor; mask-composite: exclude;
+}
+/* The sheen: light pooling in the upper half of the glass. */
+.v4-tab__knob::after {
+  inset: 1px 0 1px 1px;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.34), rgba(255, 255, 255, 0.04) 52%, rgba(255, 255, 255, 0));
+}
+/* The dot with the arrow: white, with the arrow in near-black, so it reads on the glass over any sleeve. */
+.v4-tab__dot {
+  width: 57%; aspect-ratio: 1; border-radius: 50%;
+  display: grid; place-items: center;
+  background: rgba(255, 255, 255, 0.94); color: #1d1d1f;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.28);
+  transition: transform 160ms var(--ease-out);
+}
+.v4-tab__dot svg { display: block; width: 62%; height: 62%; }
+.v4-tab.is-pressed .v4-tab__knob { filter: brightness(1.1); }
+.v4-tab.is-pressed .v4-tab__dot { transform: scale(0.9); }
+
+/* Off: the tab slips over the edge, and the two pieces of film swing away (listening-bar.ts). */
+.v4-open[data-record-unwrapped] .v4-tab__knob { transform: translateX(12px); opacity: 0; transition: transform 200ms var(--ease-out), opacity 110ms ease-out; }
+.v4-open[data-record-unwrapped] .v4-plastic { opacity: 0; transition: opacity 200ms ease; }
+/* While the film is coming away the springs move it; it may pass the sleeve's edge. Clear film shows
+   only by its edges and its glints, which read as stray lines once it leaves the sleeve, so off the
+   sleeve it gets the faintest body. */
+.v4-open.is-shedding .v4-plastic { opacity: 1; transition: none; overflow: visible; }
+.v4-open.is-shedding .v4-film__edge { background: rgba(255, 255, 255, 0.05); }
+.v4-open[data-record-unwrapped] .v4-strip, .v4-open[data-record-unwrapped] .v4-tab { visibility: hidden; transition: visibility 0s linear 320ms; }
+.v4-open.is-instant .v4-plastic, .v4-open.is-instant .v4-tab__knob, .v4-open.is-instant .v4-strip, .v4-open.is-instant .v4-tab { transition: none !important; }
+
+/* Sealed, the record and its name sit in the middle of the screen; once open they make room at the top. */
+.v4-stage { display: flex; flex-direction: column; align-items: center; width: 100%; }
+.v4-open:not([data-layout-open]) .v4-stage { margin-block: auto; }
+.v4-open__titles { margin-top: 1.75rem; display: grid; justify-items: center; gap: 0.25rem; text-align: center; max-width: 34rem; }
+.v4-open__title { font-size: clamp(1.75rem, 4vw, 2.5rem); line-height: 1.1; font-weight: 600; letter-spacing: -0.015em; text-wrap: balance; }
+.v4-open__title:focus { outline: none; }
+.v4-open__meta { font-size: 1.0625rem; line-height: 1.25; color: var(--on-dark-2); font-variant-numeric: tabular-nums; }
+.v4-open__hint { margin-top: 0.75rem; font-size: 0.9375rem; line-height: 1.25; color: var(--v4-muted); }
+.v4-open[data-layout-open] .v4-open__hint { display: none; }
+
+/* The details rise in beneath the record. */
+.v4-details {
+  width: min(100%, 36rem); margin-top: 3rem; padding-bottom: 0.5rem;
+  display: grid; gap: 3rem;
+}
+.v4-details[hidden] { display: none; }
+.v4-details > * { opacity: 0; transform: translateY(20px); transition: opacity 260ms ease, transform 560ms var(--ease-out); }
+.v4-open[data-show-details] .v4-details > * { opacity: 1; transform: none; }
+.v4-open[data-show-details] .v4-details > :nth-child(2) { transition-delay: 60ms; }
+.v4-open[data-show-details] .v4-details > :nth-child(3) { transition-delay: 120ms; }
+.v4-block__title { font-size: 0.9375rem; line-height: 1.25; font-weight: 500; color: var(--on-dark-2); }
+.v4-why { margin-top: 0.75rem; font-size: 1.25rem; line-height: 1.4; font-weight: 500; color: var(--on-dark); text-wrap: pretty; }
+.v4-tracks { list-style: none; margin: 0.5rem 0 0; padding: 0; counter-reset: v4-track; }
+.v4-tracks li {
+  counter-increment: v4-track;
+  display: grid; grid-template-columns: 1.5rem 1fr; column-gap: 1rem; align-items: center;
+  min-height: 44px; padding-block: 0.5rem;
+  font-size: 1.0625rem; line-height: 1.3;
+}
+.v4-tracks li + li { box-shadow: 0 -1px 0 var(--v4-hair); }
+.v4-tracks li::before { content: counter(v4-track); text-align: right; color: var(--v4-muted); font-size: 0.9375rem; font-variant-numeric: tabular-nums; }
+/* The facts: three short ones on top, the two long ones under them. */
+.v4-facts { margin: 0.75rem 0 0; display: grid; grid-template-columns: repeat(6, 1fr); gap: 0.5rem; }
+.v4-fact {
+  grid-column: span 2;
+  display: grid; align-content: space-between; gap: 0.75rem;
+  min-height: 5.5rem; padding: 1rem; border-radius: 16px;
+  background: var(--dark-tile); box-shadow: inset 0 0 0 1px var(--v4-hair);
+}
+.v4-fact--label, .v4-fact--genre { grid-column: span 3; }
+.v4-fact dt { font-size: 0.8125rem; line-height: 1.25; color: var(--on-dark-2); }
+.v4-fact dd { margin: 0; font-size: 1.0625rem; line-height: 1.25; font-weight: 500; text-wrap: balance; }
+.v4-fact--year dd, .v4-fact--format dd, .v4-fact--tracks dd { font-size: 1.5rem; line-height: 1; letter-spacing: -0.01em; font-weight: 600; font-variant-numeric: tabular-nums; }
+@media (min-width: 900px) {
+  .v4-details { width: min(100%, 60rem); grid-template-columns: 1fr 1fr; column-gap: 4rem; }
+  .v4-block--why { grid-column: 1 / -1; max-width: 40rem; }
+}
+
+/* "Put it back" floats at the bottom, thumb-reachable; the content fades out beneath it, and the end of
+   the details always scrolls clear of it. */
+.v4-open__bar {
+  position: sticky; bottom: 0; z-index: 2;
+  display: flex; justify-content: center;
+  margin-inline: calc(var(--gutter) * -1); width: calc(100% + 2 * var(--gutter));
+  padding: 3.5rem 0 calc(1.25rem + env(safe-area-inset-bottom, 0px));
+  background: linear-gradient(180deg, rgba(11, 11, 12, 0), rgba(11, 11, 12, 0.9) 48%, var(--v4-stage) 78%);
+  pointer-events: none;
+}
+.v4-open[data-layout-open] .v4-open__bar { margin-top: auto; }
+.v4-close { pointer-events: auto; min-width: 9.5rem; color: var(--on-dark); font-weight: 500; }
+
+@media (prefers-reduced-motion: reduce) {
+  .v4-details > * { transform: none; transition: opacity 200ms ease; }
+  .v4-open[data-record-unwrapped] .v4-plastic { transform: none; transition: opacity 200ms ease; }
+  .v4-open[data-record-unwrapped] .v4-tab__knob { transform: none; }
+}
+@media (prefers-reduced-transparency: reduce) {
+  .v4-strip__band { background: var(--tape-matte); -webkit-backdrop-filter: none; backdrop-filter: none; }
+  .v4-strip__label { color: var(--tape-matte-ink); text-shadow: none; }
+  .v4-tab__knob { background: #3a3a3c; -webkit-backdrop-filter: none; backdrop-filter: none; }
+  .v4-open__bar { background: linear-gradient(180deg, transparent, var(--v4-stage) 40%); }
+}
+@media (prefers-contrast: more) {
+  .v4-caption__meta, .v4-open__meta, .v4-block__title, .v4-fact dt, .v4-open__hint { color: #c7c7cc; }
+  .v4-strip__band { background: var(--tape-matte); -webkit-backdrop-filter: none; backdrop-filter: none; }
+  .v4-strip__label { color: var(--tape-matte-ink); text-shadow: none; }
+  .v4-tab__knob { background: #3a3a3c; -webkit-backdrop-filter: none; backdrop-filter: none; }
+}

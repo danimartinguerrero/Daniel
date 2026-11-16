@@ -1,0 +1,47 @@
+---
+/**
+ * The frame every music page shares: the document head, the island (the site's navigation, with
+ * the song in it) and the footer. A design fills the slot with its own <main>.
+ */
+import '@/styles/global.css';
+import Island from '@/components/Island.astro';
+
+interface Props {
+  /** The page title; the site's name is added after it. */
+  title?: string;
+  description?: string;
+}
+const { title = 'Music', description = 'I love music, and I love making things with it. These are the records I own on vinyl.' } = Astro.props;
+---
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>{title} · Nicolás Muñoz García</title>
+    <meta name="description" content={description} />
+    <meta name="theme-color" content="#000" />
+    <link rel="icon" href="/favicon.ico" sizes="48x48" />
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" sizes="any" />
+    <link rel="icon" href="/favicon-32.png" type="image/png" sizes="32x32" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    <script is:inline>document.documentElement.classList.add('js');</script>
+  </head>
+  <body>
+    <a class="skip sr-only" href="#main">Skip to content</a>
+    <Island />
+    <slot />
+    <footer class="music-footer">
+      <div class="container--wide music-footer__inner">
+        <p><a href="/">Nicolás Muñoz García</a></p>
+        <p>© 2026 Nicolás Muñoz García</p>
+      </div>
+    </footer>
+  </body>
+</html>
+
+<style is:global>
+  .music-footer { background: var(--dark); color: var(--on-dark-2); font-size: 0.75rem; }
+  .music-footer__inner { display: flex; justify-content: space-between; gap: 1rem; flex-wrap: wrap; padding-block: 1.25rem calc(2rem + env(safe-area-inset-bottom)); border-top: 1px solid rgba(255, 255, 255, 0.12); }
+  .music-footer a { text-decoration: none; }
+</style>
