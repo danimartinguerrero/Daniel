@@ -41,21 +41,37 @@ const hoverCloseDelay = 180;
 const metrics = { expanded: { maxHeight: 300 } } as const satisfies IslandMetricsOverrides;
 
 /**
- * The close. The shape and its springs are islandcn's `collapse`, untouched; so is how the cover
- * and the meter come back (stepped frame by frame against upstream's own player on its own
- * <Island>, the two match value for value). What upstream leaves is a moment with nothing in the
- * pill: the card's content is gone by about 0.2 s and the compact content only starts at 0.36 s, so
- * the island closes empty and then the cover and the bars turn up. Two timings close that gap:
+ * The open and the close, tuned on islandcn's iOS-fitted springs so each reads as one motion on a
+ * phone (stepped frame by frame, 60 Hz, iPhone size):
  *
- * - the card's content leaves on a slower spring (0.4 s for 0.22) and stays a little brighter as it
- *   blurs, so it is still there, shrinking with the shape, until the pill is at its narrowest;
- * - the compact content starts 0.06 s sooner (0.3 s), as the pill turns to spring back out.
- *
- * The only frames left with nothing to see are the ones at the pill's waist, where it is barely
- * wider than the sensor and the sensor would cover anything inside it anyway.
+ * - The close goes straight to the compact pill. Upstream's `collapse` heads for the idle pill
+ *   first and turns at 0.31 s: the card shrank to 105 wide, under the 155 it ends at, stopped,
+ *   grew back 55 pt with a 5 pt overshoot and settled at about 0.95 s, empty from 0.2 to 0.43 s
+ *   while it waited to turn. Now the edges, height and corners each take one near critically
+ *   damped spring (0.4 / 0.9, 0.38 / 0.92: under 0.5 pt past the end, settled by about 0.45 s),
+ *   with no lean or swell at the end (`tail`), and the cover and bars come in from 0.06 s as the
+ *   card's content leaves on 0.3 s (0.6 keeps it bright while it blurs), so the two overlap all
+ *   the way down.
+ * - The open keeps its springs, a little more damped (0.79 to 0.86 for a tap, 0.82 to 0.86 for
+ *   hover and keyboard): the card went 3.6 pt past its size and back, now about 1. The compact cover
+ *   and bars, drawn twice the size and blurred, lingered faintly over the card until 0.55 s; they
+ *   now leave on 0.2 s at their presence's pace (`exitFade` 0.7 for 0.5 and 0.65) and are gone by
+ *   0.3 s.
+ * - No blur skirts (`blurSkirt`): each blurred slot drew a cloned copy of itself at under 4.5%
+ *   opacity on a plus-lighter blend, too faint to see and a blurred, blended layer more per slot.
  */
 const motion = {
-  contentTiming: { collapse: { exit: { response: 0.4 }, exitFade: 0.6, enter: { delay: 0.3 } } },
+  viaIdle: { collapse: 0 },
+  shape: { pressExpand: { dampingFraction: 0.86 }, expand: { dampingFraction: 0.86 }, collapse: { response: 0.4, dampingFraction: 0.9 } },
+  body: { pressExpand: { dampingFraction: 0.86 }, expand: { dampingFraction: 0.86 }, collapse: { response: 0.38, dampingFraction: 0.92 } },
+  corner: { collapse: { response: 0.38, dampingFraction: 0.92, delay: 0 } },
+  tail: { collapse: { width: { lean: { by: 0 }, settle: { at: 0 } }, height: { lean: { by: 0 }, settle: { at: 0 } }, top: { settle: { at: 0 } } } },
+  contentTiming: {
+    pressExpand: { exit: { response: 0.2 }, exitFade: 0.7 },
+    expand: { exit: { response: 0.2 }, exitFade: 0.7 },
+    collapse: { exit: { response: 0.3 }, exitFade: 0.6, enter: { response: 0.36, delay: 0.06 } },
+  },
+  blurSkirt: { max: 0 },
 } as const satisfies IslandMotionOverrides;
 
 /** The page colour just below the island, so the engine's keyline knows how dark it is. */
@@ -231,6 +247,13 @@ export const IslandNav = ({ home = '' }: {
 
   const close = useCallback(() => setNow(false), [setNow]);
 
+  // When a touch on the trigger closed the island (its click is then spent).
+  const pressClosed = useRef<number | null>(null);
+
+  // The meters hold their bars while the island opens or closes (LiveMeter's `hold`).
+  const meterHold = useRef(0);
+  useEffect(() => { meterHold.current = performance.now() + 500; }, [open]);
+
   const playing = playback.kind === 'playing';
   const presentation: IslandPresentation = open
     ? {
@@ -238,7 +261,7 @@ export const IslandNav = ({ home = '' }: {
         // The song is the way to its page: the cover and the title are each a link to it.
         leading: <a className="island-nav__song" href={musicPage} aria-label={`${song.title} by ${song.artist}: my music`} onClick={close}><PlayerCover seed={seed} src={song.cover} /></a>,
         center: <a className="island-nav__song" href={musicPage} tabIndex={-1} aria-hidden="true" onClick={close}><PlayerTitle title={song.title} artist={song.artist} /></a>,
-        trailing: <LiveMeter audio={sound} color={tone} size="expanded" />,
+        trailing: <LiveMeter audio={sound} color={tone} size="expanded" hold={meterHold} />,
         bottom: (
           <div className="island-nav__bottom">
             <PlayerControls playback={playback} duration={song.duration} onToggle={toggle} onSeek={seek} />
@@ -253,7 +276,7 @@ export const IslandNav = ({ home = '' }: {
     : {
         kind: 'compact',
         leading: <Artwork seed={seed} src={song.cover} size={22} radius={6} />,
-        trailing: <LiveMeter audio={sound} color={tone} size="compact" />,
+        trailing: <LiveMeter audio={sound} color={tone} size="compact" hold={meterHold} />,
       };
 
   const dark = luma(backdrop) < 80;
@@ -275,11 +298,20 @@ export const IslandNav = ({ home = '' }: {
         type="button"
         aria-label={`Menu. ${playing ? 'Playing' : 'Paused'}: ${song.title} by ${song.artist}`}
         aria-expanded={open}
-        onPointerDown={(e) => { if (e.pointerType !== 'mouse') setPressed(true); }}
+        onPointerDown={(e) => {
+          if (e.pointerType === 'mouse') return;
+          // Open, a touch on it closes it as it lands, as a touch outside does, rather than swelling
+          // the card first and closing on the lift; the click that follows is spent.
+          if (open) { pressClosed.current = e.timeStamp; setNow(false); return; }
+          setPressed(true);
+        }}
         onPointerUp={() => setPressed(false)}
         onPointerCancel={() => setPressed(false)}
         onPointerLeave={() => setPressed(false)}
         onClick={(e) => {
+          const spent = pressClosed.current;
+          pressClosed.current = null;
+          if (spent !== null && e.timeStamp - spent < 1000) return;
           // A mouse that hovers has already opened it; a click then keeps it open.
           if (e.detail > 0 && fine.current) { setNow(true); return; }
           setNow((v) => !v);

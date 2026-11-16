@@ -28,7 +28,7 @@ import {
 } from "./geometry";
 import { IslandLayer, type SlotName } from "./layer";
 import { continuousRectPath } from "./path";
-import { isAppleWebKit, writeBlur } from "./platform";
+import { shadowBoxes, writeBlur } from "./platform";
 import { Skirts, skirtBlur, skirtDim, skirtWeight } from "./skirt";
 import type { IslandMetrics } from "./metrics";
 import type { ContentMotion, DelayedSpring, ExpandedRegion, IslandMotion, RegionLag } from "./motion";
@@ -536,7 +536,7 @@ const keylineAt = (
   return keyline * grown * expanded * dip;
 };
 
-const shadowBox: CSSProperties = { position: "absolute", top: 0, left: 0, display: "none", pointerEvents: "none" };
+const shadowBox: CSSProperties = { position: "absolute", top: 0, left: 0, display: "none", pointerEvents: "none", transformOrigin: "0 0", willChange: "transform, opacity" };
 
 const srOnly: CSSProperties = {
   position: "absolute",
@@ -648,20 +648,69 @@ const boxShadow = (shadow: IslandMetrics["expanded"]["shadow"], alpha: number) =
  */
 const shadowInset = 1;
 
-/** Places one shadow box, or hides it. */
-const placeShadow = (element: HTMLDivElement | null, box: { x: number; y: number; width: number; height: number; radius: number; lead?: number }, css: string | null) => {
+/** What a shadow box was last painted at: its size, corners and shadow. */
+interface ShadowPaint {
+  width: number;
+  height: number;
+  radius: number;
+  lead: number;
+  css: string;
+}
+
+const shadowPaints = new WeakMap<HTMLDivElement, ShadowPaint>();
+
+/** How much larger than the shape's target a moving shadow box is painted, so a spring's overshoot fits without a repaint. */
+const shadowRoom = 1.03;
+
+/**
+ * Places one shadow box, or hides it. `css` is the shadow at full strength and `strength` (0 to 1)
+ * its opacity. The box is painted (size, corners, shadow) only when it has to be: at rest at the
+ * shape's own size, in motion at the larger of the shape and `room` (where the shape is heading),
+ * then scaled to the shape by a transform. A moving shape so costs a transform and an opacity per
+ * frame on the compositor, where writing the size and the shadow every frame repainted a blur up
+ * to 81 px wide each time (local change: half the open's raster time in Chrome's trace on this
+ * path; mid-motion the scaled shadow is a little tighter, at rest it is the same).
+ */
+const placeShadow = (
+  element: HTMLDivElement | null,
+  box: { x: number; y: number; width: number; height: number; radius: number; lead?: number },
+  css: string | null,
+  strength: number,
+  room: { width: number; height: number; radius: number } | null,
+  still: boolean,
+) => {
   if (!element) return;
   const show = css !== null && box.width > 2 * shadowInset && box.height > 2 * shadowInset;
   element.style.display = show ? "block" : "none";
   if (!show) return;
-  element.style.transform = `translate(${box.x + shadowInset}px, ${box.y + shadowInset}px)`;
-  element.style.width = `${box.width - 2 * shadowInset}px`;
-  element.style.height = `${box.height - 2 * shadowInset}px`;
+  const w = box.width - 2 * shadowInset;
+  const h = box.height - 2 * shadowInset;
   const r = Math.max(0, box.radius - shadowInset);
   // Rounder left corners (`cornerLead`): top-left, top-right, bottom-right, bottom-left.
   const lead = box.lead === undefined || box.lead === box.radius ? r : Math.max(0, box.lead - shadowInset);
-  element.style.borderRadius = lead === r ? `${r}px` : `${lead}px ${r}px ${r}px ${lead}px`;
-  element.style.boxShadow = css;
+  const painted = shadowPaints.get(element);
+  let paint = painted;
+  if (still) {
+    paint = { width: w, height: h, radius: r, lead, css };
+  } else if (!painted || painted.css !== css || w > painted.width || h > painted.height) {
+    const width = Math.max(w, room ? room.width - 2 * shadowInset : 0) * shadowRoom;
+    const height = Math.max(h, room ? room.height - 2 * shadowInset : 0) * shadowRoom;
+    const radius = Math.min(Math.max(r, room ? room.radius - shadowInset : 0), width / 2, height / 2);
+    paint = { width, height, radius, lead: lead === r ? radius : Math.min(lead, width / 2, height / 2), css };
+  }
+  if (!paint) return;
+  if (paint !== painted && (!painted || painted.width !== paint.width || painted.height !== paint.height || painted.radius !== paint.radius || painted.lead !== paint.lead || painted.css !== paint.css)) {
+    element.style.width = `${paint.width}px`;
+    element.style.height = `${paint.height}px`;
+    element.style.borderRadius = paint.lead === paint.radius ? `${paint.radius}px` : `${paint.lead}px ${paint.radius}px ${paint.radius}px ${paint.lead}px`;
+    element.style.boxShadow = paint.css;
+    shadowPaints.set(element, paint);
+  }
+  const sx = w / Math.max(1e-6, paint.width);
+  const sy = h / Math.max(1e-6, paint.height);
+  const scaled = Math.abs(sx - 1) > 1e-4 || Math.abs(sy - 1) > 1e-4;
+  element.style.transform = `translate(${box.x + shadowInset}px, ${box.y + shadowInset}px)${scaled ? ` scale(${sx.toFixed(5)}, ${sy.toFixed(5)})` : ""}`;
+  element.style.opacity = strength >= 0.9999 ? "" : strength.toFixed(4);
 };
 
 const wallNow = () => (typeof performance === "undefined" ? Date.now() : performance.now());
@@ -823,7 +872,7 @@ export const IslandSurface = (props: IslandSurfaceProps) => {
   }, []);
 
   /** The shape's own writes: outline paths, hit areas, shadow, keyline and the content's clip. */
-  const drawShape = useCallback((frame: FrameGeometry, t: number, clipPath: string) => {
+  const drawShape = useCallback((frame: FrameGeometry, t: number, clipPath: string, still: boolean) => {
     const { metrics: m, reduced } = live.current;
     const { pill, bubble, paths } = frame;
 
@@ -858,12 +907,17 @@ export const IslandSurface = (props: IslandSurfaceProps) => {
       const on = alpha > 0.002;
       shadowKey.current?.setAttribute("slope", on ? alpha.toFixed(4) : "0");
       shadowTail.current?.setAttribute("slope", on ? (alpha * shadow.tail.strength).toFixed(4) : "0");
-      // Apple's WebKit renders the SVG filter on the CPU every frame; it gets CSS shadows instead.
-      const boxes = isAppleWebKit();
+      // Apple's WebKit renders the SVG filter on the CPU every frame, and a phone in any engine
+      // redraws its two wide blurs over the whole stage every frame: both get CSS shadows instead.
+      const boxes = shadowBoxes();
       svg.current.style.filter = on && !boxes ? `url(#${shadowId.current})` : "none";
-      const css = on && boxes ? boxShadow(shadow, alpha) : null;
-      placeShadow(shadowPill.current, frame.drawn, css);
-      placeShadow(shadowBubble.current, { ...bubble, radius: bubble.height / 2 }, css);
+      const css = on && boxes ? boxShadow(shadow, shadow.opacity) : null;
+      const strength = shadow.opacity > 0 ? alpha / shadow.opacity : 0;
+      // In motion the pill's box is painted at the size the shape is heading for.
+      const target = last.current.target;
+      const room = target ? { width: target.right - target.left, height: target.height, radius: target.radius } : null;
+      placeShadow(shadowPill.current, frame.drawn, css, strength, room, still);
+      placeShadow(shadowBubble.current, { ...bubble, radius: bubble.height / 2 }, css, strength, null, still);
     }
 
     // Keyline: a faint band outside the edge on dark pages. It belongs to the activity, so it
@@ -1488,7 +1542,7 @@ export const IslandSurface = (props: IslandSurfaceProps) => {
     const frame = frameAt(anim, t, width, m);
     const { pill, bubble, paths } = frame;
     const clipPath = paths.pill ? `path("${paths.clip}")` : "none";
-    if (!sink) drawShape(frame, t, clipPath);
+    if (!sink) drawShape(frame, t, clipPath, still);
     drawLayers(frame, t, width, clipPath, still, sink);
   }, [drawShape, drawLayers]);
 

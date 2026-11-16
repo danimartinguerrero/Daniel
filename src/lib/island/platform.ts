@@ -26,6 +26,21 @@ export const isAppleWebKit = (): boolean => {
   return cached;
 };
 
+let coarse: boolean | null = null;
+
+/**
+ * True where the expanded shadow is drawn as CSS box shadows rather than the SVG filter: Apple's
+ * WebKit (above), and any engine on a touch screen (local change). Chrome on a phone redraws the
+ * filter's two wide blurs over the whole stage at 3x every frame the shape moves: in Chrome's
+ * trace at iPhone size it was most of the open's raster time and dropped 7 frames of 54. Desktop
+ * Chrome and Firefox keep the filter.
+ */
+export const shadowBoxes = (): boolean => {
+  if (isAppleWebKit()) return true;
+  if (coarse === null) coarse = typeof matchMedia === "function" && matchMedia("(pointer: coarse)").matches;
+  return coarse;
+};
+
 /**
  * Writes a CSS blur in px (none at or under 0.01). In Apple's WebKit the element is made its own
  * layer while it is blurred and released once sharp, so small radii draw as asked (see above).
