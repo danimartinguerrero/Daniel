@@ -1,6 +1,6 @@
 "use client";
 
-import type { CSSProperties } from "react";
+import { type CSSProperties, useState } from "react";
 
 import { islandMetrics } from "@/lib/island";
 
@@ -11,6 +11,7 @@ import { ExpandedBottom } from "./island-layout";
 import { ExpandedSubtitle, ExpandedTitle, MinimalPair, tabularFigures } from "./island-text";
 import { LevelMeter } from "./level-meter";
 import { TimeProgress } from "./linear-progress";
+import { Scrubber } from "./scrubber";
 import { IslandStyle } from "./island-style";
 import { islandFont, islandInk } from "./theme";
 import { formatClock, TickingTime } from "./ticking-time";
@@ -192,7 +193,7 @@ export const PlayerMeter = ({ color, active = true, size }: {
  * then the transport row placed by centre, with the output button at its end. A button shows when
  * its handler is set; with none, the time row is the last row.
  */
-export const PlayerControls = ({ playback, duration, onToggle, onPrevious, onNext, onOutput }: {
+export const PlayerControls = ({ playback, duration, onToggle, onPrevious, onNext, onOutput, onSeek }: {
   /** Where playback is. */
   playback: PlaybackState;
   /** Track length in ms. */
@@ -205,11 +206,22 @@ export const PlayerControls = ({ playback, duration, onToggle, onPrevious, onNex
   onNext?: () => void;
   /** Audio output button at the row's trailing end; shown when set. Defaults to none. */
   onOutput?: () => void;
+  /**
+   * Local change (personal site): with this set the bar can be dragged, tapped and keyed to seek
+   * (`Scrubber`), and it is called with the chosen position in ms. Defaults to none: the bar only shows progress.
+   */
+  onSeek?: (ms: number) => void;
 }) => {
   const playing = playback.kind === "playing";
-  const elapsed = playing ? <TickingTime source={{ kind: "elapsed", since: playback.startedAt }} /> : <TickingTime source={{ kind: "fixed", ms: playback.position }} />;
+  // While the bar is dragged, both times read the spot under the finger.
+  const [scrub, setScrub] = useState<number | null>(null);
+  const elapsed = scrub !== null ? (
+    <TickingTime source={{ kind: "fixed", ms: scrub }} />
+  ) : playing ? <TickingTime source={{ kind: "elapsed", since: playback.startedAt }} /> : <TickingTime source={{ kind: "fixed", ms: playback.position }} />;
   // A real minus sign (U+2212): a hyphen in tabular figures is a digit wide, which leaves a gap after it.
-  const remaining = playing ? (
+  const remaining = scrub !== null ? (
+    <TickingTime source={{ kind: "fixed", ms: Math.ceil((duration - scrub) / 1000) * 1000 }} format={(ms) => `\u2212${formatClock(ms)}`} />
+  ) : playing ? (
     <TickingTime source={{ kind: "remaining", until: playback.startedAt + duration }} format={(ms) => `\u2212${formatClock(ms)}`} />
   ) : (
     // Local change (personal site): a running countdown shows whole seconds rounded up, so the
@@ -231,14 +243,26 @@ export const PlayerControls = ({ playback, duration, onToggle, onPrevious, onNex
         }}
       >
         <span style={{ ...timeText, paddingRight: player.timeGap }}>{elapsed}</span>
-        <TimeProgress
-          source={playing ? { kind: "elapsed", since: playback.startedAt } : { kind: "fixed", ms: playback.position }}
-          duration={duration}
-          color={islandInk.primary}
-          track={player.track}
-          height={player.bar}
-          ends="square"
-        />
+        {onSeek === undefined ? (
+          <TimeProgress
+            source={playing ? { kind: "elapsed", since: playback.startedAt } : { kind: "fixed", ms: playback.position }}
+            duration={duration}
+            color={islandInk.primary}
+            track={player.track}
+            height={player.bar}
+            ends="square"
+          />
+        ) : (
+          <Scrubber
+            source={playing ? { kind: "elapsed", since: playback.startedAt } : { kind: "fixed", ms: playback.position }}
+            duration={duration}
+            color={islandInk.primary}
+            track={player.track}
+            height={player.bar}
+            onSeek={onSeek}
+            onScrub={setScrub}
+          />
+        )}
         <span style={{ ...timeText, paddingLeft: player.timeGap, textAlign: "right" }}>{remaining}</span>
       </div>
       {anyControl ? (

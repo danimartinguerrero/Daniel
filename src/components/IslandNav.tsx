@@ -4,7 +4,7 @@ import { Artwork } from '@/components/islandcn/artwork';
 import { PlayerControls, PlayerCover, PlayerTitle, type PlaybackState } from '@/components/islandcn/now-playing-activity';
 import { createIslandAudio, type IslandAudio } from '@/components/island-audio';
 import { LiveMeter } from '@/components/LiveMeter';
-import { IslandView, islandMetrics, type IslandMetricsOverrides, type IslandPresentation } from '@/lib/island';
+import { IslandView, islandMetrics, type IslandMetricsOverrides, type IslandMotionOverrides, type IslandPresentation } from '@/lib/island';
 
 /**
  * The navigation as the island, drawn by the islandcn engine (src/lib/island), with a song in it.
@@ -39,6 +39,24 @@ const hoverCloseDelay = 180;
 
 /** The player and the links need more room than the engine's 180 pt cap. */
 const metrics = { expanded: { maxHeight: 300 } } as const satisfies IslandMetricsOverrides;
+
+/**
+ * The close. The shape and its springs are islandcn's `collapse`, untouched; so is how the cover
+ * and the meter come back (stepped frame by frame against upstream's own player on its own
+ * <Island>, the two match value for value). What upstream leaves is a moment with nothing in the
+ * pill: the card's content is gone by about 0.2 s and the compact content only starts at 0.36 s, so
+ * the island closes empty and then the cover and the bars turn up. Two timings close that gap:
+ *
+ * - the card's content leaves on a slower spring (0.4 s for 0.22) and stays a little brighter as it
+ *   blurs, so it is still there, shrinking with the shape, until the pill is at its narrowest;
+ * - the compact content starts 0.06 s sooner (0.3 s), as the pill turns to spring back out.
+ *
+ * The only frames left with nothing to see are the ones at the pill's waist, where it is barely
+ * wider than the sensor and the sensor would cover anything inside it anyway.
+ */
+const motion = {
+  contentTiming: { collapse: { exit: { response: 0.4 }, exitFade: 0.6, enter: { delay: 0.3 } } },
+} as const satisfies IslandMotionOverrides;
 
 /** The page colour just below the island, so the engine's keyline knows how dark it is. */
 const backdropUnder = (y: number): string | undefined => {
@@ -123,6 +141,14 @@ export const IslandNav = () => {
     try { sessionStorage.setItem('island-music', nowPlaying ? 'on' : 'paused'); } catch { /* storage blocked */ }
   }, [sound]);
 
+  // The scrubber: jump there. The element's "seeked" event puts the clock and the meter on it.
+  const seek = useCallback((ms: number) => {
+    const el = audio.current;
+    if (!el) return;
+    const length = Number.isFinite(el.duration) ? el.duration : song.duration / 1000;
+    el.currentTime = Math.min(length, Math.max(0, ms / 1000));
+  }, []);
+
   useEffect(() => {
     const media = matchMedia('(hover: hover) and (pointer: fine)');
     fine.current = media.matches;
@@ -199,7 +225,7 @@ export const IslandNav = () => {
         trailing: <LiveMeter audio={sound} color={tone} size="expanded" />,
         bottom: (
           <div className="island-nav__bottom">
-            <PlayerControls playback={playback} duration={song.duration} onToggle={toggle} />
+            <PlayerControls playback={playback} duration={song.duration} onToggle={toggle} onSeek={seek} />
             <nav className="island-nav__links" aria-label="Primary">
               {links.map((l) => (
                 <a key={l.href} className="island-nav__link" href={l.href} onClick={close}>{l.label}</a>
@@ -252,6 +278,7 @@ export const IslandNav = () => {
         pressed={pressed}
         backdrop={backdrop}
         metrics={metrics}
+        motion={motion}
       />
       <audio ref={audio} src={song.src} preload="auto" />
     </div>
