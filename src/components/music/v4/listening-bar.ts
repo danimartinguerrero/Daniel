@@ -46,6 +46,41 @@ function init(root: HTMLElement, signal: AbortSignal) {
   const byId = new Map(vinyls.map((v) => [v.id, v] as const));
   const records = buttons.map((b) => byId.get(b.dataset.vinyl!)!);
   const n = buttons.length;
+
+  /* The same black shade hides a dark sleeve long before a pale one: at the edge of the row a dark
+     sleeve has already gone into the background while a pale one is still a bright square. So each
+     sleeve's average brightness is measured once from its art, and dimTo[i] is the factor that brings a
+     brighter-than-usual sleeve down to the usual (the median) as it moves out; 1 leaves it alone. */
+  const dimTo = new Float32Array(n).fill(1);
+  async function measureSleeves() {
+    const SIZE = 12;
+    const canvas = document.createElement('canvas');
+    canvas.width = canvas.height = SIZE;
+    const g = canvas.getContext('2d', { willReadFrequently: true });
+    if (!g) return;
+    const lin = (c: number) => ((c /= 255) <= 0.04045 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4);
+    const lum: number[] = [];
+    for (const b of buttons) {
+      const svg = b.querySelector('.v4-art svg')?.cloneNode(true) as SVGSVGElement | undefined;
+      if (!svg) return;
+      svg.setAttribute('width', String(SIZE));
+      svg.setAttribute('height', String(SIZE));
+      const img = new Image();
+      img.src = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(new XMLSerializer().serializeToString(svg))}`;
+      await img.decode();
+      g.clearRect(0, 0, SIZE, SIZE);
+      g.drawImage(img, 0, 0, SIZE, SIZE);
+      const px = g.getImageData(0, 0, SIZE, SIZE).data;
+      let sum = 0;
+      for (let k = 0; k < px.length; k += 4) sum += 0.2126 * lin(px[k]!) + 0.7152 * lin(px[k + 1]!) + 0.0722 * lin(px[k + 2]!);
+      lum.push(sum / (px.length / 4));
+    }
+    const median = [...lum].sort((a, b) => a - b)[Math.floor(n / 2)]!;
+    lum.forEach((l, i) => (dimTo[i] = l > median ? median / l : 1));
+    if (!signal.aborted) renderRow();
+  }
+  measureSleeves().catch(() => {}); // without it every sleeve keeps the plain shade
+
   const capTitle = q('[data-v4-cap-title]');
   const capMeta = q('[data-v4-cap-meta]');
   const caption = q('[data-v4-caption]');
@@ -125,6 +160,10 @@ function init(root: HTMLElement, signal: AbortSignal) {
         x += Math.sign(d) * Math.min(Math.abs(d), 1) * part * S * 0.32;
         shade = Math.min(0.85, shade + part * 0.3);
       }
+      // From the second record out, a sleeve brighter than most is dimmed to their brightness, so a
+      // pale one goes into the pile as the dark ones do instead of staying lit and vanishing at the end.
+      const t = clamp(Math.abs(d) - 2, 0, 1);
+      if (t > 0 && dimTo[i]! < 1) shade = 1 - (1 - shade) * (1 - t * t * (3 - 2 * t) * (1 - dimTo[i]!));
       const b = buttons[i]!;
       css(b, 'transform', `translate3d(${x.toFixed(2)}px,0,0) perspective(${P.toFixed(0)}px) rotateY(${g.rot.toFixed(3)}deg) scale(${g.s.toFixed(4)})`);
       css(shades[i]!, 'opacity', shade.toFixed(3));
