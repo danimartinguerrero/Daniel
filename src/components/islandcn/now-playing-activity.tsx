@@ -1,6 +1,6 @@
 "use client";
 
-import { type CSSProperties, useState } from "react";
+import { type CSSProperties, useEffect, useState } from "react";
 
 import { islandMetrics } from "@/lib/island";
 
@@ -8,13 +8,13 @@ import { Artwork, artworkColors } from "./artwork";
 import { AudioOutputGlyph, PlayerBackGlyph, PlayerForwardGlyph, PlayerPauseGlyph, PlayerPlayGlyph } from "./glyphs";
 import { IslandRoundButton } from "./island-button";
 import { ExpandedBottom } from "./island-layout";
-import { ExpandedSubtitle, ExpandedTitle, MinimalPair, tabularFigures } from "./island-text";
+import { ExpandedSubtitle, ExpandedTitle, MinimalPair, NumberText, tabularFigures } from "./island-text";
 import { LevelMeter } from "./level-meter";
 import { TimeProgress } from "./linear-progress";
 import { Scrubber } from "./scrubber";
 import { IslandStyle } from "./island-style";
 import { islandFont, islandInk } from "./theme";
-import { formatClock, TickingTime } from "./ticking-time";
+import { formatClock } from "./ticking-time";
 import { useActivity, useLatest } from "./use-activity";
 
 /**
@@ -189,6 +189,78 @@ export const PlayerMeter = ({ color, active = true, size }: {
 };
 
 /**
+ * Local change (personal site): the time row, the elapsed and remaining times at the ends of the
+ * bar, with one clock for all of it. Upstream gave each time its own (`TickingTime`), one counting
+ * up in whole seconds rounded down and one counting down rounded up, so the two changed at different
+ * moments (0.45 s apart in a 2:57.45 song) and their sum went between 2:57 and 2:58; under a
+ * finger on the bar that read as the two sides flickering in turn. Here the time left is the
+ * song's length less the whole seconds played, so both sides change in the same frame and always
+ * add up to the same length.
+ *
+ * While the bar holds a position (dragged, and after the lift until the song is there) both times
+ * read that position, in place: a digit that crosses over is 60 ms behind the finger.
+ */
+const PlayerTimeline = ({ playback, duration, onSeek, inset }: {
+  playback: PlaybackState;
+  /** Track length in ms. */
+  duration: number;
+  /** With this set the bar seeks (`Scrubber`); without it, it only shows progress. */
+  onSeek?: (ms: number) => void;
+  /** Whether the row keeps the player's side insets (it does with a transport row under it). */
+  inset: boolean;
+}) => {
+  const playing = playback.kind === "playing";
+  /** The position the bar is holding, if it is (`Scrubber`'s `onScrub`). */
+  const [scrub, setScrub] = useState<number | null>(null);
+  // The time is read from the song's clock on every render, so it is never a render behind; this
+  // only wakes the row on each whole second played, when what it reads changes.
+  const [, wake] = useState(0);
+  const startedAt = playing ? playback.startedAt : null;
+  useEffect(() => {
+    if (startedAt === null) return;
+    let timer = 0;
+    const sleep = () => {
+      const played = Date.now() - startedAt;
+      if (played >= duration) return;
+      const intoSecond = ((played % 1000) + 1000) % 1000;
+      timer = window.setTimeout(() => {
+        wake((n) => n + 1);
+        sleep();
+      }, Math.max(16, 1000 - intoSecond + 4));
+    };
+    sleep();
+    return () => window.clearTimeout(timer);
+  }, [startedAt, duration]);
+
+  const at = scrub ?? (playing ? Date.now() - playback.startedAt : playback.position);
+  const seconds = Math.floor(Math.min(duration, Math.max(0, at)) / 1000);
+  // The length rounds up, as upstream's countdown did: 2:57.45 starts at 2:58 left.
+  const left = Math.ceil(duration / 1000) - seconds;
+  const source = playing ? ({ kind: "elapsed", since: playback.startedAt } as const) : ({ kind: "fixed", ms: playback.position } as const);
+  const time = (text: string) => <NumberText value={text} style={{ fontFamily: islandFont }} motion="steady" still={scrub !== null} />;
+  return (
+    <div
+      style={{
+        display: "grid",
+        gridTemplateColumns: `minmax(${player.elapsedColumn}px, max-content) minmax(0, 1fr) minmax(${player.remainingColumn}px, max-content)`,
+        alignItems: "center",
+        paddingLeft: inset ? player.timeInset.start : 0,
+        paddingRight: inset ? player.timeInset.end : 0,
+      }}
+    >
+      <span style={{ ...timeText, paddingRight: player.timeGap }}>{time(formatClock(seconds * 1000))}</span>
+      {onSeek === undefined ? (
+        <TimeProgress source={source} duration={duration} color={islandInk.primary} track={player.track} height={player.bar} ends="square" />
+      ) : (
+        <Scrubber source={source} duration={duration} color={islandInk.primary} track={player.track} height={player.bar} onSeek={onSeek} onScrub={setScrub} />
+      )}
+      {/* A real minus sign (U+2212): a hyphen in tabular figures is a digit wide, which leaves a gap after it. */}
+      <span style={{ ...timeText, paddingLeft: player.timeGap, textAlign: "right" }}>{time(`\u2212${formatClock(left * 1000)}`)}</span>
+    </div>
+  );
+};
+
+/**
  * The expanded player's bottom: the elapsed and remaining times at the ends of a white scrubber,
  * then the transport row placed by centre, with the output button at its end. A button shows when
  * its handler is set; with none, the time row is the last row.
@@ -213,58 +285,12 @@ export const PlayerControls = ({ playback, duration, onToggle, onPrevious, onNex
   onSeek?: (ms: number) => void;
 }) => {
   const playing = playback.kind === "playing";
-  // While the bar is dragged, both times read the spot under the finger.
-  const [scrub, setScrub] = useState<number | null>(null);
-  const elapsed = scrub !== null ? (
-    <TickingTime source={{ kind: "fixed", ms: scrub }} />
-  ) : playing ? <TickingTime source={{ kind: "elapsed", since: playback.startedAt }} /> : <TickingTime source={{ kind: "fixed", ms: playback.position }} />;
-  // A real minus sign (U+2212): a hyphen in tabular figures is a digit wide, which leaves a gap after it.
-  const remaining = scrub !== null ? (
-    <TickingTime source={{ kind: "fixed", ms: Math.ceil((duration - scrub) / 1000) * 1000 }} format={(ms) => `\u2212${formatClock(ms)}`} />
-  ) : playing ? (
-    <TickingTime source={{ kind: "remaining", until: playback.startedAt + duration }} format={(ms) => `\u2212${formatClock(ms)}`} />
-  ) : (
-    // Local change (personal site): a running countdown shows whole seconds rounded up, so the
-    // paused one rounds up too; rounding it down made the time left jump a second on every pause.
-    <TickingTime source={{ kind: "fixed", ms: Math.ceil((duration - playback.position) / 1000) * 1000 }} format={(ms) => `\u2212${formatClock(ms)}`} />
-  );
   const anyControl = onToggle !== undefined || onPrevious !== undefined || onNext !== undefined || onOutput !== undefined;
   return (
     // With no buttons under it, the time row is the last one and its ends sit in the corner arcs,
     // which cut the last digit of the remaining time: pull it in until they clear.
     <ExpandedBottom gap={player.rowGap} reach={anyControl ? "none" : "inset"} style={{ paddingTop: player.timeTop, paddingBottom: anyControl ? player.bottomPad : 0 }}>
-      <div
-        style={{
-          display: "grid",
-          gridTemplateColumns: `minmax(${player.elapsedColumn}px, max-content) minmax(0, 1fr) minmax(${player.remainingColumn}px, max-content)`,
-          alignItems: "center",
-          paddingLeft: anyControl ? player.timeInset.start : 0,
-          paddingRight: anyControl ? player.timeInset.end : 0,
-        }}
-      >
-        <span style={{ ...timeText, paddingRight: player.timeGap }}>{elapsed}</span>
-        {onSeek === undefined ? (
-          <TimeProgress
-            source={playing ? { kind: "elapsed", since: playback.startedAt } : { kind: "fixed", ms: playback.position }}
-            duration={duration}
-            color={islandInk.primary}
-            track={player.track}
-            height={player.bar}
-            ends="square"
-          />
-        ) : (
-          <Scrubber
-            source={playing ? { kind: "elapsed", since: playback.startedAt } : { kind: "fixed", ms: playback.position }}
-            duration={duration}
-            color={islandInk.primary}
-            track={player.track}
-            height={player.bar}
-            onSeek={onSeek}
-            onScrub={setScrub}
-          />
-        )}
-        <span style={{ ...timeText, paddingLeft: player.timeGap, textAlign: "right" }}>{remaining}</span>
-      </div>
+      <PlayerTimeline playback={playback} duration={duration} onSeek={onSeek} inset={anyControl} />
       {anyControl ? (
         // Placed by their centres, not by flex gaps, so the pause stays on the island's centre
         // line whichever buttons are there.

@@ -24,7 +24,11 @@ interface ScrubberProps {
   height: number;
   /** Called once with the chosen position (ms) when a drag ends, a tap lands or a key moves it. */
   onSeek: (ms: number) => void;
-  /** Called with the position under the finger while dragging, and with null when the drag is over. */
+  /**
+   * Called with the position the bar is holding: the one under the finger while dragging, and the
+   * chosen one after the lift until the song is there. Called with null when the bar is the song's
+   * again. Whatever reads the time beside the bar shows the same place as the bar, all the way.
+   */
   onScrub?: (ms: number | null) => void;
 }
 
@@ -62,6 +66,13 @@ export const Scrubber = ({ source, duration, color, track, height, onSeek, onScr
   /** Where the last key press sent the song, until the song reports it: the next press goes on from there. */
   const keyed = useRef<number | null>(null);
   const key = source.kind === "elapsed" ? `e${source.since}` : `f${source.ms}`;
+  const report = useRef(onScrub);
+  report.current = onScrub;
+  /** Holds the bar at a position, or gives it back to the song, and says so. */
+  const hold = (ms: number | null) => {
+    setScrub(ms);
+    report.current?.(ms);
+  };
 
   useEffect(() => {
     setPosition(playheadAt(source, duration));
@@ -69,7 +80,7 @@ export const Scrubber = ({ source, duration, color, track, height, onSeek, onScr
     // The song has moved (the seek landed): the bar is the song's again.
     if (pointer.current === null) {
       window.clearTimeout(settle.current);
-      setScrub(null);
+      hold(null);
     }
     if (source.kind !== "elapsed") return;
     const timer = window.setInterval(() => setPosition(playheadAt(source, duration)), 500);
@@ -88,17 +99,16 @@ export const Scrubber = ({ source, duration, color, track, height, onSeek, onScr
   const release = (commit: boolean) => {
     pointer.current = null;
     setHeld(false);
-    onScrub?.(null);
     const ms = chosen.current;
     chosen.current = null;
     if (!commit || ms === null) {
-      setScrub(null);
+      hold(null);
       return;
     }
     onSeek(ms);
-    // Hold the chosen spot until the song reports it, so the fill never darts back in between.
+    // Hold the chosen spot until the song reports it, so the fill and the times never dart back in between.
     window.clearTimeout(settle.current);
-    settle.current = window.setTimeout(() => setScrub(null), 1000);
+    settle.current = window.setTimeout(() => hold(null), 1000);
   };
 
   const onPointerDown = (event: PointerEvent<HTMLSpanElement>) => {
@@ -111,15 +121,13 @@ export const Scrubber = ({ source, duration, color, track, height, onSeek, onScr
     const ms = at(event.clientX);
     chosen.current = ms;
     setHeld(true);
-    setScrub(ms);
-    onScrub?.(ms);
+    hold(ms);
   };
   const onPointerMove = (event: PointerEvent<HTMLSpanElement>) => {
     if (pointer.current !== event.pointerId) return;
     const ms = at(event.clientX);
     chosen.current = ms;
-    setScrub(ms);
-    onScrub?.(ms);
+    hold(ms);
   };
   const onPointerUp = (event: PointerEvent<HTMLSpanElement>) => {
     if (pointer.current === event.pointerId) release(true);

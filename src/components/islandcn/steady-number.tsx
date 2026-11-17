@@ -70,10 +70,11 @@ interface PlaceTurn {
   at: number;
 }
 
-/** The changes in flight, by place counted from the right, and every place that has ever changed. */
+/** The changes in flight, by place counted from the right, every place that has ever changed, and when the value last did. */
 interface Changes {
   turns: ReadonlyMap<number, PlaceTurn>;
   cells: ReadonlySet<number>;
+  at: number;
 }
 
 interface SteadyNumberProps {
@@ -81,31 +82,48 @@ interface SteadyNumberProps {
   value: number | string;
   /** Styles on the wrapper (font, size, colour). Defaults to none. */
   style?: CSSProperties;
+  /**
+   * Local addition (personal site): while true, a change shows at once, with no crossing. For a
+   * value that follows a finger (a scrubber's times): it has to read exactly what is under the
+   * finger in every frame. Defaults to false.
+   */
+  still?: boolean;
 }
 
 /**
  * Text whose changed characters cross over in place, overlapped so one of them always reads.
  * Places count from the right, so 9:59 to 10:00 keeps the seconds in their cells. Unchanged
  * characters don't move. Use it under the island's reduced-motion check (`NumberText` does).
+ *
+ * Local change (personal site): a value that changes again before its last change has finished
+ * (arrow keys held on a scrubber, a seek landing on a tick) changes in place from then on, as it
+ * does while `still`. Upstream let each place go on with its own turn, a new one starting over,
+ * so for a while each digit showed a different moment: going from 0:29 through 0:30 to 0:32 read
+ * "0:20", a time the value never had, and a run of changes read as numbers jumping back and forth.
  */
-export const SteadyNumber = ({ value, style }: SteadyNumberProps) => {
+export const SteadyNumber = ({ value, style, still = false }: SteadyNumberProps) => {
   const text = String(value);
   const [shown, setShown] = useState(text);
-  const [changes, setChanges] = useState<Changes>({ turns: new Map(), cells: new Set() });
+  const [changes, setChanges] = useState<Changes>({ turns: new Map(), cells: new Set(), at: Number.NEGATIVE_INFINITY });
   if (shown !== text) {
     // Adjusting state while rendering puts the old characters in the same commit as the new ones.
     const now = performance.now();
     const turns = new Map<number, PlaceTurn>();
-    // A place still changing keeps going; a new change at it starts over from what it was turning to.
-    for (const [place, turn] of changes.turns) if ((now - turn.at) / 1000 < TURN_SECONDS && place < text.length) turns.set(place, turn);
-    const before = [...shown];
-    const after = [...text];
-    for (let place = 0; place < after.length; place += 1) {
-      const from = before[before.length - 1 - place] ?? "";
-      if (from !== after[after.length - 1 - place]) turns.set(place, { from, at: now });
+    // One change at a time: every place that turns starts with the others, so together they always
+    // read one value or the next. With the last change still under way, this one just shows.
+    if (!still && (now - changes.at) / 1000 >= TURN_SECONDS) {
+      const before = [...shown];
+      const after = [...text];
+      for (let place = 0; place < after.length; place += 1) {
+        const from = before[before.length - 1 - place] ?? "";
+        if (from !== after[after.length - 1 - place]) turns.set(place, { from, at: now });
+      }
     }
     setShown(text);
-    setChanges({ turns, cells: new Set([...changes.cells, ...turns.keys()]) });
+    setChanges({ turns, cells: new Set([...changes.cells, ...turns.keys()]), at: now });
+  } else if (still && changes.turns.size > 0) {
+    // Held from now on: a change caught half way finishes at once.
+    setChanges({ ...changes, turns: new Map() });
   }
 
   const wrapper = useRef<HTMLSpanElement | null>(null);

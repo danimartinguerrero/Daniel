@@ -65,7 +65,7 @@ export type NumberMotion = "live" | "steady" | "none";
  * A value whose changed digits turn over when it updates, like a live status activity's numbers, in
  * tabular figures so it keeps its width. With reduced motion it changes in place.
  */
-export const NumberText = ({ value, style, turn, motion = "live" }: {
+export const NumberText = ({ value, style, turn, motion = "live", still }: {
   /** The number, or text such as "4:07". Write a negative value with a minus sign (U+2212), not a hyphen. */
   value: number | string;
   /** Styles on the text. Defaults to none. */
@@ -74,12 +74,14 @@ export const NumberText = ({ value, style, turn, motion = "live" }: {
   turn?: number;
   /** How changed digits move. Defaults to "live". */
   motion?: NumberMotion;
+  /** Local addition (personal site): with the "steady" motion, changes show at once while true (`SteadyNumber`'s `still`). Defaults to false. */
+  still?: boolean;
 }) => {
   const reduced = useIslandReducedMotion();
   const figures = { ...tabularFigures, ...style };
   // "none": a clock that simply changes, as the system's recorder does; any crossing showed two digits at once.
   if (reduced || motion === "none") return <span style={figures}>{value}</span>;
-  return motion === "steady" ? <SteadyNumber value={value} style={figures} /> : <IslandNumber value={value} style={figures} turn={turn} />;
+  return motion === "steady" ? <SteadyNumber value={value} style={figures} still={still} /> : <IslandNumber value={value} style={figures} turn={turn} />;
 };
 
 /** 15 pt semibold, the trailing text in compact and minimal. */

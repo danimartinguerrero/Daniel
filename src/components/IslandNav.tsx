@@ -163,6 +163,9 @@ export const IslandNav = ({ home = '' }: {
     const playing = () => setPlayback({ kind: 'playing', startedAt: Date.now() - el.currentTime * 1000 });
     const paused = () => setPlayback({ kind: 'paused', position: el.currentTime * 1000 });
     const ended = () => setPlayback({ kind: 'paused', position: 0 });
+    // A seek, from its start ("seeking") as well as its end: the element already reports the new
+    // place, so the clock goes there at once. Waiting for "seeked" left the old time showing until
+    // the audio was ready, and a run of seeks (the arrow keys held) only ends in one "seeked".
     const seeked = () => (el.paused ? paused() : playing());
     // The clock runs on its own between events; if the audio stalled or skipped, put it back.
     const drift = () => {
@@ -177,6 +180,7 @@ export const IslandNav = ({ home = '' }: {
     el.addEventListener('playing', playing);
     el.addEventListener('pause', paused);
     el.addEventListener('ended', ended);
+    el.addEventListener('seeking', seeked);
     el.addEventListener('seeked', seeked);
     el.addEventListener('timeupdate', drift);
     // Where it is now: already playing, if the island attaches to a song under way.
@@ -186,6 +190,7 @@ export const IslandNav = ({ home = '' }: {
       el.removeEventListener('playing', playing);
       el.removeEventListener('pause', paused);
       el.removeEventListener('ended', ended);
+      el.removeEventListener('seeking', seeked);
       el.removeEventListener('seeked', seeked);
       el.removeEventListener('timeupdate', drift);
     };
@@ -320,6 +325,23 @@ export const IslandNav = ({ home = '' }: {
 
   const close = useCallback(() => setNow(false), [setNow]);
 
+  // A press inside the island, under way or just over. Safari doesn't focus a button on a press: it
+  // only takes focus off whatever had it, and the progress bar has it after a drag. That blur, with
+  // focus going nowhere, read as the visitor leaving and closed the island under the press: seek,
+  // press pause, and the player was gone.
+  const pressInside = useRef({ down: false, liftedAt: Number.NEGATIVE_INFINITY });
+  useEffect(() => {
+    const lift = () => {
+      if (pressInside.current.down) pressInside.current = { down: false, liftedAt: performance.now() };
+    };
+    addEventListener('pointerup', lift, true);
+    addEventListener('pointercancel', lift, true);
+    return () => {
+      removeEventListener('pointerup', lift, true);
+      removeEventListener('pointercancel', lift, true);
+    };
+  }, []);
+
   // Open, the song is one press from its page: fetch it and its scripts now, so the page opens out of
   // the island the moment it is pressed, carousel and all (scripts/warm.ts).
   useEffect(() => { if (open) warm(musicPage); }, [open]);
@@ -396,7 +418,13 @@ export const IslandNav = ({ home = '' }: {
       data-nudge={!open && !playing && nudge ? '' : undefined}
       onPointerEnter={(e) => { if (e.pointerType === 'mouse' && fine.current) setSoon(true, hoverOpenDelay); }}
       onPointerLeave={(e) => { if (e.pointerType === 'mouse' && fine.current) setSoon(false, hoverCloseDelay); }}
-      onBlur={(e) => { if (!root.current?.contains(e.relatedTarget as Node | null)) setNow(false); }}
+      onPointerDownCapture={() => { pressInside.current.down = true; }}
+      onBlur={(e) => {
+        if (root.current?.contains(e.relatedTarget as Node | null)) return;
+        // On a phone the blur comes with the click, a moment after the finger lifts.
+        if (e.relatedTarget === null && (pressInside.current.down || performance.now() - pressInside.current.liftedAt < 400)) return;
+        setNow(false);
+      }}
     >
       <button
         ref={trigger}
