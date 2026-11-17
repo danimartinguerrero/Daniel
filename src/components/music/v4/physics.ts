@@ -94,14 +94,41 @@ export class VelocityTracker {
     while (this.samples.length > 2 && t - this.samples[0]!.t > 100) this.samples.shift();
   }
 
-  velocity(now: number) {
+  /** Over the last `window` ms of moves (100 at most, which is all it keeps). A short window is the
+      speed the pointer has now rather than the one it had on average: for handing what it was dragging
+      over to a spring, which should carry on at the speed that was on screen. */
+  velocity(now: number, window = 100) {
     const s = this.samples;
     if (s.length < 2) return 0;
     const last = s[s.length - 1]!;
     if (now - last.t > 70) return 0;
-    const first = s[0]!;
+    // The earliest move inside the window; always at least the last two moves.
+    let k = s.length - 2;
+    while (k > 0 && last.t - s[k - 1]!.t <= window) k--;
+    const first = s[k]!;
     const dt = last.t - first.t;
     return dt > 0 ? ((last.x - first.x) / dt) * 1000 : 0;
+  }
+
+  /** Where the pointer was at `time`, on the straight line between the two moves either side of it.
+      Later than the last move, it carries on at the recent speed for up to `ahead` ms: that is a move
+      running late, not a pointer that has stopped. */
+  at(time: number, ahead = 0) {
+    const s = this.samples;
+    const last = s[s.length - 1];
+    if (!last) return 0;
+    if (time >= last.t) {
+      const span = last.t - s[0]!.t;
+      return span > 0 ? last.x + ((last.x - s[0]!.x) / span) * Math.min(time - last.t, ahead) : last.x;
+    }
+    for (let k = s.length - 1; k > 0; k--) {
+      const a = s[k - 1]!;
+      if (a.t <= time) {
+        const b = s[k]!; // b.t > time >= a.t
+        return a.x + ((b.x - a.x) * (time - a.t)) / (b.t - a.t);
+      }
+    }
+    return s[0]!.x;
   }
 }
 

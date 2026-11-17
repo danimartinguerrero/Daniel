@@ -84,8 +84,11 @@ function init(root: HTMLElement, signal: AbortSignal) {
   const HOME = 4000; // the track's resting scroll offset (see the CSS)
   const ROT = 60; // how far the neighbours turn away, in degrees
   const TUCK = 0.6; // how far, in spacings, the pile at each end reaches past the third record
-  const MAX_SPEED = 12; // records per second the row turns at most once let go: faster, and they strobe
+  const MAX_SPEED = 12; // records per second a swipe turns the row at most: kept up for longer, they strobe
   const MAX_THROW = 5; // records a single throw travels at most (half the ring)
+  // A flick is let go at the speed the finger had, so nothing brakes as it lifts: up to the speed that
+  // carries it the whole throw. It is that fast for a moment only, slowing from the first frame.
+  const FLICK_SPEED = 20;
 
   let W = 0; // row width
   let S = 0; // sleeve size in the row
@@ -194,6 +197,7 @@ function init(root: HTMLElement, signal: AbortSignal) {
   /** Bring record i to the middle, the short way round. */
   function goTo(i: number, velocity?: number) {
     thrown = false;
+    endSwipe(); // a swipe still tailing off must not take the row anywhere else
     const to = Math.round(pos.value + around(i - pos.value));
     // A record several places away takes a little longer, so the ones between don't flash past.
     const response = Math.min(0.9, 0.5 + 0.1 * Math.max(0, Math.abs(to - pos.value) - 1));
@@ -203,18 +207,24 @@ function init(root: HTMLElement, signal: AbortSignal) {
 
   /** Let the row go at `v` records/s: it coasts to the whole record it would come to rest near, and
       slows from the speed it was let go at. */
-  function release(v: number, bounce: boolean) {
-    v = clamp(v, -MAX_SPEED, MAX_SPEED);
-    const landing = Math.round(pos.value + clamp(project(v * A) / A, -MAX_THROW, MAX_THROW));
+  function release(v: number, bounce: boolean, max = MAX_SPEED) {
+    v = clamp(v, -max, max);
+    coast(Math.round(pos.value + clamp(project(v * A) / A, -MAX_THROW, MAX_THROW)), bounce ? 0.82 : 1, v);
+    thrown = true;
+    tick();
+  }
+
+  /** Send the row to a whole record from the speed `v` it has, slowing all the way there. */
+  function coast(landing: number, damping: number, v = pos.velocity) {
     const D = landing - pos.value;
-    const damping = bounce ? 0.82 : 1;
     // A spring stiffer than the throw would pull the row faster than it was let go, a lurch you can see.
     // Heading where it was thrown, soften it until it only slows down: its pull at the start (w²·D) must
     // not beat its drag (2ζw·v), so w ≤ 2ζv/D, i.e. response ≥ πD/(ζv).
-    const response = D * v > 0 ? clamp((Math.PI * Math.abs(D)) / (damping * Math.abs(v)), 0.55, 1.2) : 0.55;
+    // Only as far as the speed is worth keeping: a row that is barely moving would crawl to its record
+    // for over a second on so soft a spring, and being drawn in a little faster than that is no lurch.
+    const softest = 0.55 + 0.65 * clamp(Math.abs(v) / 1.5, 0, 1);
+    const response = D * v > 0 ? clamp((Math.PI * Math.abs(D)) / (damping * Math.abs(v)), 0.55, softest) : 0.55;
     pos.to(landing, { response, damping, velocity: v });
-    thrown = true;
-    tick();
   }
 
   /* Dragging the row. Vertical pans stay with the browser (touch-action: pan-y); a horizontal one, once
@@ -224,6 +234,7 @@ function init(root: HTMLElement, signal: AbortSignal) {
   let dragged = false; // the last press turned into a drag: its click must not open anything
   let caught = false; // the last press caught a thrown row in flight: it only stops it
   let thrown = false; // the row is coasting from a throw (not from a tap or the keyboard)
+  let fingerMoved = false; // the finger has moved the row since the last frame was drawn
 
   row.addEventListener('pointerdown', (e) => {
     if (openIndex !== null || rowDrag?.active || (e.pointerType === 'mouse' && e.button !== 0)) return;
@@ -244,6 +255,7 @@ function init(root: HTMLElement, signal: AbortSignal) {
       // Clearly sideways: it is ours. Track from here, so nothing jumps by the threshold.
       rowDrag.active = true;
       rowDrag.x0 = e.clientX;
+      endSwipe();
       pos.set(pos.value); // from wherever it has got to
       rowDrag.pos0 = pos.value;
       dragged = true;
@@ -253,6 +265,7 @@ function init(root: HTMLElement, signal: AbortSignal) {
     }
     tracker.push(e.clientX, e.timeStamp);
     pos.set(rowDrag.pos0 - dx / A); // no ends to pull against: it goes round
+    fingerMoved = true;
     tick();
   });
   const endRowDrag = (e: PointerEvent) => {
@@ -261,9 +274,12 @@ function init(root: HTMLElement, signal: AbortSignal) {
     rowDrag = null;
     row.classList.remove('is-dragging');
     if (wasActive) {
-      const v = e.type === 'pointercancel' ? 0 : tracker.velocity(e.timeStamp); // px/s, finger
+      // px/s, the finger's over its last two or three frames. Over the usual 100ms it is behind a flick
+      // that is still speeding up and ahead of a hand slowing down to place the row, and the row would
+      // brake, or lurch, on the frame it is let go: it carries on at the speed it had on screen.
+      const v = e.type === 'pointercancel' ? 0 : tracker.velocity(e.timeStamp, 40);
       // A flick earns a little bounce as it lands; a slow drag settles without one.
-      release(-v / A, Math.abs(v) > 500);
+      release(-v / A, Math.abs(v) > 500, FLICK_SPEED);
     } else if (caught || e.type === 'pointercancel' || pos.target !== Math.round(pos.target)) {
       goTo(Math.round(pos.value));
     }
@@ -275,22 +291,40 @@ function init(root: HTMLElement, signal: AbortSignal) {
 
   /* A trackpad's sideways swipe turns the row too (a mouse wheel still scrolls the page).
      Wheel events don't come one per frame: some frames get none and some get two, so a row moved by
-     each event stands still and then lurches. The events move a point (wheelTo) instead, and the row
-     follows it on a short spring, a step on every frame.
+     each event stands still and then lurches, and a spring short enough to keep up with the swipe is
+     too short to hide that: at a steady swipe the row's speed still swung by a third from frame to
+     frame. So the events only record where the swipe had got to and when (their own time stamps), and
+     each frame asks where it was one event ago, on the line between two events (wheelTarget): the same
+     step on every frame however the events fall, a frame's worth behind the fingers.
      After a fast swipe the pad's momentum dies away over a second, and a row that waited for the end of
      it would stop between two records and then set off again for the nearer one. Where the momentum
-     will end is known long before (it decays steadily), so as the swipe slows the row is drawn to the
-     record it will end on (wheelLand) and arrives as the momentum runs out. A slow swipe isn't drawn
+     will end is known long before (it decays steadily), so once the swipe has clearly slowed the row
+     is let go to the record it will end on (wheelLand), as a throw is: from the speed it has, slowing
+     all the way (coast), and no longer following the events. Drawn there while still following them,
+     it slowed, picked up speed again for the record and stopped short. If the swipe speeds up again
+     the fingers are back, and it follows them again from where it is. A slow swipe isn't let go
      anywhere: it follows the fingers, and settles when they stop. */
   const WHEEL_FOLLOW = { response: 0.1, damping: 1 };
   let wheelIdle = 0; // set while a swipe is going on
   let wheelLast = 0; // when its last event came
   let wheelTo = 0; // where the swipe has taken the row, in records
-  let wheelLand = NaN; // the record a slowing swipe is drawn to
+  let wheelLand = NaN; // the record a slowing swipe has been let go to; NaN while the row follows the swipe
   let wheelPeak = 0; // the fastest the swipe has been, records/s
-  let wheelPull = 0; // how far the row is drawn to that record: 0 follows the swipe, 1 is on the record
   let wheelGone = 0; // how far the swipe has turned the row in all (wheelTo is brought back into the ring)
-  const wheelTracker = new VelocityTracker(); // the swipe's speed, over its last 100ms
+  let wheelEvery = 16; // ms from one event of the swipe to the next, smoothed
+  const wheelTracker = new VelocityTracker(); // the swipe's last 100ms: how far it had gone (wheelGone), and when
+
+  /** The swipe is over as far as the row goes: something else has it now (a tap, a key, a finger). */
+  function endSwipe() {
+    clearTimeout(wheelIdle);
+    wheelIdle = 0;
+  }
+  /** How far the swipe has turned the row since one event before `time`. */
+  const wheelSince = (time: number) => wheelGone - wheelTracker.at(time - wheelEvery, wheelEvery);
+  /** Where the swipe wants the row on the frame drawn at `now` (the frame's own time, the same clock
+      as the events'): where it was one event ago. */
+  const wheelTarget = (now: number) => wheelTo - wheelSince(now);
+
   row.addEventListener(
     'wheel',
     (e) => {
@@ -299,8 +333,11 @@ function init(root: HTMLElement, signal: AbortSignal) {
       if (!wheelIdle) {
         wheelTo = pos.value; // from where the row is on screen, even if it was on its way somewhere
         wheelLand = NaN;
-        wheelPeak = wheelPull = wheelGone = 0;
-        wheelTracker.reset(0, e.timeStamp);
+        wheelPeak = wheelGone = 0;
+        wheelEvery = 16;
+        wheelTracker.reset(0, e.timeStamp - wheelEvery); // an event tells of the time before it
+      } else {
+        wheelEvery += (clamp(e.timeStamp - wheelLast, 4, 34) - wheelEvery) * 0.2;
       }
       // No faster than the row may turn, whatever the pad sends and however often it sends it.
       const dt = clamp(e.timeStamp - wheelLast, 4, 50) / 1000;
@@ -314,23 +351,24 @@ function init(root: HTMLElement, signal: AbortSignal) {
 
       // Slowing: well under the speed the swipe had (a slow swipe has less to lose than a fast one).
       const slow = clamp(1 - Math.abs(speed) / clamp(wheelPeak * 0.6, 0.5, 2.5), 0, 1);
-      wheelPull += ((wheelPeak > 0.8 ? slow * slow * (3 - 2 * slow) : 0) - wheelPull) * 0.25;
-      let to = wheelTo;
-      if (wheelPull > 0.001) {
-        // Where the momentum will run out; it keeps to a record until that is clearly another one.
-        const end = wheelTo + speed * 0.3;
-        if (!(Math.abs(end - wheelLand) <= 0.6)) wheelLand = Math.round(end);
-        to += (wheelLand - wheelTo) * wheelPull;
-      } else {
+      const end = wheelTo + speed * 0.3; // where the momentum will run out
+      if (Number.isNaN(wheelLand)) {
+        if (wheelPeak > 0.8 && slow > 0.3) wheelLand = Math.round(end);
+      } else if (slow === 0) {
+        // As fast as it was again: the fingers are back. It follows them from where it is on screen.
         wheelLand = NaN;
+        wheelTo = pos.value + wheelSince(e.timeStamp);
+      } else if (Math.abs(end - wheelLand) > 0.6) {
+        wheelLand = Math.round(end); // it keeps to a record until that is clearly another one
       }
       thrown = false;
-      pos.to(to, WHEEL_FOLLOW);
-      tick();
+      tick(); // the frame loop takes the row there
       clearTimeout(wheelIdle);
       wheelIdle = window.setTimeout(() => {
         wheelIdle = 0;
-        if (!rowDrag?.active) release(pos.velocity, false);
+        if (rowDrag?.active) return;
+        if (Number.isNaN(wheelLand)) release(pos.velocity, false);
+        else thrown = true; // already on its way to its record
       }, 60);
     },
     { passive: false },
@@ -961,18 +999,27 @@ function init(root: HTMLElement, signal: AbortSignal) {
   let last = 0;
   function tick() {
     if (!raf) {
-      last = performance.now();
+      last = 0;
       raf = requestAnimationFrame(frame);
     }
   }
   function frame(now: number) {
     raf = 0;
-    const dt = Math.min(1 / 30, Math.max(0, (now - last) / 1000));
+    // The first frame of a run has no frame before it to measure from: it takes a short step, so that
+    // what was just set going moves on this frame and not on the next.
+    const dt = last ? Math.min(1 / 30, Math.max(0, (now - last) / 1000)) : 1 / 120;
     last = now;
 
-    let busy = false;
+    let busy = !!wheelIdle; // a swipe is followed on every frame, between its events too
     if (!rowDrag?.active) {
-      const moving = !pos.step(dt);
+      if (wheelIdle) {
+        if (Number.isNaN(wheelLand)) pos.to(wheelTarget(now), WHEEL_FOLLOW);
+        else if (pos.target !== wheelLand) coast(wheelLand, 1); // let go, or its record has changed
+      }
+      // A finger's last move and its lifting often come within one frame. The move has already taken
+      // the row this frame's distance: the spring it is let go on starts with the next frame, or the
+      // row would travel two frames' worth in this one, a jolt forward on every release.
+      const moving = !pos.step(fingerMoved ? 0 : dt);
       if (!moving) {
         thrown = false;
         // At rest, back into 0..n by whole turns: the same place on the ring, so nothing on screen
@@ -987,6 +1034,7 @@ function init(root: HTMLElement, signal: AbortSignal) {
       }
       busy = moving || busy;
     }
+    fingerMoved = false;
     // How fast the row turns, from frame to frame, whether a finger or a spring is turning it.
     if (pos.settled && !rowDrag?.active) speed = 0;
     else if (dt > 0) speed += (Math.abs(around(pos.value - speedFrom)) / dt - speed) * (1 - Math.exp(-dt / 0.1));
