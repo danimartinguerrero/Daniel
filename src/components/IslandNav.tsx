@@ -103,11 +103,13 @@ const motion = {
 const swellAtLeast = Math.min(120, islandMotion.longPressBubble * 1000);
 const joinSoon = 50;
 /**
- * After a close, how long the island heads for the bare pill before the bubble buds off it. The
- * split itself waits `viaIdle.split` (0.215 s) on the pill before the bubble shows, so the card is
- * down to capsule height by then.
+ * After a close, how long the island heads for the bare pill before the bubble buds off it: until
+ * the card is down to about 40 pt (0.33 s on the dismiss spring), where its corner is as round as
+ * the bubble's, so the bubble comes out of the pill's end. Budding sooner, the bubble's 18 pt
+ * corner showed past the taller card's rounder one, a shoulder on the outline that the keyline drew
+ * on a black page. The split then waits its own `viaIdle.split` (0.215 s) before the bubble shows.
  */
-const budAfterClose = 150;
+const budAfterClose = 330;
 /** Where the bubble starts, right of the island's centre: half the sensor and half the gap to the bubble. */
 const bubbleFrom = islandMetrics.compact.sensorWidth / 2 + islandMetrics.minimal.gap / 2;
 
@@ -325,17 +327,22 @@ export const IslandNav = ({ home = '' }: {
   // and the neck between them appeared all at once as the card came down to capsule height.
   const [budAgain, setBudAgain] = useState(false);
   const wasOpen = useRef(open);
-  const budTimer = useRef<number | undefined>(undefined);
+  const budCancel = useRef<(() => void) | null>(null);
   useEffect(() => {
     const closed = wasOpen.current && !open;
     wasOpen.current = open;
     if (!closed) return;
-    // Its own timer, which nothing else cancels: a bubble held back for good would never come back.
-    clearTimeout(budTimer.current);
+    // Its own timer, which nothing else cancels (a bubble held back for good would never come back),
+    // on the clock the engine draws by, so it keeps step with the close's frames.
+    budCancel.current?.();
     setBudAgain(true);
-    budTimer.current = window.setTimeout(() => setBudAgain(false), budAfterClose);
+    const clock = defaultClock();
+    budCancel.current = clock.at(clock.now() + budAfterClose, () => {
+      budCancel.current = null;
+      setBudAgain(false);
+    });
   }, [open]);
-  useEffect(() => () => clearTimeout(budTimer.current), []);
+  useEffect(() => () => budCancel.current?.(), []);
   const bubble = budAgain ? null : nudge;
   bubbleOut.current = !open && !playing && nudge !== null;
   const presentation: IslandPresentation = open

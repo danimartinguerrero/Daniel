@@ -927,16 +927,11 @@ export const IslandSurface = (props: IslandSurfaceProps) => {
     const keylineAlpha = keylineAt(frame, t, live.current, leavingKeys.current.length > 0, keylineDip.current);
     // The bands are drawn opaque and faded together on their group, so where two of them overlap (a
     // bubble's top along the pill's while it is still in it, the neck) the band isn't drawn twice as
-    // bright: that showed as a speck on the pill's top edge. A bubble still inside the pill, and the
-    // neck to it, come in as the bubble clears the pill's end by half its height (personal site).
-    const out = bubble.height > 0 ? Math.min(1, Math.max(0, (bubble.x + bubble.width - (pill.x + pill.width)) / (bubble.height / 2))) : 0;
+    // bright: that showed as a speck on the pill's top edge (personal site).
     if (kGroup.current) kGroup.current.style.opacity = keylineAlpha > 0.001 ? keylineAlpha.toFixed(3) : "0";
-    const strength = (path: SVGPathElement | null, a: number) => {
-      if (path) path.style.strokeOpacity = a > 0.001 ? a.toFixed(3) : "0";
-    };
-    strength(kPill.current, 1);
-    strength(kBubble.current, out);
-    strength(kBridge.current, out);
+    for (const path of [kPill.current, kBubble.current, kBridge.current]) {
+      if (path) path.style.strokeOpacity = "1";
+    }
     kPill.current?.setAttribute("d", paths.pill);
     kBubble.current?.setAttribute("d", paths.bubble);
     kBridge.current?.setAttribute("d", paths.bridge);
