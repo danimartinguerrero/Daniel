@@ -29,6 +29,10 @@ export const musicCopy = {
   },
 } as const;
 
+/** A track with guests, as Apple Music credits them ("feat. …"). */
+export type Track = string | { title: string; feat: string };
+const ft = (title: string, feat: string): Track => ({ title, feat });
+
 export interface Vinyl {
   /** Stable id, used in the DOM (`data-vinyl`) and as the cover's file name. */
   id: string;
@@ -39,8 +43,8 @@ export interface Vinyl {
   genre: string;
   /** How it comes, as printed on a hype sticker: "LP", "2×LP". */
   format: string;
-  /** Track names in order. */
-  tracks: readonly string[];
+  /** The tracks in order: a name, or a name and who is featured on it. */
+  tracks: readonly Track[];
   /** A couple of sentences on what the album is, written from `source`. */
   about: string;
   /** Where `about` comes from, shown as a link under it. */
@@ -58,7 +62,7 @@ export const vinyls: readonly Vinyl[] = [
     label: 'TDE, Aftermath, Interscope',
     genre: 'Jazz rap',
     format: '2×LP',
-    tracks: ['Wesley’s Theory', 'For Free? (Interlude)', 'King Kunta', 'Institutionalized', 'These Walls', 'u', 'Alright', 'For Sale? (Interlude)', 'Momma', 'Hood Politics', 'How Much a Dollar Cost', 'Complexion (A Zulu Love)', 'The Blacker the Berry', 'You Ain’t Gotta Lie (Momma Said)', 'i', 'Mortal Man'],
+    tracks: [ft('Wesley’s Theory', 'George Clinton & Thundercat'), 'For Free? (Interlude)', 'King Kunta', ft('Institutionalized', 'Bilal, Anna Wise & Snoop Dogg'), ft('These Walls', 'Bilal, Anna Wise & Thundercat'), 'u', 'Alright', 'For Sale? (Interlude)', 'Momma', 'Hood Politics', ft('How Much a Dollar Cost', 'James Fauntleroy & Ronald Isley'), ft('Complexion (A Zulu Love)', 'Rapsody'), 'The Blacker the Berry', 'You Ain’t Gotta Lie (Momma Said)', 'i', 'Mortal Man'],
     about: "Kendrick Lamar’s third album came out in 2015, three years after good kid, m.A.A.d city made him a star. He made it with jazz and funk players, among them Thundercat, Kamasi Washington, Flying Lotus and George Clinton, and on songs like “King Kunta” and “Alright” he raps about fame and race.",
     source: apple('https://music.apple.com/us/album/to-pimp-a-butterfly/1440828886'),
   },
@@ -70,7 +74,7 @@ export const vinyls: readonly Vinyl[] = [
     label: 'TDE, Aftermath, Interscope',
     genre: 'Hip-hop',
     format: '2×LP',
-    tracks: ['BLOOD.', 'DNA.', 'YAH.', 'ELEMENT.', 'FEEL.', 'LOYALTY.', 'PRIDE.', 'HUMBLE.', 'LUST.', 'LOVE.', 'XXX.', 'FEAR.', 'GOD.', 'DUCKWORTH.'],
+    tracks: ['BLOOD.', 'DNA.', 'YAH.', 'ELEMENT.', 'FEEL.', ft('LOYALTY.', 'Rihanna'), 'PRIDE.', 'HUMBLE.', 'LUST.', ft('LOVE.', 'Zacari'), ft('XXX.', 'U2'), 'FEAR.', 'GOD.', 'DUCKWORTH.'],
     about: "Two years after To Pimp a Butterfly, Kendrick Lamar dropped most of the jazz and made a rawer, more direct record that ends by rewinding to its own first line. Every title is one word in capitals with a full stop, and in 2018 it won the Pulitzer Prize for Music, the first album outside classical and jazz to do so.",
     source: apple('https://music.apple.com/us/album/damn/1440881047'),
   },
@@ -82,7 +86,7 @@ export const vinyls: readonly Vinyl[] = [
     label: 'GOOD Music, Def Jam',
     genre: 'Hip-hop',
     format: 'LP',
-    tracks: ['I Thought About Killing You', 'Yikes', 'All Mine', 'Wouldn’t Leave', 'No Mistakes', 'Ghost Town', 'Violent Crimes'],
+    tracks: ['I Thought About Killing You', 'Yikes', 'All Mine', ft('Wouldn’t Leave', 'PARTYNEXTDOOR'), 'No Mistakes', ft('Ghost Town', 'PARTYNEXTDOOR'), 'Violent Crimes'],
     about: "Kanye West recorded his eighth album in Wyoming with a small group of collaborators, and at seven songs and 23 minutes it is the shortest of his career. He talks openly about his mental health and his bipolar disorder, over chopped samples and gospel-style backing vocals.",
     source: apple('https://music.apple.com/us/album/ye/1441460375'),
   },
@@ -94,7 +98,7 @@ export const vinyls: readonly Vinyl[] = [
     label: 'TDE, Aftermath, Interscope',
     genre: 'West Coast hip-hop',
     format: '2×LP',
-    tracks: ['Sherane a.k.a Master Splinter’s Daughter', 'Bitch, Don’t Kill My Vibe', 'Backseat Freestyle', 'The Art of Peer Pressure', 'Money Trees', 'Poetic Justice', 'good kid', 'm.A.A.d city', 'Swimming Pools (Drank) (Extended Version)', 'Sing About Me, I’m Dying of Thirst', 'Real', 'Compton'],
+    tracks: ['Sherane a.k.a Master Splinter’s Daughter', 'Bitch, Don’t Kill My Vibe', 'Backseat Freestyle', 'The Art of Peer Pressure', ft('Money Trees', 'Jay Rock'), ft('Poetic Justice', 'Drake'), 'good kid', ft('m.A.A.d city', 'MC Eiht'), 'Swimming Pools (Drank) (Extended Version)', 'Sing About Me, I’m Dying of Thirst', ft('Real', 'Anna Wise'), ft('Compton', 'Dr. Dre')],
     about: "Kendrick Lamar’s first album on a major label is subtitled “a short film” and plays like one, following his teenage years in Compton through his friends, his parents’ voicemails and a girl called Sherane. Gang violence and drinking run all the way through it, and so does prayer.",
     source: apple('https://music.apple.com/us/album/good-kid-m-a-a-d-city-deluxe-version/1440818890'),
   },
@@ -106,7 +110,7 @@ export const vinyls: readonly Vinyl[] = [
     label: 'Freebandz, Boominati, Epic, Republic',
     genre: 'Trap',
     format: '2×LP',
-    tracks: ['We Don’t Trust You', 'Young Metro', 'Ice Attack', 'Type Shit', 'Claustrophobic', 'Like That', 'Slimed In', 'Magic Don Juan (Princess Diana)', 'Cinderella', 'Runnin Outta Time', 'Fried (She a Vibe)', 'Ain’t No Love', 'Everyday Hustle', 'GTA', 'Seen It All', 'WTFYM', 'Where My Twin @'],
+    tracks: ['We Don’t Trust You', ft('Young Metro', 'The Weeknd'), 'Ice Attack', ft('Type Shit', 'Travis Scott & Playboi Carti'), 'Claustrophobic', ft('Like That', 'Kendrick Lamar'), 'Slimed In', 'Magic Don Juan (Princess Diana)', ft('Cinderella', 'Travis Scott'), 'Runnin Outta Time', 'Fried (She a Vibe)', 'Ain’t No Love', ft('Everyday Hustle', 'Rick Ross'), 'GTA', 'Seen It All', 'WTFYM', 'Where My Twin @'],
     about: "Future and Metro Boomin had worked together since “Honest” in 2013 and “Mask Off” in 2017, and this, from March 2024, is their first full album as a duo. It moves from breakup songs and party records to darker tracks like “Like That”, where Kendrick Lamar’s verse takes shots at Drake and J. Cole.",
     source: apple('https://music.apple.com/us/album/we-dont-trust-you/1737149923'),
   },
@@ -166,7 +170,7 @@ export const vinyls: readonly Vinyl[] = [
     label: 'Jive',
     genre: 'Jazz rap',
     format: '2×LP',
-    tracks: ['Excursions', 'Buggin’ Out', 'Rap Promoter', 'Butter', 'Verses from the Abstract', 'Show Business', 'Vibes and Stuff', 'The Infamous Date Rape', 'Check the Rhime', 'Everything Is Fair', 'Jazz (We’ve Got)', 'Skypager', 'What?', 'Scenario'],
+    tracks: ['Excursions', 'Buggin’ Out', 'Rap Promoter', 'Butter', ft('Verses from the Abstract', 'Vinia Mojica & Ron Carter'), ft('Show Business', 'Diamond D, Lord Jamar & Sadat X'), 'Vibes and Stuff', 'The Infamous Date Rape', 'Check the Rhime', 'Everything Is Fair', 'Jazz (We’ve Got)', 'Skypager', 'What?', ft('Scenario', 'Busta Rhymes, Dinco D & Charlie Brown')],
     about: "A Tribe Called Quest’s second album puts Q-Tip’s bass-heavy jazz samples under Phife Dawg’s quick, self-mocking rhymes. The jazz bassist Ron Carter plays on “Verses from the Abstract”, and the record ends with “Scenario”, a posse cut with Leaders of the New School.",
     source: apple('https://music.apple.com/us/album/the-low-end-theory/278911460'),
   },
@@ -178,7 +182,7 @@ export const vinyls: readonly Vinyl[] = [
     label: 'Columbia',
     genre: 'East Coast hip-hop',
     format: 'LP',
-    tracks: ['The Genesis', 'N.Y. State of Mind', 'Life’s a Bitch', 'The World Is Yours', 'Halftime', 'Memory Lane (Sittin’ in da Park)', 'One Love', 'One Time 4 Your Mind', 'Represent', 'It Ain’t Hard to Tell'],
+    tracks: ['The Genesis', 'N.Y. State of Mind', ft('Life’s a Bitch', 'AZ & Olu Dara'), 'The World Is Yours', 'Halftime', 'Memory Lane (Sittin’ in da Park)', ft('One Love', 'Q-Tip'), 'One Time 4 Your Mind', 'Represent', 'It Ain’t Hard to Tell'],
     about: "The Queensbridge rapper was about 20 when he made his first album, ten tracks of dense rhymes about the streets he grew up on. The beats come from DJ Premier, Pete Rock, Large Professor, Q-Tip and L.E.S., and many of them are built on dark jazz samples.",
     source: apple('https://music.apple.com/us/album/illmatic/662324135'),
   },

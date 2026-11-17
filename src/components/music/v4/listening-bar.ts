@@ -539,7 +539,15 @@ function init(root: HTMLElement, signal: AbortSignal) {
     q('[data-tracklist]').replaceChildren(
       ...v.tracks.map((t) => {
         const li = document.createElement('li');
-        li.textContent = t;
+        const name = document.createElement('span');
+        name.textContent = typeof t === 'string' ? t : t.title;
+        if (typeof t !== 'string') {
+          const feat = document.createElement('span');
+          feat.className = 'v4-tracks__feat';
+          feat.textContent = `feat. ${t.feat}`;
+          name.append(' ', feat);
+        }
+        li.append(name);
         return li;
       }),
     );

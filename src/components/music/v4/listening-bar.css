@@ -429,6 +429,7 @@ html:not(.js) .v4-vinyl__shade { opacity: 0 !important; }
 }
 .v4-tracks li + li { box-shadow: 0 -1px 0 var(--v4-hair); }
 .v4-tracks li::before { content: counter(v4-track); text-align: right; color: var(--v4-muted); font-size: 0.9375rem; font-variant-numeric: tabular-nums; }
+.v4-tracks__feat { color: var(--on-dark-2); }
 /* The facts: three short ones on top, the two long ones under them. */
 .v4-facts { margin: 0.75rem 0 0; display: grid; grid-template-columns: repeat(6, 1fr); gap: 0.5rem; }
 .v4-fact {
