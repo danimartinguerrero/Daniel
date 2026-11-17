@@ -1,24 +1,27 @@
 /**
  * The music page's intro. "I love" comes into focus in the middle of the screen, large, a word at a
  * time, and drifts up and shrinks, slowly, like a breath drawn in, while nothing else happens: the
- * wait. Then "music" lands below it, much larger, its rainbow racing, and "I love" is pushed up out of its way. A moment later the headline goes home into the
- * page while the rest of the page comes in under it, and the rainbow slows down to its drift.
+ * wait. Then "music" lands below it, much larger, its rainbow racing, and "I love" is pushed up out of
+ * its way. A moment later the headline goes home into the page while the rest of the page comes in
+ * under it, and the rainbow slows down to its drift.
  *
  * It plays when the page is arrived at (the island's song, a link, a load), not when history steps back
  * to it, and not when the page opens scrolled down. Any touch, click, scroll or key during it plays the
  * rest three times as fast. With reduced motion the page is just there and the bands hold still.
  *
+ * It begins once the page is shown, after the island's view transition has opened it: Safari starts
+ * the compositor's animations over when a view transition ends, so on an iPhone "I love" came into
+ * focus for 430 ms and then again from nothing, and ran that much behind "music." from then on.
+ *
  * The two parts of the headline have to stay in step with each other to the frame, so one clock moves
  * both: a script reads the time once a frame and writes each part's transform (and the landing's
- * opacity and blur) itself. As two animations handed to the browser they did not stay in step on an
- * iPhone: opened from the island, "I love" ran about 450 ms behind "music." all the way (measured on a
- * screen recording), so "music." landed on top of it and went home before it. What needs no such step
- * is still the Web Animations API on transform, opacity and filter: the words coming into focus, the
- * rest of the page coming in, and the rainbow, whose change of speed is baked into keyframes (see
+ * opacity and blur) itself, and nothing the browser does to its animations can part them. What needs
+ * no such step is the Web Animations API on transform, opacity and filter: the words coming into focus,
+ * the rest of the page coming in, and the rainbow, whose change of speed is baked into keyframes (see
  * `rush`), not a rate changed every frame.
  */
 import type { TransitionBeforeSwapEvent } from 'astro:transitions/client';
-import { onPage } from '@/scripts/page';
+import { arrived, onPage } from '@/scripts/page';
 import { bezier } from '@/scripts/easing';
 
 // The site's curves (emil-design-eng): a strong ease-out for arrivals, the iOS drawer curve for going
@@ -64,7 +67,10 @@ onPage((signal) => {
   const fromHistory = firstPage && (performance.getEntriesByType('navigation')[0] as PerformanceNavigationTiming | undefined)?.type === 'back_forward';
   firstPage = false;
   const root = document.querySelector<HTMLElement>('.v4[data-music-page]');
-  if (root) start(root, signal, fromHistory);
+  if (!root) return;
+  // Not before the page is shown: what begins while the island is still opening the page, Safari
+  // begins again when it has opened (scripts/page.ts). Until then the page is dark, as the CSS has it.
+  void arrived().then(() => { if (!signal.aborted) start(root, signal, fromHistory); });
 });
 
 function start(root: HTMLElement, signal: AbortSignal, fromHistory: boolean) {

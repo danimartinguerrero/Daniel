@@ -31,6 +31,16 @@ export function onPage(setup: (signal: AbortSignal) => void) {
   start();
 }
 
+/**
+ * The change of page under way, over: resolves a frame after its view transition has finished, so at
+ * once on a page that was loaded rather than changed to. Safari starts the compositor's animations over
+ * when a view transition ends: on an iPhone, an animation begun as the music page opened out of the
+ * island played for 430 ms and then began again from its start. An animation that must play once, or
+ * keep time with another, waits for this before it begins.
+ */
+let arriving: Promise<void> = Promise.resolve();
+export const arrived = () => arriving;
+
 const reduce = matchMedia('(prefers-reduced-motion: reduce)');
 let landing = '';
 /** The page in the document now. */
@@ -49,7 +59,12 @@ addEventListener('popstate', (event) => {
 }, { capture: true });
 
 document.addEventListener('astro:before-swap', (event) => {
-  const { newDocument, navigationType, to } = event as TransitionBeforeSwapEvent;
+  const { newDocument, navigationType, to, viewTransition } = event as TransitionBeforeSwapEvent;
+  // Never held up for long, whatever becomes of the transition (a tab in the background draws no frame).
+  arriving = Promise.race([
+    Promise.resolve(viewTransition?.finished).then(() => {}, () => {}).then(() => new Promise<void>((done) => requestAnimationFrame(() => done()))),
+    new Promise<void>((done) => setTimeout(done, 2000)),
+  ]);
   // The router gives <html> the new page's attributes and nothing else. The classes the pages' CSS
   // reads before any script has run go with it: "js" (set inline in the head, which doesn't run
   // again) and "reduce" (scripts/scroll.ts), so the new page's first frame is already the right one.
