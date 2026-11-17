@@ -50,8 +50,9 @@
 /* "music" in the six bands of Apple's old logo, slanted, drifting right. The bands are a layer laid
    over the white word and blended with `darken`: on the white letters it leaves the colour, on the
    black around them it leaves black. The word's own black box is what the bands blend against, since
-   the word moves on its own layer. The layer is one period wider than the word and slides by one
-   period (--rb-p, measured along the line of text) at a time, so its motion is a transform. */
+   the word moves on its own layer. The bands are two layers, one inside the other, and each slides by
+   one period (--rb-p, measured along the line of text) at a time, so the motion is two transforms: the
+   inner one drifts for ever, the outer one adds the intro's rush to it (intro.ts). */
 .v4-music {
   --rb-p: 2.4em;
   position: relative; display: inline-block; isolation: isolate;
@@ -60,8 +61,10 @@
 }
 /* The bands are cut a little inside the black, so no edge of them ever meets the page. */
 .v4-music__bands { position: absolute; inset: 0.04em; overflow: hidden; mix-blend-mode: darken; pointer-events: none; }
+.v4-music__rush { position: absolute; inset: 0; }
+/* Two periods wider than the word: one for its own slide, one for the layer it rides on. */
 .v4-music__rainbow {
-  position: absolute; inset: 0 auto 0 calc(var(--rb-p) * -1); width: calc(100% + var(--rb-p));
+  position: absolute; inset: 0 auto 0 calc(var(--rb-p) * -2); width: calc(100% + var(--rb-p) * 2);
   /* Six bands of 1/6 period each; along the gradient a period is --rb-p × sin(115deg). */
   --b: calc(var(--rb-p) * 0.9063 / 6);
   background: repeating-linear-gradient(115deg,

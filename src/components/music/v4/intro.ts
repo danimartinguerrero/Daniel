@@ -17,8 +17,15 @@
  * both: a script reads the time once a frame and writes each part's transform (and the landing's
  * opacity and blur) itself, and nothing the browser does to its animations can part them. What needs
  * no such step is the Web Animations API on transform, opacity and filter: the words coming into focus,
- * the rest of the page coming in, and the rainbow, whose change of speed is baked into keyframes (see
- * `rush`), not a rate changed every frame.
+ * the rest of the page coming in, and the rainbow.
+ *
+ * The rainbow is two layers, one inside the other. The inner one drifts for ever, from the moment the
+ * page is shown. The outer one adds the rush to it: what the bands move beyond their drift, which is
+ * nothing before "music" lands and nothing more once they have slowed down, with the change of speed
+ * baked into keyframes (see `rush`), not a rate changed every frame. So no animation ever hands over to
+ * another: a second one taking over where the rush ended stood still for a frame, and in Safari began
+ * from the start of a period instead (its compositor does not know `iterationStart`), a jump of half a
+ * band at the very end of the slowing down.
  */
 import type { TransitionBeforeSwapEvent } from 'astro:transitions/client';
 import { arrived, onPage } from '@/scripts/page';
@@ -77,24 +84,21 @@ function start(root: HTMLElement, signal: AbortSignal, fromHistory: boolean) {
   const love = root.querySelector<HTMLElement>('[data-intro-love]');
   const word = root.querySelector<HTMLElement>('[data-intro-word]');
   const bands = root.querySelector<HTMLElement>('[data-rainbow]');
-  if (!love || !word || !bands) return root.removeAttribute('data-intro');
+  const surge = root.querySelector<HTMLElement>('[data-rainbow-rush]');
+  if (!love || !word || !bands || !surge) return root.removeAttribute('data-intro');
 
   const running: Animation[] = [];
   signal.addEventListener('abort', () => running.forEach((a) => a.cancel()));
 
-  /** The bands drifting at rest, picking up where the rush left them (`phase`, in periods). */
-  const drift = (phase = 0) => {
-    if (reduce.matches || signal.aborted) return;
+  // The bands drift, for good: the rainbow at rest. The intro's rush goes on top of it (`rush`).
+  if (!reduce.matches) {
     running.push(bands.animate([{ transform: 'translateX(0em)' }, { transform: `translateX(${PERIOD}em)` }], {
-      duration: (PERIOD / DRIFT) * 1000, iterations: Infinity, iterationStart: phase,
+      duration: (PERIOD / DRIFT) * 1000, iterations: Infinity,
     }));
-  };
+  }
 
   const play = root.hasAttribute('data-intro') && !reduce.matches && !fromHistory && scrollY < 40;
-  if (!play) {
-    root.removeAttribute('data-intro');
-    return drift();
-  }
+  if (!play) return root.removeAttribute('data-intro');
 
   // Where the parts rest in the page (laid out, unseen), and where they go on the stage. The stage is
   // the screen as it is now, so it is worked out again whenever the screen changes size during the
@@ -217,7 +221,7 @@ function start(root: HTMLElement, signal: AbortSignal, fromHistory: boolean) {
         duration: REST, delay: SETTLE + REST_AFTER + i * REST_STAGGER, easing: EASE_DRAWER.css, fill: 'both',
       })),
   ];
-  const { animation: rushing, end } = rush(bands, HIT, SETTLE - HIT);
+  const rushing = rush(surge, HIT, SETTLE - HIT);
   running.push(...show, rushing);
 
   // Once in place, the page is the page again: no intro state, nothing holding its parts there.
@@ -228,32 +232,40 @@ function start(root: HTMLElement, signal: AbortSignal, fromHistory: boolean) {
     visualViewport?.removeEventListener('resize', reflow);
     show.forEach((a) => a.cancel());
   }, () => {});
-  rushing.finished.then(() => {
-    drift(end);
-    rushing.cancel();
-  }, () => {});
 
-  // Never in the way: whoever reaches for the page gets it sooner.
-  const hurry = () => [...show, rushing].forEach((a) => a.playState === 'running' && a.updatePlaybackRate(SKIP_RATE));
+  // Never in the way: whoever reaches for the page gets it sooner. The rainbow is in nobody's way and
+  // keeps its own pace (three times the rush strobes, and three times the slowing down ends in a jolt);
+  // it is only moved on in time, so that it still starts to slow down as the headline starts home. Once
+  // "music" is there to be seen, it is moved on by whole periods of the rush, which look the same.
+  const hurry = () => {
+    const t = Number(clock.currentTime ?? END);
+    show.forEach((a) => a.playState === 'running' && a.updatePlaybackRate(SKIP_RATE));
+    if (t >= SETTLE || rushing.playState !== 'running') return;
+    const lap = (PERIOD / (RUSH - DRIFT)) * 1000;
+    const skip = (SETTLE - t) * (1 - 1 / SKIP_RATE);
+    rushing.currentTime = Number(rushing.currentTime) + (t < HIT ? skip : Math.floor(skip / lap) * lap);
+  };
   for (const type of ['pointerdown', 'wheel', 'touchstart', 'keydown'] as const) {
     addEventListener(type, hurry, { once: true, passive: true, signal });
   }
 }
 
 /**
- * The rainbow from the landing: at full rush while the headline holds, then slowing to the drift. The eye
- * reads speed by ratios, so the speed falls by the same ratio in each moment (from RUSH to DRIFT on a
- * geometric scale), on a sine in-out across DECAY: it lets go of the rush gently and meets the drift
- * without a jolt. The position is that speed summed up sample by sample. The band layer is only one
- * period wider than the word, so the position is kept within a period: at each whole period the
- * keyframes jump back by one, which looks the same. Returns where in a period it ends.
+ * The rush: what the bands move beyond their drift, from the landing on. They race while the headline
+ * holds, then slow down to the drift. The eye reads speed by ratios, so the speed falls by the same ratio
+ * in each moment (from RUSH to DRIFT on a geometric scale), on a sine in-out across DECAY: it lets go of
+ * the rush gently and meets the drift without a jolt. The layer's position is the speed above the drift
+ * summed up sample by sample, and it stays where that ends. The bands are only a period wider than they
+ * need to be for this, so the position is kept within a period: at each whole period the keyframes jump
+ * back by one, which looks the same.
  */
-function rush(bands: HTMLElement, delay: number, hold: number) {
+function rush(layer: HTMLElement, delay: number, hold: number) {
   const total = hold + DECAY;
-  const speed = (ms: number) => {
-    if (ms <= hold) return RUSH;
+  /** How much faster than the drift the bands go, `ms` after the landing. */
+  const extra = (ms: number) => {
+    if (ms <= hold) return RUSH - DRIFT;
     const u = Math.min(1, (ms - hold) / DECAY);
-    return RUSH * (DRIFT / RUSH) ** ((1 - Math.cos(Math.PI * u)) / 2);
+    return RUSH * (DRIFT / RUSH) ** ((1 - Math.cos(Math.PI * u)) / 2) - DRIFT;
   };
   const frame = (offset: number, em: number): Keyframe => ({ offset, transform: `translateX(${em.toFixed(4)}em)` });
   const keys: Keyframe[] = [frame(0, 0)];
@@ -262,7 +274,7 @@ function rush(bands: HTMLElement, delay: number, hold: number) {
   for (let was = 0; was < total; ) {
     const now = Math.min(was + STEP, total);
     const xp = x;
-    x += ((speed(was) + speed(now)) / 2) * ((now - was) / 1000);
+    x += ((extra(was) + extra(now)) / 2) * ((now - was) / 1000);
     if (Math.floor(x / PERIOD) > Math.floor(xp / PERIOD)) {
       // The moment it crosses a whole period, found on the straight line between the two samples.
       const edge = Math.floor(x / PERIOD) * PERIOD;
@@ -272,6 +284,5 @@ function rush(bands: HTMLElement, delay: number, hold: number) {
     keys.push(frame(now / total, x % PERIOD));
     was = now;
   }
-  const animation = bands.animate(keys, { duration: total, delay, fill: 'both' });
-  return { animation, end: (x % PERIOD) / PERIOD };
+  return layer.animate(keys, { duration: total, delay, fill: 'both' });
 }
