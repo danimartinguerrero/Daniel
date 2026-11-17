@@ -1,0 +1,11 @@
+---
+/** The name of the record in the middle of the carousel, under it (listening-bar.ts keeps it). */
+import { vinyls } from '@/data/music';
+import { START } from './start';
+
+const first = vinyls[START]!;
+---
+<p class="v4-caption" aria-hidden="true" data-v4-caption>
+  <span class="v4-caption__title" data-v4-cap-title>{first.title}</span>
+  <span class="v4-caption__meta" data-v4-cap-meta>{first.artist}, {first.year}</span>
+</p>

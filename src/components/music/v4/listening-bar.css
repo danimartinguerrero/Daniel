@@ -171,6 +171,74 @@
 .v4-caption__title { font-size: 1.3125rem; line-height: 1.2; font-weight: 600; text-wrap: balance; }
 .v4-caption__meta { font-size: 1rem; line-height: 1.25; color: var(--on-dark-2); font-variant-numeric: tabular-nums; }
 
+/* ---------------------------------------------------------------- the climb
+   Past the shelf the page does not scroll on: the stage stays on screen and the scroll raises the
+   camera instead (climb.ts), until you look down on the same records lying in a ring on the floor,
+   with how the collection came about in the middle of it. Scrolling further fills those words with
+   light, one passage after another.
+
+   Without the script, or with reduced motion, there is no climb: the passages are simply the page's
+   next paragraphs, lit. */
+.v4-floor { display: none; }
+.v4-making {
+  display: grid; gap: 1.25em;
+  width: min(100% - 2 * var(--gutter), 34rem); margin: clamp(3.5rem, 8vw, 6rem) auto 0;
+  font-size: clamp(1.25rem, 3vw, 1.75rem); line-height: 1.16; font-weight: 600; letter-spacing: -0.02em;
+  text-align: center; text-wrap: balance;
+}
+/* Each word is filled from its left by --f (0 to 1), with a soft edge, as light coming along the line.
+   Left alone it is 1: lit. */
+.v4-making .w { --f: 1; color: var(--on-dark); }
+@supports ((-webkit-background-clip: text) or (background-clip: text)) {
+  .v4-making .w {
+    background: linear-gradient(90deg, var(--on-dark) calc(var(--f) * 124% - 24%), #3a3a3c calc(var(--f) * 124%));
+    -webkit-background-clip: text; background-clip: text;
+    -webkit-text-fill-color: transparent; color: transparent;
+    /* The letters' ink reaches a little past their box (the tail of a "y", a slanted stroke). */
+    padding: 0.12em 0.04em; margin: -0.12em -0.04em;
+  }
+}
+@media (forced-colors: active) {
+  .v4-making .w { background: none; -webkit-text-fill-color: currentColor; color: CanvasText; }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  /* The stretch of scroll the climb takes: the camera's rise, then the passages, then a breath. */
+  html.js .v4-shelf[data-climb] { height: calc(100svh + var(--climb-run, 290svh)); padding-bottom: 0; }
+  html.js [data-climb] .v4-climb__stage { position: sticky; top: 0; height: 100svh; }
+  html.js [data-climb] .v4-caption { pointer-events: none; will-change: transform; }
+  html.js [data-climb] .v4-shelf__head { will-change: transform, opacity; }
+
+  /* A pool of the lamp's light on the floor, under the ring. */
+  html.js [data-climb] .v4-floor {
+    display: block; position: absolute; left: 50%; top: var(--ring-y, 50%);
+    width: var(--ring-w, 60vw); height: var(--ring-h, 60vw);
+    margin: calc(var(--ring-h, 60vw) / -2) 0 0 calc(var(--ring-w, 60vw) / -2);
+    background: radial-gradient(closest-side, rgba(255, 240, 224, 0.075), rgba(255, 240, 224, 0.03) 52%, transparent);
+    opacity: 0; pointer-events: none; will-change: opacity;
+  }
+
+  /* While the camera is up, the row is the whole stage: the ring lies well outside the strip the
+     sleeves stand in, and the row is what clips them and what the hand turns. The sleeves keep their
+     place: they are moved down by the room the row gained above them. */
+  html.js [data-climb].is-climbing .v4-row {
+    height: calc(var(--lift) + var(--s) + var(--foot) + var(--room-top, 0px) + var(--room-bottom, 0px));
+    margin-block: calc(var(--room-top, 0px) * -1) calc(var(--room-bottom, 0px) * -1);
+  }
+  html.js [data-climb].is-climbing .v4-vinyl { top: calc(var(--lift) + var(--room-top, 0px)); }
+
+  /* The passages stand in the middle of the ring, facing you, one at a time in the same place.
+     Nothing in them takes a press: a drag that starts on them turns the ring under them. */
+  html.js [data-climb] .v4-making {
+    position: absolute; left: 50%; top: var(--words-y, 50%); z-index: 2;
+    width: var(--words-w, 20rem); margin: 0; gap: 0;
+    transform: translate(-50%, -50%);
+    font-size: var(--words-fs, 1.5rem);
+    pointer-events: none;
+  }
+  html.js [data-climb] .v4-making__page { grid-area: 1 / 1; align-self: center; opacity: 0; will-change: transform, opacity; }
+}
+
 /* Without the script the row is simply a row you can scroll. */
 html:not(.js) .v4-row { overflow-x: auto; height: auto; padding-block: var(--lift) var(--foot); }
 html:not(.js) .v4-row__track { position: static; width: max-content; display: flex; gap: 1rem; padding-inline: var(--gutter); }
@@ -191,6 +259,15 @@ html:not(.js) .v4-vinyl__shade { opacity: 0 !important; }
   opacity: 0; pointer-events: none;
 }
 .v4-open__scrim { position: absolute; inset: 0; opacity: 0; background: var(--v4-stage); }
+/* The shadow of a record held over the ring: a sleeve's footprint lying on the floor, soft at the edge.
+   It is drawn once, blurred by its own box-shadow, and after that only moved, sized and faded: held
+   high it is larger and fainter, and it tightens under the record as that comes down. */
+.v4-open__cast {
+  position: absolute; left: 0; top: 0; width: var(--cast, 300px); height: var(--cast, 300px);
+  border-radius: 6px; background: rgba(0, 0, 0, 0.82);
+  box-shadow: 0 0 calc(var(--cast, 300px) * 0.14) calc(var(--cast, 300px) * 0.05) rgba(0, 0, 0, 0.82);
+  opacity: 0; pointer-events: none; will-change: transform, opacity;
+}
 .v4-open__scroll {
   position: absolute; inset: 0;
   overflow-x: hidden; overflow-y: auto; overscroll-behavior: contain;

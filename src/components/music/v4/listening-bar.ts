@@ -11,6 +11,7 @@
 import { musicCopy, vinyls, type Vinyl } from '@/data/music';
 import { Spring, VelocityTracker, clamp, project, rubberband } from './physics';
 import { onPage } from '@/scripts/page';
+import type { CameraView } from './climb';
 
 // Set up each time the page is shown; what it starts outside the page stops when the page is swapped out.
 onPage((signal) => {
@@ -140,11 +141,97 @@ function init(root: HTMLElement, signal: AbortSignal) {
     };
   }
 
+  /* The view from above. On the music page the scroll goes on past the shelf by raising the camera
+     (climb.ts, which says where it is on the page's root): the records leave the row, lie down on the
+     floor in a ring and are seen from above. They are these same sleeves, so the ring turns under a
+     hand as the row does, and a record comes out of it from where it lies. `view` is null at the shelf,
+     and then everything below is exactly the row. */
+  let view: CameraView | null = null;
+  root.addEventListener('v4:camera', (e) => {
+    const v = (e as CustomEvent<CameraView>).detail;
+    const next = v.w > 0 ? v : null;
+    if (!next && !view) return;
+    view = next;
+    renderRow();
+  }, { signal });
+
+  /** Where the record d places from the front is drawn, wherever the camera is: its pose in the row at
+      the shelf, its place in the ring from above, and the way between the two. `x` and `y` are px from
+      its slot in the row; `k` is how much larger or smaller the camera's place makes it; then it is
+      turned as the camera looks down on it (`pitch`), as it faces round the ring (`yaw`) and as it
+      lies back on the floor (`lay`), in degrees. */
+  function place(d: number, g = pose(d)) {
+    if (!view) return { x: g.x, y: 0, k: 1, pitch: 0, yaw: g.rot, lay: 0, s: g.s, shade: g.shade, alpha: g.alpha };
+    const { w, R, zoom, y, tilt, far } = view;
+    const th = (d * 2 * Math.PI) / n; // round the ring from its front, where the middle of the row goes
+    const a = (tilt * w * Math.PI) / 180;
+    // On the floor: across it, and towards you. The row is a line across; the ring curls back from it.
+    const across = g.x + (R * Math.sin(th) - g.x) * w;
+    const toward = R * Math.cos(th) * w;
+    const k = (far / (far - toward * Math.cos(a))) * (1 + (zoom - 1) * w); // nearer is larger; from above, all smaller
+    const ad = Math.abs(d);
+    return {
+      x: across * k,
+      // Looked down on, what is nearer is lower on the screen.
+      y: y * w + toward * Math.sin(a) * k,
+      k,
+      pitch: tilt * w,
+      // In the row a neighbour is turned in towards the middle; in the ring it faces out, so that lying
+      // back its top points at the centre.
+      yaw: g.rot + ((d * 360) / n - g.rot) * w,
+      lay: 90 * w,
+      s: g.s + (1 - g.s) * w,
+      // From above the whole ring is seen: nothing is in the dark at the ends, only a little dimmer
+      // away from the front.
+      shade: g.shade + (Math.min(ad, 1) * 0.14 + Math.max(0, ad - 1) * 0.045 - g.shade) * w,
+      alpha: g.alpha + (1 - g.alpha) * w * w,
+    };
+  }
+  /* How a sleeve is turned, as one matrix: the camera's look down (`pitch`), then its facing round the
+     ring (`yaw`), then its lying back on the floor (`lay`), in degrees. On its way there a sleeve is
+     edge-on for an instant (lying back a quarter turn before the camera's pitch brings it round), which
+     is a place rotations chained one after another are best not taken through; one matrix has no such
+     place. (Playwright's headless WebKit is no judge of how this looks: it draws every perspective()
+     without its vanishing point, the row's own included. The boxes it reports are right.) */
+  function turn3d(pitch: number, yaw: number, lay: number) {
+    const rad = Math.PI / 180;
+    const cp = Math.cos(-pitch * rad), sp = Math.sin(-pitch * rad);
+    const cy = Math.cos(yaw * rad), sy = Math.sin(yaw * rad);
+    const cl = Math.cos(lay * rad), sl = Math.sin(lay * rad);
+    // Rx(-pitch) · Ry(yaw) · Rx(lay), columns first as matrix3d wants them.
+    const m = [
+      cy, sp * sy, -cp * sy,
+      sy * sl, cp * cl - sp * cy * sl, sp * cl + cp * cy * sl,
+      sy * cl, -cp * sl - sp * cy * cl, -sp * sl + cp * cy * cl,
+    ].map((v) => (Math.abs(v) < 1e-6 ? '0' : v.toFixed(6)));
+    return `matrix3d(${m[0]},${m[1]},${m[2]},0,${m[3]},${m[4]},${m[5]},0,${m[6]},${m[7]},${m[8]},0,0,0,0,1)`;
+  }
+  /* The sleeve's size from the camera's place (`k`) goes inside its perspective, with the perspective
+     shortened to match: the same picture as scaling the whole thing afterwards, in the order the row
+     has always written its sleeves (place, perspective, turn, size). */
+  const turned = (v: { k: number; pitch: number; yaw: number; lay: number; s: number }) =>
+    `perspective(${(P * v.k).toFixed(1)}px) ${turn3d(v.pitch, v.yaw, v.lay)} scale(${(v.k * v.s).toFixed(4)})`;
+  /** px a finger moves per record under it: the row's spacing at the shelf, the ring's arc at its
+      front from above. */
+  function perRecord() {
+    if (!view) return A;
+    const a = (view.tilt * view.w * Math.PI) / 180;
+    const k = (view.far / (view.far - view.R * view.w * Math.cos(a))) * (1 + (view.zoom - 1) * view.w);
+    return A + (((2 * Math.PI * view.R) / n) * k - A) * view.w;
+  }
+
   // Where the row is, in records (0 = the first one in the middle).
   // The row opens on a record in the middle (marked by the page), so there are sleeves on both sides.
   const START = Math.max(0, buttons.findIndex((b) => b.hasAttribute('data-start')));
   const pos = new Spring(START, { response: 0.5, damping: 1 }, 0.0004);
   let captionIndex = START;
+
+  /* What the row is doing, said aloud on the page's root for whatever else on the page wants to move
+     with it (a backdrop, say): "v4:turn" whenever the row has moved, with where it is in records
+     (`pos`, running freely; `n` records in the ring), and "v4:centre" when another record becomes the
+     one in the middle. "v4:open" and "v4:close" say a record came out and went back. */
+  const say = (type: string, detail: object) => root.dispatchEvent(new CustomEvent(type, { detail }));
+  let saidPos = NaN;
 
   function renderRow() {
     // With reduced motion the record doesn't fly out, so the row doesn't part for it either.
@@ -152,25 +239,33 @@ function init(root: HTMLElement, signal: AbortSignal) {
     for (let i = 0; i < n; i++) {
       const d = around(i - pos.value);
       const g = pose(d);
-      let x = g.x;
-      let shade = g.shade;
+      const v = view ? place(d, g) : null;
+      let x = v ? v.x : g.x;
+      let shade = v ? v.shade : g.shade;
       if (part > 0 && i !== openIndex) {
-        // The row parts around the record that came out, and dims.
-        x += Math.sign(d) * Math.min(Math.abs(d), 1) * part * S * 0.32;
+        // The row parts around the record that came out, and dims. (The ring has room: it only dims.)
+        x += Math.sign(d) * Math.min(Math.abs(d), 1) * part * S * 0.32 * (1 - (view?.w ?? 0));
         shade = Math.min(0.85, shade + part * 0.3);
       }
       // From the second record out, a sleeve brighter than most is dimmed to their brightness, so a
       // pale one goes into the pile as the dark ones do instead of staying lit and vanishing at the end.
-      const t = clamp(Math.abs(d) - 2, 0, 1);
+      const t = clamp(Math.abs(d) - 2, 0, 1) * (1 - (view?.w ?? 0));
       if (t > 0 && dimTo[i]! < 1) shade = 1 - (1 - shade) * (1 - t * t * (3 - 2 * t) * (1 - dimTo[i]!));
       const b = buttons[i]!;
-      css(b, 'transform', `translate3d(${x.toFixed(2)}px,0,0) perspective(${P.toFixed(0)}px) rotateY(${g.rot.toFixed(3)}deg) scale(${g.s.toFixed(4)})`);
+      const alpha = v ? v.alpha : g.alpha;
+      css(b, 'transform', v
+        ? `translate3d(${x.toFixed(2)}px,${v.y.toFixed(2)}px,0) ${turned(v)}`
+        : `translate3d(${x.toFixed(2)}px,0,0) perspective(${P.toFixed(0)}px) rotateY(${g.rot.toFixed(3)}deg) scale(${g.s.toFixed(4)})`);
       css(shades[i]!, 'opacity', shade.toFixed(3));
       css(b, 'zIndex', String(g.z));
-      css(b, 'opacity', g.alpha.toFixed(3));
-      css(b, 'pointerEvents', g.alpha < 0.2 ? 'none' : ''); // nothing to press on the far side
+      css(b, 'opacity', alpha.toFixed(3));
+      css(b, 'pointerEvents', alpha < 0.2 ? 'none' : ''); // nothing to press on the far side
     }
     renderCaption();
+    if (pos.value !== saidPos) {
+      saidPos = pos.value;
+      say('v4:turn', { pos: pos.value, n });
+    }
   }
 
   /* The name under the row. It changes a little past half-way (not at it), so a finger resting between
@@ -188,6 +283,7 @@ function init(root: HTMLElement, signal: AbortSignal) {
       const v = records[c]!;
       capTitle.textContent = v.title;
       capMeta.textContent = `${v.artist}, ${v.year}`;
+      say('v4:centre', { index: c, id: v.id });
       captionFlash?.cancel();
       captionFlash = speed < 5 ? caption.animate([{ opacity: 0.2 }, { opacity: 1 }], { duration: 180, easing: 'ease-out' }) : null;
     }
@@ -251,7 +347,7 @@ function init(root: HTMLElement, signal: AbortSignal) {
   /* Dragging the row. Vertical pans stay with the browser (touch-action: pan-y); a horizontal one, once
      it is clearly horizontal, tracks the finger 1:1 and throws on release. */
   const tracker = new VelocityTracker();
-  let rowDrag: { id: number; x0: number; y0: number; pos0: number; active: boolean } | null = null;
+  let rowDrag: { id: number; x0: number; y0: number; pos0: number; active: boolean; dir: 1 | -1 } | null = null;
   let dragged = false; // the last press turned into a drag: its click must not open anything
   let caught = false; // the last press caught a thrown row in flight: it only stops it
   let thrown = false; // the row is coasting from a throw (not from a tap or the keyboard)
@@ -272,7 +368,9 @@ function init(root: HTMLElement, signal: AbortSignal) {
       steer();
       pos.set(pos.value);
     }
-    rowDrag = { id: e.pointerId, x0: e.clientX, y0: e.clientY, pos0: pos.value, active: false };
+    // From above, a finger on the far side of the ring is on records going the other way: they follow it too.
+    const far = !!view && view.w > 0.5 && e.clientY < row.getBoundingClientRect().top + buttons[0]!.offsetTop + S / 2 + view.y * view.w;
+    rowDrag = { id: e.pointerId, x0: e.clientX, y0: e.clientY, pos0: pos.value, active: false, dir: far ? -1 : 1 };
     tracker.reset(e.clientX, e.timeStamp);
   });
   row.addEventListener('pointermove', (e) => {
@@ -294,13 +392,14 @@ function init(root: HTMLElement, signal: AbortSignal) {
       return;
     }
     tracker.push(e.clientX, e.timeStamp);
-    pos.set(rowDrag.pos0 - dx / A); // no ends to pull against: it goes round
+    pos.set(rowDrag.pos0 - (rowDrag.dir * dx) / perRecord()); // no ends to pull against: it goes round
     fingerMoved = true;
     tick();
   });
   const endRowDrag = (e: PointerEvent) => {
     if (!rowDrag || e.pointerId !== rowDrag.id) return;
     const wasActive = rowDrag.active;
+    const dir = rowDrag.dir;
     rowDrag = null;
     row.classList.remove('is-dragging');
     if (wasActive) {
@@ -309,7 +408,7 @@ function init(root: HTMLElement, signal: AbortSignal) {
       // brake, or lurch, on the frame it is let go: it carries on at the speed it had on screen.
       const v = e.type === 'pointercancel' ? 0 : tracker.velocity(e.timeStamp, 40);
       // A flick earns a little bounce as it lands; a slow drag settles without one.
-      release(-v / A, Math.abs(v) > 500, FLICK_SPEED);
+      release((-dir * v) / perRecord(), Math.abs(v) > 500, FLICK_SPEED);
     } else if (caught || e.type === 'pointercancel' || (!lead && pos.target !== Math.round(pos.target))) {
       // (A row turning round is aimed between two records, but is on its way to one.)
       goTo(Math.round(pos.value));
@@ -475,6 +574,7 @@ function init(root: HTMLElement, signal: AbortSignal) {
 
   const overlay = q('[data-v4-open]');
   const scrim = q('[data-v4-scrim]');
+  const cast = q('[data-v4-cast]');
   const edge = q('[data-v4-edge]');
   const scroller = q('[data-v4-scroll]');
   const stage = q('[data-v4-stage]');
@@ -534,6 +634,10 @@ function init(root: HTMLElement, signal: AbortSignal) {
   let shedFrom = [{ a: 1, fade: 0 }, { a: 1, fade: 0 }];
   let detailsTimer = 0;
 
+  /** The spring a record goes home on. Into the ring it is carried over its place and then lowered
+      (renderHero), which needs a little longer than the one move into the row. */
+  const homeResponse = () => 0.44 + 0.1 * (view?.w ?? 0);
+
   /** Pulling the tape leans on the record: its right side tips away by this much, and it sinks a little. */
   const TILT = 8; // degrees
   const PRESS = 0.045; // of its size
@@ -558,6 +662,7 @@ function init(root: HTMLElement, signal: AbortSignal) {
     source = { cx: rr.left + rr.width / 2, cy: rr.top + buttons[0]!.offsetTop + S / 2 };
     // Sleeve plus the half of the disc that shows is 1.48 sleeves wide; shrink it to fit a phone.
     revealScale = Math.min(1, (window.innerWidth - 32) / (So * 1.48));
+    overlay.style.setProperty('--cast', `${S}px`); // its shadow on the floor is a sleeve's footprint
   }
 
   function fill(i: number, v: Vinyl) {
@@ -623,6 +728,7 @@ function init(root: HTMLElement, signal: AbortSignal) {
     unwrapped = false;
     closeStep = 'fly';
     fill(i, v);
+    say('v4:open', { index: i, id: v.id });
 
     overlay.hidden = false;
     overlay.setAttribute('data-record-open', v.id);
@@ -731,7 +837,7 @@ function init(root: HTMLElement, signal: AbortSignal) {
     } else {
       closeStep = 'fly';
       peel.to(0, { response: 0.3, damping: 1 });
-      lift.to(0, { response: 0.44, damping: 1 });
+      lift.to(0, { response: homeResponse(), damping: 1 });
     }
     renderAll();
     tick();
@@ -747,6 +853,7 @@ function init(root: HTMLElement, signal: AbortSignal) {
     clearTimeout(detailsTimer);
     for (const s of [lift, reveal, slide, rise, peel, away, away2, tilt]) s.set(0);
     shedding = false;
+    say('v4:close', { index: i, id: records[i]!.id });
     overlay.hidden = true;
     overlay.removeAttribute('data-record-open');
     overlay.removeAttribute('data-record-unwrapped');
@@ -762,20 +869,54 @@ function init(root: HTMLElement, signal: AbortSignal) {
     buttons[i]!.focus({ preventScroll: true });
   }
 
+  /* The flight between your hands and the record's place. In the row it is one move: across, turning,
+     shrinking, with a little rise on the way. Into the ring seen from above it is two, as a hand puts
+     something down on a floor: the record is carried over its place, already level with the floor,
+     and then lowered onto it; so it is over its place early (`across`), level early (`level`), and
+     only then comes down to size (`down`), its shadow tightening under it. Taking it out is the same
+     film backwards: it comes up off the floor where it lay, and then to you. All of it is drawn from
+     the one spring (`lift`), so it can be turned round at any point of the way. */
+  const smooth = (v: number) => v * v * (3 - 2 * v);
   function renderHero() {
     const t = lift.value;
     if (lift.settled && t === 1) {
       css(hero, 'transform', 'none');
+      css(cast, 'opacity', '0');
     } else {
       // From where the record is in front (the stage may still be gliding: rise) to its pose in the row,
-      // wherever the row is right now.
-      const g = pose(around(openIndex! - pos.value));
-      const k = (g.s * S) / So;
-      const u = 1 - t;
+      // wherever the row is right now; or to where it lies in the ring.
+      const g = place(around(openIndex! - pos.value));
+      const above = view ? view.w : 0; // how much of this flight is the ring's kind
+      const u = clamp(1 - t, 0, 1);
+      const across = u + (1 - (1 - u) * (1 - u) - u) * above;
+      const level = u + (smooth(clamp(u / 0.62, 0, 1)) - u) * above;
+      const down = u + (u * Math.sqrt(u) - u) * above;
+      // A spring a little past its end still moves it, as it always has in the row.
+      const past = 1 - t - u;
+      const k = (g.k * g.s * S) / So;
       const scrolled = scroller.scrollTop - scrollAt;
-      const x = (source.cx + g.x - target.cx) * u;
-      const y = (source.cy - (target.cy - scrolled) - rise.value) * u - Math.sin(Math.PI * clamp(t, 0, 1)) * So * 0.1;
-      css(hero, 'transform', `translate3d(${x.toFixed(2)}px,${y.toFixed(2)}px,0) perspective(${P.toFixed(0)}px) rotateY(${(g.rot * u).toFixed(3)}deg) scale(${(k + (1 - k) * t).toFixed(4)})`);
+      const x = (source.cx + g.x - target.cx) * (across + past);
+      const y = (source.cy + g.y - (target.cy - scrolled) - rise.value) * (across + past) - Math.sin(Math.PI * clamp(t, 0, 1)) * So * 0.1 * (1 - above);
+      // Its perspective shortens as it shrinks, so on its last frame it is drawn exactly as the sleeve
+      // in the ring is (see `turned`), and the two change places unseen.
+      const near = 1 + (g.k - 1) * down;
+      const turn = view ? turn3d(g.pitch * level, g.yaw * level, g.lay * level) : `rotateY(${(g.yaw * (u + past)).toFixed(3)}deg)`;
+      css(hero, 'transform', `translate3d(${x.toFixed(2)}px,${y.toFixed(2)}px,0) perspective(${(P * near).toFixed(1)}px) ${turn} scale(${(1 + (k - 1) * (down + past)).toFixed(4)})`);
+
+      if (view && above > 0) {
+        // Its shadow lies where it will: on the floor at its place, and across the corners of its
+        // neighbours. The lamp is overhead, so the shadow is under the record and a little towards
+        // you; the higher the record, the larger and fainter. It is gone as the record touches down,
+        // and before the backdrop has cleared there is no floor to see it on.
+        const high = 1 - down;
+        const size = g.k * g.s * (1 + 0.26 * high);
+        const cx = source.cx + g.x - S / 2;
+        const cy = source.cy + g.y - S / 2 + high * S * g.k * 0.07;
+        css(cast, 'transform', `translate3d(${cx.toFixed(2)}px,${cy.toFixed(2)}px,0) perspective(${(P * g.k).toFixed(1)}px) ${turn3d(g.pitch, g.yaw, g.lay)} scale(${size.toFixed(4)})`);
+        css(cast, 'opacity', (0.62 * above * smooth(clamp((u - 0.18) / 0.4, 0, 1)) * (1 - smooth(clamp((down - 0.8) / 0.2, 0, 1)))).toFixed(3));
+      } else {
+        css(cast, 'opacity', '0');
+      }
     }
     css(stage, 'transform', rise.value === 0 ? '' : `translate3d(0,${rise.value.toFixed(2)}px,0)`);
     const a = clamp(t, 0, 1);
@@ -1150,7 +1291,7 @@ function init(root: HTMLElement, signal: AbortSignal) {
       }
       if (phase === 'closing' && closeStep === 'tape' && peel.value < 0.18) {
         closeStep = 'fly'; // nearly sealed: it heads home as the tab finishes
-        lift.to(0, { response: 0.44, damping: 1 });
+        lift.to(0, { response: homeResponse(), damping: 1 });
         busy = true;
       }
     }

@@ -17,6 +17,14 @@ export const musicCopy = {
     headline: 'My records.',
     lede: 'These are the albums I own on vinyl. Pick one and unwrap it.',
   },
+  /** In the middle of the ring, once the page has climbed above the records: how the collection came
+      about and what putting a record on is to me. One passage at a time; each fills with light as the
+      page is scrolled, then makes way for the next. */
+  collection: [
+    'My father encouraged me to start my own collection. His is huge, but I keep adding to mine, thinking I’ll catch up with him one day.',
+    'When I want to relax or study, I put on a record I really like. For me it is a spiritual thing.',
+    'First I switch on the stereo, then the turntable. I clean the record and, finally, set it playing. I love the sound of the needle as it lands.',
+  ],
   record: {
     unwrap: 'Unwrap',
     unwrapHint: 'Slide to unwrap',
