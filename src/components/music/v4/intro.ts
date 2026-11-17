@@ -83,57 +83,77 @@ function start(root: HTMLElement, signal: AbortSignal, fromHistory: boolean) {
     return drift();
   }
 
-  // Where things go on the stage, from where they are in the page (the parts are laid out, unseen).
-  const L = love.getBoundingClientRect();
-  const M = word.getBoundingClientRect();
-  const W = innerWidth, H = innerHeight;
-  const sM = Math.min((W * 0.86) / M.width, (H * 0.4) / M.height); // "music." as wide as the screen allows
-  const sL0 = Math.min((W * 0.55) / L.width, (H * 0.24) / L.height); // "I love" alone, large
-  const sL1 = sL0 * 0.78; // after the wait
-  const sL2 = Math.min(sM * 0.42, sL1); // dwarfed by "music"
-  const cx = W / 2, cy = H * 0.47;
-  const rise = H * 0.035; // how far "I love" drifts up through the wait
-  const hL = L.height * sL2, hM = M.height * sM;
-  const top = cy - (hL + hM * 1.02) / 2;
-  const loveY = top + hL / 2, wordY = top + hL + hM * 0.02 + hM / 2;
+  // Where the parts rest in the page (laid out, unseen), and where they go on the stage. The stage is
+  // the screen as it is now, so it is worked out again whenever the screen changes size during the
+  // show: on an iPhone, Safari's toolbar comes back as the page opens at its top (it was tucked away on
+  // a page scrolled down), and the screen gets shorter under the headline.
+  const restLove = love.getBoundingClientRect(), restWord = word.getBoundingClientRect();
+  const sx0 = scrollX, sy0 = scrollY;
+  type Box = { left: number; right: number; top: number; width: number; height: number };
+  /** A part's resting box on the screen now, wherever the page has been scrolled to since. */
+  const rest = (r: DOMRect): Box => {
+    const dx = sx0 - scrollX, dy = sy0 - scrollY;
+    return { left: r.left + dx, right: r.right + dx, top: r.top + dy, width: r.width, height: r.height };
+  };
   // Each part scales about the side that faces the other ("I love" its right, "music." its left, as
   // set in the CSS), so neither swells into the other on the way home.
   /** Puts a part's facing side at x and its middle at y, scaled by s. */
-  const place = (r: DOMRect, side: 'left' | 'right', x: number, y: number, s: number) => {
+  const place = (r: Box, side: 'left' | 'right', x: number, y: number, s: number) => {
     const dx = side === 'right' ? x + (s * r.width) / 2 - r.right : x - (s * r.width) / 2 - r.left;
     return `translate(${dx.toFixed(2)}px, ${(y - r.top - r.height / 2).toFixed(2)}px) scale(${s.toFixed(4)})`;
   };
-  const loveAt = (y: number, s: number) => place(L, 'right', cx, y, s);
-  const wordAt = (s: number) => place(M, 'left', cx, wordY, s);
   const home = 'translate(0px, 0px) scale(1)';
   const T = SETTLE + LOVE_HOME;
   const o = (ms: number) => ms / T;
   const Tw = SETTLE + FOLLOW + HOME;
   const ow = (ms: number) => ms / Tw;
+  /** The two parts' paths across the screen as it is now. */
+  const paths = () => {
+    const L = rest(restLove), M = rest(restWord);
+    const W = innerWidth, H = innerHeight;
+    const sM = Math.min((W * 0.86) / M.width, (H * 0.4) / M.height); // "music." as wide as the screen allows
+    const sL0 = Math.min((W * 0.55) / L.width, (H * 0.24) / L.height); // "I love" alone, large
+    const sL1 = sL0 * 0.78; // after the wait
+    const sL2 = Math.min(sM * 0.42, sL1); // dwarfed by "music"
+    const cx = W / 2, cy = H * 0.47;
+    const rise = H * 0.035; // how far "I love" drifts up through the wait
+    const hL = L.height * sL2, hM = M.height * sM;
+    const top = cy - (hL + hM * 1.02) / 2;
+    const loveY = top + hL / 2, wordY = top + hL + hM * 0.02 + hM / 2;
+    const loveAt = (y: number, s: number) => place(L, 'right', cx, y, s);
+    const wordAt = (s: number) => place(M, 'left', cx, wordY, s);
+    return {
+      // "I love": in focus, shrinking steadily through the wait, shoved up as "music" lands, then home.
+      love: [
+        { offset: 0, transform: loveAt(cy + rise, sL0), easing: EASE_BREATH },
+        { offset: o(HIT), transform: loveAt(cy, sL1), easing: EASE_OUT },
+        { offset: o(HIT + PUNCH), transform: loveAt(loveY, sL2) },
+        { offset: o(SETTLE), transform: loveAt(loveY, sL2), easing: EASE_DRAWER },
+        { offset: 1, transform: home },
+      ],
+      // "music.": lands from larger than the screen allows, all at once, then follows "I love" home.
+      word: [
+        { offset: 0, transform: wordAt(sM * 1.35) },
+        { offset: ow(HIT), transform: wordAt(sM * 1.35), easing: EASE_OUT },
+        { offset: ow(HIT + PUNCH), transform: wordAt(sM) },
+        { offset: ow(SETTLE + FOLLOW), transform: wordAt(sM), easing: EASE_DRAWER },
+        { offset: 1, transform: home },
+      ],
+    } satisfies Record<string, Keyframe[]>;
+  };
+  const first = paths();
+  const loveMoves = love.animate(first.love, { duration: T, fill: 'both' });
+  const wordMoves = word.animate(first.word, { duration: Tw, fill: 'both' });
 
   const show: Animation[] = [
-    // "I love": in focus, shrinking steadily through the wait, shoved up as "music" lands, then home.
-    love.animate([
-      { offset: 0, transform: loveAt(cy + rise, sL0), easing: EASE_BREATH },
-      { offset: o(HIT), transform: loveAt(cy, sL1), easing: EASE_OUT },
-      { offset: o(HIT + PUNCH), transform: loveAt(loveY, sL2) },
-      { offset: o(SETTLE), transform: loveAt(loveY, sL2), easing: EASE_DRAWER },
-      { offset: 1, transform: home },
-    ], { duration: T, fill: 'both' }),
+    loveMoves,
     // Shown (the CSS hides it until now); its words come into focus one after the other.
     love.animate([{ opacity: 1 }, { opacity: 1 }], { duration: T, fill: 'both' }),
     ...[...love.querySelectorAll<HTMLElement>('[data-intro-w]')].map((w, i) => w.animate(
       [{ opacity: 0, filter: 'blur(14px)' }, { opacity: 1, offset: 0.6 }, { opacity: 1, filter: 'blur(0px)' }],
       { duration: FOCUS, delay: i * FOCUS_STAGGER, easing: EASE_FOCUS, fill: 'both' },
     )),
-    // "music.": lands from larger than the screen allows, all at once, then follows "I love" home.
-    word.animate([
-      { offset: 0, transform: wordAt(sM * 1.35) },
-      { offset: ow(HIT), transform: wordAt(sM * 1.35), easing: EASE_OUT },
-      { offset: ow(HIT + PUNCH), transform: wordAt(sM) },
-      { offset: ow(SETTLE + FOLLOW), transform: wordAt(sM), easing: EASE_DRAWER },
-      { offset: 1, transform: home },
-    ], { duration: Tw, fill: 'both' }),
+    wordMoves,
     word.animate([{ opacity: 0, filter: 'blur(6px)' }, { opacity: 1, offset: 0.3 }, { opacity: 1, filter: 'blur(0px)' }], { duration: PUNCH, delay: HIT, easing: EASE_OUT, fill: 'both' }),
     // The rest of the page, in order down it, following the headline home.
     ...[...root.querySelectorAll<HTMLElement>('[data-intro-rest]'), document.querySelector<HTMLElement>('.music-footer')]
@@ -145,8 +165,20 @@ function start(root: HTMLElement, signal: AbortSignal, fromHistory: boolean) {
   const { animation: rushing, end } = rush(bands, HIT, SETTLE - HIT);
   running.push(...show, rushing);
 
+  // The screen changing size mid-show redraws the paths; the parts carry on from where they are in time.
+  let settled = false;
+  const reflow = () => {
+    if (settled) return;
+    const next = paths();
+    (loveMoves.effect as KeyframeEffect).setKeyframes(next.love);
+    (wordMoves.effect as KeyframeEffect).setKeyframes(next.word);
+  };
+  addEventListener('resize', reflow, { signal });
+  visualViewport?.addEventListener('resize', reflow, { signal });
+
   // Once in place, the page is the page again: no intro state, no animations holding it there.
   Promise.all(show.map((a) => a.finished)).then(() => {
+    settled = true;
     root.removeAttribute('data-intro');
     show.forEach((a) => a.cancel());
   }, () => {});
