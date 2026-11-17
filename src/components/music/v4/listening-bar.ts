@@ -523,13 +523,16 @@ function init(root: HTMLElement, signal: AbortSignal) {
 
   const lift = new Spring(0, { response: 0.52, damping: 1 }, 0.0005); // 0 in the row, 1 in front of you
   const reveal = new Spring(0, { response: 0.7, damping: 1 }, 0.0005); // 0 disc in the sleeve, 1 half out
+  const slide = new Spring(0, { response: 0.7, damping: 1 }, 0.0005); // 0 sleeve in the middle, 1 moved over for the disc
   const peel = new Spring(0, { response: 0.35, damping: 1 }, 0.0005); // 0 sealed, 1 strip torn off
   const rise = new Spring(0, { response: 0.55, damping: 1 }, 0.05); // px: the record making room for the details
-  const away = new Spring(0, { response: 0.42, damping: 1 }, 0.0005); // 0 film on the sleeve, 1 gone
+  const away = new Spring(0, { response: 0.42, damping: 1 }, 0.0005); // 0 film on the sleeve, 1 gone: the top piece
+  const away2 = new Spring(0, { response: 0.56, damping: 1 }, 0.0005); // the same for the bottom piece
   const tilt = new Spring(0, { response: 0.3, damping: 1 }, 0.0005); // the lean, once the record is on its way back
   let shedding = false; // the film is coming away, or coming back on
   // Putting it back: how much of the film showed when it turned round (renderShed).
-  let shedFrom = { a: 1, fade: 0 };
+  let shedFrom = [{ a: 1, fade: 0 }, { a: 1, fade: 0 }];
+  let detailsTimer = 0;
 
   /** Pulling the tape leans on the record: its right side tips away by this much, and it sinks a little. */
   const TILT = 8; // degrees
@@ -641,7 +644,9 @@ function init(root: HTMLElement, signal: AbortSignal) {
     peel.set(0);
     reveal.set(0);
     rise.set(0);
+    slide.set(0);
     away.set(0);
+    away2.set(0);
     tilt.set(0);
     shedding = false;
 
@@ -671,6 +676,7 @@ function init(root: HTMLElement, signal: AbortSignal) {
     if (openIndex === null || phase === 'closing') return;
     const leaning = lean();
     phase = 'closing';
+    clearTimeout(detailsTimer);
     cancelHint();
     if (peelDrag) endPeel(null);
     overlay.removeAttribute('data-show-details');
@@ -697,7 +703,7 @@ function init(root: HTMLElement, signal: AbortSignal) {
       handle.tabIndex = 0;
       shedding = true; // the film comes back the way it left
       overlay.classList.add('is-shedding');
-      shedFrom = { a: Math.max(away.value, 0.001), fade: shedFade(away.value) };
+      shedFrom = [away, away2].map((s) => ({ a: Math.max(s.value, 0.001), fade: shedFade(s.value) }));
     }
 
     // Scrolled down the details: scroll back to the top but leave everything where it is on screen, the
@@ -718,7 +724,10 @@ function init(root: HTMLElement, signal: AbortSignal) {
     if (rewrap) {
       closeStep = 'film';
       reveal.to(0, { response: 0.32, damping: 1 });
-      away.to(0, { response: 0.42, damping: 1 }); // as it left; if it was still leaving, it turns round
+      slide.to(0, { response: 0.32, damping: 1 });
+      // As they left; a piece still leaving turns round.
+      away.to(0, { response: 0.42, damping: 1 });
+      away2.to(0, { response: 0.42, damping: 1 });
     } else {
       closeStep = 'fly';
       peel.to(0, { response: 0.3, damping: 1 });
@@ -735,7 +744,8 @@ function init(root: HTMLElement, signal: AbortSignal) {
     phase = 'idle';
     unwrapped = false;
     closeStep = 'fly';
-    for (const s of [lift, reveal, rise, peel, away, tilt]) s.set(0);
+    clearTimeout(detailsTimer);
+    for (const s of [lift, reveal, slide, rise, peel, away, away2, tilt]) s.set(0);
     shedding = false;
     overlay.hidden = true;
     overlay.removeAttribute('data-record-open');
@@ -795,27 +805,28 @@ function init(root: HTMLElement, signal: AbortSignal) {
     css(hintCaption, 'opacity', (late * clamp(1 - peel.value * 2.5, 0, 1)).toFixed(3));
   }
 
-  /** How far the record leans, 0 to 1. It comes on early in the pull, and goes as the film leaves. On
-      the way back it lets go of whatever lean it had. */
+  /** How far the record leans, 0 to 1. It comes on early in the pull. Once the tape is off the record
+      is let go on a spring (commitUnwrap) and swings back a little past flat before it settles; on the
+      way back it lets go of whatever lean it had. */
   function lean() {
     if (openIndex === null || reduced()) return 0;
-    if (phase === 'closing') return tilt.value;
-    if (shedding) return (1 - clamp(away.value, 0, 1)) ** 2;
-    if (unwrapped) return 0;
+    if (phase === 'closing' || unwrapped) return tilt.value;
     return 1 - (1 - clamp(peel.value, 0, 1)) ** 3;
   }
 
   function renderReveal() {
     const r = reveal.value;
     const t = lean();
-    const shift = -0.24 * So * revealScale * r;
-    const s = (1 - (1 - revealScale) * r) * (1 - PRESS * t);
+    // The sleeve moves over for the disc on a spring of its own, without the disc's overshoot.
+    const g = slide.value;
+    const shift = -0.24 * So * revealScale * g;
+    const s = (1 - (1 - revealScale) * g) * (1 - PRESS * t);
     const tilted = t === 0 ? '' : ` perspective(${(So * 3.8).toFixed(0)}px) rotateY(${(TILT * t).toFixed(3)}deg)`;
-    css(group, 'transform', r === 0 && t === 0 ? 'none' : `translate3d(${shift.toFixed(2)}px,0,0) scale(${s.toFixed(4)})${tilted}`);
-    // The disc rolls out: it turns by as much as it travels, and comes to rest with its label upright.
+    css(group, 'transform', g === 0 && t === 0 ? 'none' : `translate3d(${shift.toFixed(2)}px,0,0) scale(${s.toFixed(4)})${tilted}`);
+    // The disc rolls out: it turns as it travels, runs a little past where it stops and rolls back.
     // All the way in, it is out of sight: its shadow would show under the sleeve in the row. So its
     // shadow goes as it slides in, rather than all at once when it is home.
-    css(disc, 'transform', r === 0 ? 'none' : `translate3d(${(0.5 * So * r).toFixed(2)}px,0,0) rotate(${((r - 1) * 60).toFixed(2)}deg)`);
+    css(disc, 'transform', r === 0 ? 'none' : `translate3d(${(0.5 * So * r).toFixed(2)}px,0,0) rotate(${((r - 1) * 84).toFixed(2)}deg)`);
     css(disc, 'visibility', r === 0 ? 'hidden' : '');
     css(discShadow, 'opacity', clamp(r / 0.35, 0, 1).toFixed(3));
   }
@@ -846,29 +857,36 @@ function init(root: HTMLElement, signal: AbortSignal) {
     }
   }
 
-  /* The film coming away once the tape is off: the top piece goes up and the bottom one down, each
-     swinging about the end the tab left by. Put back, it comes back on along the same path. */
+  /* The film coming away once the tape is off. The two pieces are not a mirror image: the top one floats
+     up and drifts on after the tab, easing off as it goes; the bottom one, held by the tab longest, lets
+     go later and drops, gathering speed. Both curl away from the sleeve and shrink a touch as the film
+     loses its stretch. Put back, each comes back on along the same path. */
   /** Leaving, the film is gone well before the end of its way: a third of the way out it is fading. */
   const shedFade = (a: number) => clamp(1 - a * 1.45, 0, 1);
 
   function renderShed() {
-    const a = away.value;
-    // A short way: far enough to read as leaving, not so far that it crosses the title below.
-    const d = a * So * 0.17;
-    // Coming back it shows from the start of its way and is all there as it lands, so it closes over
-    // the sleeve instead of appearing at the last moment; it starts from what showed as it turned round.
-    let f = shedFade(a);
-    if (phase === 'closing') f = shedFrom.fade + (1 - shedFrom.fade) * clamp(1 - a / shedFrom.a, 0, 1);
-    const fade = a === 0 ? '' : f.toFixed(3);
     for (let i = 0; i < 2; i++) {
-      const up = i === 0 ? -1 : 1;
-      css(films[i]!, 'transform', a === 0 ? 'none' : `translate3d(0,${(up * d).toFixed(2)}px,0) rotate(${(up * a * 3.5).toFixed(3)}deg)`);
-      css(films[i]!, 'opacity', fade);
+      const a = (i === 0 ? away : away2).value;
+      // Coming back it shows from the start of its way and is all there as it lands, so it closes over
+      // the sleeve instead of appearing at the last moment; it starts from what showed as it turned round.
+      let f = shedFade(a);
+      if (phase === 'closing') f = shedFrom[i]!.fade + (1 - shedFrom[i]!.fade) * clamp(1 - a / shedFrom[i]!.a, 0, 1);
+      let tf = 'none';
+      if (a !== 0) {
+        // Short ways: far enough to read as leaving, not so far that they cross the title below.
+        const fall = a * a;
+        const x = (i === 0 ? 0.06 * a : 0.02 * fall) * So;
+        const y = (i === 0 ? -0.2 * a : 0.26 * fall) * So;
+        const rot = i === 0 ? -6 * a - 2.2 * Math.sin(Math.PI * clamp(a, 0, 1)) : 5 * fall;
+        const curl = (i === 0 ? 28 : -22) * a;
+        tf = `translate3d(${x.toFixed(2)}px,${y.toFixed(2)}px,0) perspective(${(So * 2.5).toFixed(0)}px) rotateX(${curl.toFixed(2)}deg) rotate(${rot.toFixed(3)}deg) scale(${(1 - 0.04 * a).toFixed(4)})`;
+      }
+      css(films[i]!, 'transform', tf);
+      css(films[i]!, 'opacity', a === 0 ? '' : f.toFixed(3));
+      // Off the sleeve clear film would only show as stray lines, so it gets the faintest body there. It
+      // comes with the distance: none on the sleeve, where it would grey the sleeve over.
+      css(filmBodies[i]!, 'opacity', clamp(a * 4, 0, 1).toFixed(3));
     }
-    // Off the sleeve clear film would only show as stray lines, so it gets the faintest body there. It
-    // comes with the distance: none on the sleeve, where it would grey the sleeve over.
-    const body = clamp(a * 4, 0, 1).toFixed(3);
-    for (const el of filmBodies) css(el, 'opacity', body);
   }
 
   function renderAll() {
@@ -993,6 +1011,7 @@ function init(root: HTMLElement, signal: AbortSignal) {
     if (reduced()) {
       openLayout(false);
       reveal.set(1);
+      slide.set(1);
       requestAnimationFrame(() => overlay.setAttribute('data-show-details', ''));
       tick();
       return;
@@ -1001,6 +1020,11 @@ function init(root: HTMLElement, signal: AbortSignal) {
     overlay.classList.add('is-shedding');
     away.set(0);
     away.to(1, { response: 0.42, damping: 1, velocity: clamp(speed * 0.6, 0, 4) });
+    away2.set(0);
+    away2.to(1, { response: 0.56, damping: 1, velocity: clamp(speed * 0.25, 0, 3) });
+    // The record was leaning into the pull: with the tension gone it swings back past flat and settles.
+    tilt.set(1);
+    tilt.to(0, { response: 0.46, damping: 0.45 });
     tick();
   }
 
@@ -1018,9 +1042,15 @@ function init(root: HTMLElement, signal: AbortSignal) {
     measureOpen();
     if (animate) {
       rise.set(before - layoutAfter); // stay put on screen, then glide up to the new place
-      rise.to(0, { response: 0.55, damping: 1 });
-      reveal.to(1, { response: 0.7, damping: 1 });
-      requestAnimationFrame(() => overlay.setAttribute('data-show-details', ''));
+      rise.to(0, { response: 0.6, damping: 0.86 });
+      // Thrown out of the sleeve: it runs a little past where it stops and rolls back.
+      reveal.to(1, { response: 0.64, damping: 0.66, velocity: 0.9 });
+      slide.to(1, { response: 0.7, damping: 1 });
+      // The details follow the record up rather than rising with it.
+      clearTimeout(detailsTimer);
+      detailsTimer = window.setTimeout(() => {
+        if (phase === 'open' && unwrapped) overlay.setAttribute('data-show-details', '');
+      }, 140);
     }
     renderAll();
     tick();
@@ -1091,15 +1121,17 @@ function init(root: HTMLElement, signal: AbortSignal) {
     if (openIndex !== null) {
       busy = !lift.step(dt) || busy;
       busy = !reveal.step(dt) || busy;
+      busy = !slide.step(dt) || busy;
       busy = !rise.step(dt) || busy;
       if (!peelDrag) busy = !peel.step(dt) || busy;
       busy = busy || !!peelDrag;
       busy = !away.step(dt) || busy;
+      busy = !away2.step(dt) || busy;
       busy = !tilt.step(dt) || busy;
       if (shedding) {
         // The record opens as the film clears it, not on a timer.
         if (away.value > 0.35 && phase === 'open' && !overlay.hasAttribute('data-layout-open')) openLayout(true);
-        if (away.settled) endShed();
+        if (away.settled && away2.settled) endShed();
       }
 
       if (phase === 'open' && !unwrapped && lift.settled && lift.value === 1 && hintPhase === 'idle') scheduleHint();
@@ -1110,7 +1142,7 @@ function init(root: HTMLElement, signal: AbortSignal) {
       }
       if (phase === 'open' && !unwrapped && peel.target === 1 && peel.value >= 0.995) commitUnwrap();
       // Putting it back unwrapped: each part starts as the one before is nearly done, not after it.
-      if (phase === 'closing' && closeStep === 'film' && away.value < 0.4) {
+      if (phase === 'closing' && closeStep === 'film' && Math.max(away.value, away2.value) < 0.4) {
         closeStep = 'tape'; // the film is nearly on: the tab slips back on and sets off along the sleeve
         overlay.removeAttribute('data-record-unwrapped');
         peel.to(0, { response: 0.34, damping: 1 });
@@ -1150,5 +1182,6 @@ function init(root: HTMLElement, signal: AbortSignal) {
     cancelAnimationFrame(resizeFrame);
     clearTimeout(wheelIdle);
     clearTimeout(hintTimer);
+    clearTimeout(detailsTimer);
   });
 }
