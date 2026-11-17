@@ -1,7 +1,7 @@
 /**
  * The island's sound. The song plays through a plain audio element and nothing else: routing it
  * through Web Audio (for a live analyser and fades) is what glitched on pause and resume, and a
- * suspended AudioContext never answers resume() without a gesture, which hung the autostart. The
+ * suspended AudioContext never answers resume() without a gesture, which hung a start without a press. The
  * needle drop is recorded onto the start of the file (public/audio/README.md).
  *
  * There is one audio element for the whole visit, made here and never put in the page. The site
@@ -14,14 +14,12 @@
  * (six bands, 30 frames a second, a byte each) and the page reads the frame for the element's
  * current time, so the bars are in step with what is heard, whatever paused or sought it.
  *
- * Browsers only let a page make sound after a user gesture (Safari on iPhone always; desktop
- * browsers unless the visitor has allowed or played media on the site before). The autostart tries
- * at once and otherwise on every tap, click and key until the song really plays: play() refused
- * outside a gesture simply rejects, so the events of a tap that don't count go by harmlessly. A
- * visitor who pauses it is not played at again for the rest of the visit, reloads included.
+ * The song plays only when the visitor presses play in the island: nothing
+ * starts it on its own, and a tap anywhere else on the page doesn't either. The island invites the
+ * press instead (IslandNudge.tsx).
  *
  * A reload, or a visit that leaves the site and comes back, is a new start for the element: the song
- * carries on from where it was, on the first gesture again (the browser asks for one).
+ * waits, paused, at the place it was left, for the next press of play.
  */
 
 /** In step with scripts/audio-levels.mjs. */
@@ -50,8 +48,6 @@ interface Song {
   levels: string;
   /** In seconds, for seeking before the file has said how long it is. */
   duration: number;
-  /** A press the autostart leaves alone, because it starts or stops the song itself (the island's play button). */
-  skip: (target: EventTarget | null) => boolean;
 }
 
 const read = (key: string) => {
@@ -111,41 +107,9 @@ const create = (song: Song): IslandAudio => {
   }
   addEventListener('pagehide', () => write(placeKey, String(el.currentTime)));
 
-  // The autostart: at once where the browser allows it, otherwise on the first gesture that counts.
-  const gestures = ['pointerup', 'touchend', 'mousedown', 'keydown', 'click'] as const;
-  let waiting = false;
-  const listen = (on: boolean) => {
-    if (on === waiting) return;
-    waiting = on;
-    for (const type of gestures) {
-      if (on) addEventListener(type, onGesture, { capture: true, passive: true });
-      else removeEventListener(type, onGesture, true);
-    }
-  };
-  const attempt = () => {
-    if (!el.paused) { listen(false); return; }
-    void el.play().then(() => listen(false), () => undefined);
-  };
-  function onGesture(event: Event) {
-    // A press on the island's own play button is the visitor choosing: it starts the song itself.
-    if (song.skip(event.target)) { listen(false); return; }
-    attempt();
-  }
-  const autostart = () => {
-    if (read(choiceKey) === 'paused' || !el.paused) return;
-    listen(true);
-    // A browser that allows sound without a gesture starts now; elsewhere this rejects.
-    attempt();
-  };
-  autostart();
-  // Back from another site through the back/forward cache: the page is the one that was left, but
-  // the browser paused the song on the way out. Wait for a gesture again, as a fresh load does.
-  addEventListener('pageshow', (event) => { if (event.persisted) autostart(); });
-
   return {
     element: el,
     toggle() {
-      listen(false);
       let playing: boolean;
       if (el.paused) {
         if (el.ended) el.currentTime = 0;

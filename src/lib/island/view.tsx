@@ -18,6 +18,19 @@ export interface IslandViewProps {
   contentKey?: string;
   /** Hold the pill down: it squishes slightly. Defaults to false. */
   pressed?: boolean;
+  /**
+   * Press the pill or the detached bubble as the activity stack does, overriding `pressed`
+   * (personal site). Defaults to `pressed`.
+   */
+  pressTarget?: "pill" | "bubble" | null;
+  /** "swell" for the stack's press (grows, a bubble wobbles), "squish" for a gentle hold. Defaults to "squish". */
+  pressStyle?: "swell" | "squish";
+  /**
+   * Clock time (ms) at which the detached bubble joins the pill for an expansion, as the stack's
+   * long-press on the bubble sets it (split-expand-b): the join starts just ahead of it and the
+   * expansion that follows absorbs the bubble instead of passing through the idle pill. Defaults to none.
+   */
+  joining?: number | null;
   /** "container" (nearest positioned ancestor) or "viewport" (fixed to the window). Defaults to "container". */
   placement?: "container" | "viewport";
   /** Region name for screen readers. Defaults to "Live activity". */
@@ -53,6 +66,9 @@ export const IslandView = ({
   presentation,
   contentKey,
   pressed = false,
+  pressTarget,
+  pressStyle = "squish",
+  joining = null,
   placement = "container",
   label = "Live activity",
   liveLabel = "",
@@ -76,8 +92,9 @@ export const IslandView = ({
       presentation={presentation}
       contentKey={contentKey ?? presentation.kind}
       change={null}
-      pressed={pressed ? "pill" : null}
-      pressStyle="squish"
+      pressed={pressTarget !== undefined ? pressTarget : pressed ? "pill" : null}
+      pressStyle={pressStyle}
+      joining={joining}
       activityId={null}
       alerting={false}
       placement={placement}

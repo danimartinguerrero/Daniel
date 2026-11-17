@@ -176,7 +176,8 @@ export const shapeTransition = (
     return options.alert ? "alertCollapse" : "collapse";
   }
   if (to === "idle") return "dismiss";
-  if (from === "idle") return "appear";
+  // A bubble out of the bare pill buds off it as it does off a compact one (personal site).
   if (to === "minimal") return "split";
+  if (from === "idle") return "appear";
   return "unsplit";
 };

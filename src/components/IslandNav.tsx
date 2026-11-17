@@ -4,19 +4,21 @@ import { Artwork } from '@/components/islandcn/artwork';
 import { PlayerControls, PlayerCover, PlayerTitle, type PlaybackState } from '@/components/islandcn/now-playing-activity';
 import { islandAudio, type IslandAudio } from '@/components/island-audio';
 import { LiveMeter } from '@/components/LiveMeter';
+import { useIslandNudge } from '@/components/IslandNudge';
 import { warm } from '@/scripts/warm';
-import { IslandView, islandMetrics, type IslandMetricsOverrides, type IslandMotionOverrides, type IslandPresentation } from '@/lib/island';
+import { defaultClock, IslandView, islandMetrics, islandMotion, type IslandMetricsOverrides, type IslandMotionOverrides, type IslandPresentation } from '@/lib/island';
 
 /**
  * The navigation as the island, drawn by the islandcn engine (src/lib/island), with a song in it.
- * At rest it is compact, a cover and a level meter, as a music player's island is. Hovered (fine
+ * At rest it is the plain pill; while the song plays it is compact, a cover and a level meter, as a
+ * music player's island is. Hovered (fine
  * pointers), tapped (touch) or focused, it opens into islandcn's expanded player (cover, title,
  * meter, times and play/pause) with the links below, and closes when left. The engine solves the
  * springs, the shape and the crossfades; this file decides when it is open and what it holds.
  *
- * The song, with a needle drop recorded onto its start, plays by itself (island-audio.ts): at once
- * where the browser allows it, otherwise on the visitor's first tap, click or key. A visitor who pauses it isn't played at
- * again for the rest of the visit, reloads included. The meter shows the song's real spectrum.
+ * The song, with a needle drop recorded onto its start, plays only from the island's play button
+ * (island-audio.ts). While it isn't playing, the closed island keeps a bubble with a note in it
+ * (IslandNudge.tsx). The meter shows the song's real spectrum.
  */
 const links = [
   { href: '#projects', label: 'Projects' },
@@ -38,8 +40,12 @@ const tone = '#ff7a5c';
 const hoverOpenDelay = 70;
 const hoverCloseDelay = 180;
 
-/** The player and the links need more room than the engine's 180 pt cap. */
-const metrics = { expanded: { maxHeight: 300 } } as const satisfies IslandMetricsOverrides;
+/**
+ * The player and the links need more room than the engine's 180 pt cap. And the island keeps its
+ * keyline on a dark page when it shows nothing or only the bubble, as it does open or playing: on
+ * iOS the bare cutout has none, but here the pill is the way in, and on black it would vanish.
+ */
+const metrics = { expanded: { maxHeight: 300 }, keyline: { idle: 1 } } as const satisfies IslandMetricsOverrides;
 
 /**
  * The open and the close, tuned on islandcn's iOS-fitted springs so each reads as one motion on a
@@ -60,11 +66,16 @@ const metrics = { expanded: { maxHeight: 300 } } as const satisfies IslandMetric
  *   0.3 s.
  * - No blur skirts (`blurSkirt`): each blurred slot drew a cloned copy of itself at under 4.5%
  *   opacity on a plus-lighter blend, too faint to see and a blurred, blended layer more per slot.
+ * - No keyline dip (`keyline.dip`, below).
+ * - The pill's edges and height settle without overshoot as the bubble buds (`split`, 1 against
+ *   0.815): after a close the pill comes down from the card on that spring, and it fell 2.3 pt
+ *   under capsule height and 3 pt narrower, thinner than the bubble beside it. The bubble keeps its
+ *   own springs.
  */
 const motion = {
   viaIdle: { collapse: 0 },
-  shape: { pressExpand: { dampingFraction: 0.86 }, expand: { dampingFraction: 0.86 }, collapse: { response: 0.4, dampingFraction: 0.9 } },
-  body: { pressExpand: { dampingFraction: 0.86 }, expand: { dampingFraction: 0.86 }, collapse: { response: 0.38, dampingFraction: 0.92 } },
+  shape: { pressExpand: { dampingFraction: 0.86 }, expand: { dampingFraction: 0.86 }, collapse: { response: 0.4, dampingFraction: 0.9 }, split: { response: 0.42, dampingFraction: 1 } },
+  body: { pressExpand: { dampingFraction: 0.86 }, expand: { dampingFraction: 0.86 }, collapse: { response: 0.38, dampingFraction: 0.92 }, split: { response: 0.42, dampingFraction: 1 } },
   corner: { collapse: { response: 0.38, dampingFraction: 0.92, delay: 0 } },
   tail: { collapse: { width: { lean: { by: 0 }, settle: { at: 0 } }, height: { lean: { by: 0 }, settle: { at: 0 } }, top: { settle: { at: 0 } } } },
   contentTiming: {
@@ -73,7 +84,32 @@ const motion = {
     collapse: { exit: { response: 0.3 }, exitFade: 0.6, enter: { response: 0.36, delay: 0.06 } },
   },
   blurSkirt: { max: 0 },
+  // The keyline holds its strength through a collapse. Upstream dims it to 15% over 0.5 s and brings
+  // it back by 1.1 s (`keyline.dip`, measured on the simulator), which read here as the outline
+  // going and coming back each time the island closed.
+  keyline: { dip: 1 },
 } as const satisfies IslandMotionOverrides;
+
+/**
+ * Opening out of the bubble, as the activity stack opens a held bubble (split-expand-b): a press
+ * swells the bubble at touch-down (its own wobbling spring), a join is set, the bubble starts into
+ * the pill just ahead of it (`bubble.joinLead`) as its note leaves, and the expansion absorbs it as
+ * a lobe of the pill and turns outward `bubble.absorbExpand` later. The stack sets the join at its
+ * long-press (`longPressBubble`, 224 ms); here a tap opens, so the swell shows for `swellAtLeast`
+ * and the join comes `joinSoon` after the lift. Without a press on the bubble (a hover, the pill, a
+ * key) the join is `joinSoon` ahead: the note leaves 23 ms before it (the swap's `bubbleExit`), so
+ * less would cut it short.
+ */
+const swellAtLeast = Math.min(120, islandMotion.longPressBubble * 1000);
+const joinSoon = 50;
+/**
+ * After a close, how long the island heads for the bare pill before the bubble buds off it. The
+ * split itself waits `viaIdle.split` (0.215 s) on the pill before the bubble shows, so the card is
+ * down to capsule height by then.
+ */
+const budAfterClose = 150;
+/** Where the bubble starts, right of the island's centre: half the sensor and half the gap to the bubble. */
+const bubbleFrom = islandMetrics.compact.sensorWidth / 2 + islandMetrics.minimal.gap / 2;
 
 /** The page colour just below the island, so the engine's keyline knows how dark it is. */
 const backdropUnder = (y: number): string | undefined => {
@@ -113,12 +149,12 @@ export const IslandNav = ({ home = '' }: {
   // every change of page, so the island only ever attaches to it.
   useEffect(() => {
     // The island's own play button is the visitor choosing; it starts the song itself.
-    setSound(islandAudio({ src: song.src, levels: song.levels, duration: song.duration / 1000, skip: (target) => target instanceof Element && target.closest('[data-islandcn] .icn-button') !== null }));
+    setSound(islandAudio({ src: song.src, levels: song.levels, duration: song.duration / 1000 }));
   }, []);
 
   // The player shows what the audio element is doing and nothing else: every change of the
   // button and the clock comes from the element's own events, whatever started or stopped it
-  // (the island, the autostart, the lock screen), so the two can't disagree.
+  // (the island, the lock screen), so the two can't disagree.
   useEffect(() => {
     if (!sound) return;
     const el = sound.element;
@@ -193,18 +229,58 @@ export const IslandNav = ({ home = '' }: {
     };
   }, []);
 
+  // The bubble (IslandNudge.tsx): whether it is out, a press on it, and the join that opens the
+  // island out of it.
+  const bubbleOut = useRef(false);
+  const openNow = useRef(open);
+  openNow.current = open;
+  const [bubblePressed, setBubblePressed] = useState(false);
+  const bubblePressAt = useRef<number | null>(null);
+  const [joining, setJoining] = useState<number | null>(null);
+  const joinCancel = useRef<(() => void) | null>(null);
+  const clearJoin = useCallback(() => {
+    joinCancel.current?.();
+    joinCancel.current = null;
+    bubblePressAt.current = null;
+    setJoining(null);
+    setBubblePressed(false);
+  }, []);
+
   // Every open and close goes through here, so a pending hover change never overrides a click,
   // a key or a link.
   const hoverTimer = useRef<number | undefined>(undefined);
   const setNow = useCallback((next: boolean | ((v: boolean) => boolean)) => {
     clearTimeout(hoverTimer.current);
-    setOpen(next);
-  }, []);
+    const want = typeof next === 'function' ? next(openNow.current) : next;
+    if (!want) {
+      clearJoin();
+      setOpen(false);
+      return;
+    }
+    if (openNow.current || joinCancel.current) return;
+    if (!bubbleOut.current) {
+      setOpen(true);
+      return;
+    }
+    // Out of the bubble: the join first, then the island opens on the clock the engine draws by.
+    const clock = defaultClock();
+    const now = clock.now();
+    const pressed = bubblePressAt.current;
+    const at = Math.max(now + joinSoon, pressed === null ? 0 : pressed + swellAtLeast);
+    setJoining(at);
+    joinCancel.current = clock.at(at, () => {
+      joinCancel.current = null;
+      bubblePressAt.current = null;
+      setJoining(null);
+      setBubblePressed(false);
+      setOpen(true);
+    });
+  }, [clearJoin]);
   const setSoon = (next: boolean, ms: number) => {
     clearTimeout(hoverTimer.current);
-    hoverTimer.current = window.setTimeout(() => setOpen(next), ms);
+    hoverTimer.current = window.setTimeout(() => setNow(next), ms);
   };
-  useEffect(() => () => clearTimeout(hoverTimer.current), []);
+  useEffect(() => () => { clearTimeout(hoverTimer.current); joinCancel.current?.(); }, []);
 
   // A press outside, Escape, or focus moving elsewhere closes it.
   useEffect(() => {
@@ -241,6 +317,27 @@ export const IslandNav = ({ home = '' }: {
   useEffect(() => { meterHold.current = performance.now() + 500; }, [open]);
 
   const playing = playback.kind === 'playing';
+  // While the song isn't playing, the closed island keeps a bubble with a note to invite a press.
+  const nudge = useIslandNudge();
+  // Closing without the song, the island draws in to the bare pill and the bubble buds off it again
+  // as it first did (the split), rather than splitting off the shrinking card (`collapseSplit`, iOS's
+  // expanded-to-split): there the bubble came out of the card's top corner while it was still tall,
+  // and the neck between them appeared all at once as the card came down to capsule height.
+  const [budAgain, setBudAgain] = useState(false);
+  const wasOpen = useRef(open);
+  const budTimer = useRef<number | undefined>(undefined);
+  useEffect(() => {
+    const closed = wasOpen.current && !open;
+    wasOpen.current = open;
+    if (!closed) return;
+    // Its own timer, which nothing else cancels: a bubble held back for good would never come back.
+    clearTimeout(budTimer.current);
+    setBudAgain(true);
+    budTimer.current = window.setTimeout(() => setBudAgain(false), budAfterClose);
+  }, [open]);
+  useEffect(() => () => clearTimeout(budTimer.current), []);
+  const bubble = budAgain ? null : nudge;
+  bubbleOut.current = !open && !playing && nudge !== null;
   const presentation: IslandPresentation = open
     ? {
         kind: 'expanded',
@@ -259,11 +356,13 @@ export const IslandNav = ({ home = '' }: {
           </div>
         ),
       }
-    : {
-        kind: 'compact',
-        leading: <Artwork seed={seed} src={song.cover} size={22} radius={6} />,
-        trailing: <LiveMeter audio={sound} color={tone} size="compact" hold={meterHold} />,
-      };
+    : playing
+      ? {
+          kind: 'compact',
+          leading: <Artwork seed={seed} src={song.cover} size={22} radius={6} />,
+          trailing: <LiveMeter audio={sound} color={tone} size="compact" hold={meterHold} />,
+        }
+      : bubble ?? { kind: 'idle' };
 
   const dark = luma(backdrop) < 80;
 
@@ -274,6 +373,7 @@ export const IslandNav = ({ home = '' }: {
       data-island-nav=""
       data-open={open || undefined}
       data-dark={dark || undefined}
+      data-nudge={!open && !playing && nudge ? '' : undefined}
       onPointerEnter={(e) => { if (e.pointerType === 'mouse' && fine.current) setSoon(true, hoverOpenDelay); }}
       onPointerLeave={(e) => { if (e.pointerType === 'mouse' && fine.current) setSoon(false, hoverCloseDelay); }}
       onBlur={(e) => { if (!root.current?.contains(e.relatedTarget as Node | null)) setNow(false); }}
@@ -289,11 +389,18 @@ export const IslandNav = ({ home = '' }: {
           // Open, a touch on it closes it as it lands, as a touch outside does, rather than swelling
           // the card first and closing on the lift; the click that follows is spent.
           if (open) { pressClosed.current = e.timeStamp; setNow(false); return; }
+          // On the bubble, it swells as the stack's bubble does under a finger, and the island opens
+          // out of it when the touch lifts.
+          if (bubbleOut.current && e.clientX - innerWidth / 2 > bubbleFrom) {
+            bubblePressAt.current = defaultClock().now();
+            setBubblePressed(true);
+            return;
+          }
           setPressed(true);
         }}
         onPointerUp={() => setPressed(false)}
-        onPointerCancel={() => setPressed(false)}
-        onPointerLeave={() => setPressed(false)}
+        onPointerCancel={() => { setPressed(false); if (!joinCancel.current) clearJoin(); }}
+        onPointerLeave={(e) => { setPressed(false); if (e.pointerType !== 'mouse' && !joinCancel.current) clearJoin(); }}
         onClick={(e) => {
           const spent = pressClosed.current;
           pressClosed.current = null;
@@ -309,7 +416,9 @@ export const IslandNav = ({ home = '' }: {
         presentation={presentation}
         placement="viewport"
         label="Navigation and music"
-        pressed={pressed}
+        pressTarget={bubblePressed ? 'bubble' : pressed ? 'pill' : null}
+        pressStyle={bubblePressed ? 'swell' : 'squish'}
+        joining={joining}
         backdrop={backdrop}
         metrics={metrics}
         motion={motion}

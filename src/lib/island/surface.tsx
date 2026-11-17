@@ -523,8 +523,9 @@ const keylineAt = (
 ) => {
   const { keyline, metrics: m, motion } = props;
   if (keyline <= 0) return 0;
-  if (props.presentation.kind === "idle" && !leaving) return 0;
-  const grown = clamp01((frame.pill.width - m.idle.width) / Math.max(m.keyline.ramp, 0.01));
+  const idle = clamp01(m.keyline.idle);
+  if (props.presentation.kind === "idle" && !leaving && idle <= 0) return 0;
+  const grown = idle + (1 - idle) * clamp01((frame.pill.width - m.idle.width) / Math.max(m.keyline.ramp, 0.01));
   const expanded = 1 - m.keyline.expandedDim * frame.expansion;
   let dip = 1;
   if (dipAt !== null && !props.reduced) {
@@ -844,6 +845,7 @@ export const IslandSurface = (props: IslandSurfaceProps) => {
   const kPill = useRef<SVGPathElement>(null);
   const kBubble = useRef<SVGPathElement>(null);
   const kBridge = useRef<SVGPathElement>(null);
+  const kGroup = useRef<SVGGElement>(null);
   const content = useRef<HTMLDivElement>(null);
   const pillHit = useRef<HTMLButtonElement>(null);
   const bubbleHit = useRef<HTMLButtonElement>(null);
@@ -923,9 +925,18 @@ export const IslandSurface = (props: IslandSurfaceProps) => {
     // Keyline: a faint band outside the edge on dark pages. It belongs to the activity, so it
     // grows in over the first points beyond idle and is gone once only idle remains.
     const keylineAlpha = keylineAt(frame, t, live.current, leavingKeys.current.length > 0, keylineDip.current);
-    for (const path of [kPill.current, kBubble.current, kBridge.current]) {
-      if (path) path.style.strokeOpacity = keylineAlpha > 0.001 ? keylineAlpha.toFixed(3) : "0";
-    }
+    // The bands are drawn opaque and faded together on their group, so where two of them overlap (a
+    // bubble's top along the pill's while it is still in it, the neck) the band isn't drawn twice as
+    // bright: that showed as a speck on the pill's top edge. A bubble still inside the pill, and the
+    // neck to it, come in as the bubble clears the pill's end by half its height (personal site).
+    const out = bubble.height > 0 ? Math.min(1, Math.max(0, (bubble.x + bubble.width - (pill.x + pill.width)) / (bubble.height / 2))) : 0;
+    if (kGroup.current) kGroup.current.style.opacity = keylineAlpha > 0.001 ? keylineAlpha.toFixed(3) : "0";
+    const strength = (path: SVGPathElement | null, a: number) => {
+      if (path) path.style.strokeOpacity = a > 0.001 ? a.toFixed(3) : "0";
+    };
+    strength(kPill.current, 1);
+    strength(kBubble.current, out);
+    strength(kBridge.current, out);
     kPill.current?.setAttribute("d", paths.pill);
     kBubble.current?.setAttribute("d", paths.bubble);
     kBridge.current?.setAttribute("d", paths.bridge);
@@ -2248,7 +2259,7 @@ export const IslandSurface = (props: IslandSurfaceProps) => {
             </filter>
           </defs>
           {/* Keyline strokes under the fills: only their outer half shows, outside the black edge. */}
-          <g fill="none" stroke="#fff" strokeWidth={metrics.keyline.width * 2} strokeOpacity={0} strokeLinejoin="round">
+          <g ref={kGroup} fill="none" stroke="#fff" strokeWidth={metrics.keyline.width * 2} strokeOpacity={0} strokeLinejoin="round" opacity={0}>
             <path ref={kPill} d={initialPaths.pill} />
             <path ref={kBridge} d={initialPaths.bridge} />
             <path ref={kBubble} d={initialPaths.bubble} />

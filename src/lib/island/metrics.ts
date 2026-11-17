@@ -259,6 +259,12 @@ export const islandMetrics = {
     expandedDim: 0.07,
     /** It grows in over the first few points of width beyond idle, so idle shows none. */
     ramp: 6,
+    /**
+     * Its strength on the bare pill and on a pill no wider than it (a bubble's), as a share of the
+     * full band: 0 as on iOS, where the cutout has none; 1 keeps the island's outline on a dark page
+     * whatever it shows (personal site).
+     */
+    idle: 0,
   },
 } as const satisfies IslandMetricsShape;
 
@@ -344,6 +350,7 @@ export interface IslandMetricsShape {
     noneFrom: number;
     expandedDim: number;
     ramp: number;
+    idle: number;
   };
 }
 

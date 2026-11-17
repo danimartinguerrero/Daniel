@@ -35,6 +35,10 @@ const home = Astro.url.pathname === '/' ? '' : '/';
     -webkit-tap-highlight-color: transparent;
   }
   .island-nav__hit:focus-visible { outline-offset: 3px; }
+  /* The bubble the island buds to invite a press (IslandNudge.tsx) is part of it: the hit area
+     reaches over it on the right (its far edge is 92.1 px right of the centre, the area's 95.5)
+     and stays where it was on the left. */
+  .island-nav[data-nudge] .island-nav__hit { width: 173px; translate: calc(-50% + 9px) 0; }
 
   /* The song in the open island is a link to the music page: the cover and the title each press. */
   .island-nav__song {
