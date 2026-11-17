@@ -198,6 +198,7 @@ function init(root: HTMLElement, signal: AbortSignal) {
   function goTo(i: number, velocity?: number) {
     thrown = false;
     endSwipe(); // a swipe still tailing off must not take the row anywhere else
+    steer();
     const to = Math.round(pos.value + around(i - pos.value));
     // A record several places away takes a little longer, so the ones between don't flash past.
     const response = Math.min(0.9, 0.5 + 0.1 * Math.max(0, Math.abs(to - pos.value) - 1));
@@ -223,8 +224,28 @@ function init(root: HTMLElement, signal: AbortSignal) {
     // Only as far as the speed is worth keeping: a row that is barely moving would crawl to its record
     // for over a second on so soft a spring, and being drawn in a little faster than that is no lurch.
     const softest = 0.55 + 0.65 * clamp(Math.abs(v) / 1.5, 0, 1);
-    const response = D * v > 0 ? clamp((Math.PI * Math.abs(D)) / (damping * Math.abs(v)), 0.55, softest) : 0.55;
-    pos.to(landing, { response, damping, velocity: v });
+    heading = landing;
+    lead = 0;
+    if (D * v > 0) {
+      pos.to(landing, { response: clamp((Math.PI * Math.abs(D)) / (damping * Math.abs(v)), 0.55, softest), damping, velocity: v });
+      return;
+    }
+    // Let go too gently to reach the next record, it is still moving away from the one it goes back to.
+    // Aimed straight at that one, the spring's drag alone stops it dead within two frames, and then it
+    // comes back: a row that looked on its way to the next record hits a wall. So the spring is first
+    // aimed ahead of the row, at the point where its pull and its drag cancel (x + 2ζv/w): on the frame
+    // it is let go nothing changes, and it carries on at the speed it had. The aim then comes home
+    // (lead, in the frame loop) and the row follows it: it runs on a little, slows, turns round and
+    // settles, in one motion. Only as far as there is speed to lose: let go at rest it is drawn straight in.
+    turn = TURN * clamp(Math.abs(v) / 0.5, 0, 1);
+    if (turn > 0) lead = (damping * v * RETURN) / Math.PI - D;
+    pos.to(landing + lead, { response: RETURN, damping, velocity: v });
+  }
+
+  /** Whatever takes the row next takes it straight there: nothing is left of a coast. */
+  function steer() {
+    lead = 0;
+    heading = NaN;
   }
 
   /* Dragging the row. Vertical pans stay with the browser (touch-action: pan-y); a horizontal one, once
@@ -235,6 +256,11 @@ function init(root: HTMLElement, signal: AbortSignal) {
   let caught = false; // the last press caught a thrown row in flight: it only stops it
   let thrown = false; // the row is coasting from a throw (not from a tap or the keyboard)
   let fingerMoved = false; // the finger has moved the row since the last frame was drawn
+  let heading = NaN; // the record a coast is taking the row to
+  let lead = 0; // how far past that record the spring is aimed, while a row let go moving away turns round
+  let turn = 0; // the time, in seconds, that aim takes to come most of the way home
+  const RETURN = 0.55; // the spring a row goes back to its record on
+  const TURN = 0.1;
 
   row.addEventListener('pointerdown', (e) => {
     if (openIndex !== null || rowDrag?.active || (e.pointerType === 'mouse' && e.button !== 0)) return;
@@ -242,7 +268,10 @@ function init(root: HTMLElement, signal: AbortSignal) {
     caught = thrown && Math.abs(pos.velocity) > 0.6;
     // A throw is caught where it is. A row easing into place carries on: stopping it here would leave
     // it between two records if the press never becomes a drag.
-    if (caught) pos.set(pos.value);
+    if (caught) {
+      steer();
+      pos.set(pos.value);
+    }
     rowDrag = { id: e.pointerId, x0: e.clientX, y0: e.clientY, pos0: pos.value, active: false };
     tracker.reset(e.clientX, e.timeStamp);
   });
@@ -256,6 +285,7 @@ function init(root: HTMLElement, signal: AbortSignal) {
       rowDrag.active = true;
       rowDrag.x0 = e.clientX;
       endSwipe();
+      steer();
       pos.set(pos.value); // from wherever it has got to
       rowDrag.pos0 = pos.value;
       dragged = true;
@@ -280,7 +310,8 @@ function init(root: HTMLElement, signal: AbortSignal) {
       const v = e.type === 'pointercancel' ? 0 : tracker.velocity(e.timeStamp, 40);
       // A flick earns a little bounce as it lands; a slow drag settles without one.
       release(-v / A, Math.abs(v) > 500, FLICK_SPEED);
-    } else if (caught || e.type === 'pointercancel' || pos.target !== Math.round(pos.target)) {
+    } else if (caught || e.type === 'pointercancel' || (!lead && pos.target !== Math.round(pos.target))) {
+      // (A row turning round is aimed between two records, but is on its way to one.)
       goTo(Math.round(pos.value));
     }
   };
@@ -332,6 +363,7 @@ function init(root: HTMLElement, signal: AbortSignal) {
       e.preventDefault();
       if (!wheelIdle) {
         wheelTo = pos.value; // from where the row is on screen, even if it was on its way somewhere
+        steer();
         wheelLand = NaN;
         wheelPeak = wheelGone = 0;
         wheelEvery = 16;
@@ -357,6 +389,7 @@ function init(root: HTMLElement, signal: AbortSignal) {
       } else if (slow === 0) {
         // As fast as it was again: the fingers are back. It follows them from where it is on screen.
         wheelLand = NaN;
+        steer();
         wheelTo = pos.value + wheelSince(e.timeStamp);
       } else if (Math.abs(end - wheelLand) > 0.6) {
         wheelLand = Math.round(end); // it keeps to a record until that is clearly another one
@@ -1022,12 +1055,19 @@ function init(root: HTMLElement, signal: AbortSignal) {
     if (!rowDrag?.active) {
       if (wheelIdle) {
         if (Number.isNaN(wheelLand)) pos.to(wheelTarget(now), WHEEL_FOLLOW);
-        else if (pos.target !== wheelLand) coast(wheelLand, 1); // let go, or its record has changed
+        else if (heading !== wheelLand) coast(wheelLand, 1); // let go, or its record has changed
       }
       // A finger's last move and its lifting often come within one frame. The move has already taken
       // the row this frame's distance: the spring it is let go on starts with the next frame, or the
       // row would travel two frames' worth in this one, a jolt forward on every release.
-      const moving = !pos.step(fingerMoved ? 0 : dt);
+      const h = fingerMoved ? 0 : dt;
+      if (lead) {
+        // A row turning round (coast): its spring's aim comes home to the record, and the row with it.
+        lead *= Math.exp(-h / turn);
+        if (Math.abs(lead) < pos.precision) lead = 0;
+        pos.target = heading + lead;
+      }
+      const moving = !pos.step(h) || lead !== 0;
       if (!moving) {
         thrown = false;
         // At rest, back into 0..n by whole turns: the same place on the ring, so nothing on screen
@@ -1038,6 +1078,7 @@ function init(root: HTMLElement, signal: AbortSignal) {
           pos.set(pos.value - turns);
           wheelTo -= turns; // a swipe under way carries on from the same place
           wheelLand -= turns;
+          heading -= turns;
         }
       }
       busy = moving || busy;
