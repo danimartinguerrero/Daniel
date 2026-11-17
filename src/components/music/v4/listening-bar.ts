@@ -198,7 +198,10 @@ function init(root: HTMLElement, signal: AbortSignal) {
   /** Bring record i to the middle, the short way round. */
   function goTo(i: number, velocity?: number) {
     thrown = false;
-    pos.to(Math.round(pos.value + around(i - pos.value)), { response: 0.5, damping: 1, velocity });
+    const to = Math.round(pos.value + around(i - pos.value));
+    // A record several places away takes a little longer, so the ones between don't flash past.
+    const response = Math.min(0.9, 0.5 + 0.1 * Math.max(0, Math.abs(to - pos.value) - 1));
+    pos.to(to, { response, damping: 1, velocity });
     tick();
   }
 
@@ -274,31 +277,64 @@ function init(root: HTMLElement, signal: AbortSignal) {
   window.addEventListener('pointercancel', endRowDrag, { signal });
   row.addEventListener('dragstart', (e) => e.preventDefault());
 
-  /* A trackpad's sideways swipe moves the row too (a mouse wheel still scrolls the page). When the
-     swipe and its momentum end, the row is let go at the speed it was turning, as from a drag, instead
-     of stopping and then setting off again for the nearest record. */
-  let wheelIdle = 0;
-  let wheelX = 0;
-  let wheelLast = 0;
-  const wheelTracker = new VelocityTracker();
+  /* A trackpad's sideways swipe turns the row too (a mouse wheel still scrolls the page).
+     Wheel events don't come one per frame: some frames get none and some get two, so a row moved by
+     each event stands still and then lurches. The events move a point (wheelTo) instead, and the row
+     follows it on a short spring, a step on every frame.
+     After a fast swipe the pad's momentum dies away over a second, and a row that waited for the end of
+     it would stop between two records and then set off again for the nearer one. Where the momentum
+     will end is known long before (it decays steadily), so as the swipe slows the row is drawn to the
+     record it will end on (wheelLand) and arrives as the momentum runs out. A slow swipe isn't drawn
+     anywhere: it follows the fingers, and settles when they stop. */
+  const WHEEL_FOLLOW = { response: 0.1, damping: 1 };
+  let wheelIdle = 0; // set while a swipe is going on
+  let wheelLast = 0; // when its last event came
+  let wheelTo = 0; // where the swipe has taken the row, in records
+  let wheelLand = NaN; // the record a slowing swipe is drawn to
+  let wheelPeak = 0; // the fastest the swipe has been, records/s
+  let wheelPull = 0; // how far the row is drawn to that record: 0 follows the swipe, 1 is on the record
+  let wheelGone = 0; // how far the swipe has turned the row in all (wheelTo is brought back into the ring)
+  const wheelTracker = new VelocityTracker(); // the swipe's speed, over its last 100ms
   row.addEventListener(
     'wheel',
     (e) => {
-      if (openIndex !== null || Math.abs(e.deltaX) <= Math.abs(e.deltaY)) return;
+      if (openIndex !== null || rowDrag?.active || Math.abs(e.deltaX) <= Math.abs(e.deltaY)) return;
       e.preventDefault();
-      if (!wheelIdle) wheelTracker.reset((wheelX = 0), e.timeStamp);
-      // A hard fling sends big steps: no more than a fifth of a record per event, or the row strobes.
-      const step = clamp(e.deltaX / A, -0.2, 0.2);
-      wheelX += step;
+      if (!wheelIdle) {
+        wheelTo = pos.value; // from where the row is on screen, even if it was on its way somewhere
+        wheelLand = NaN;
+        wheelPeak = wheelPull = wheelGone = 0;
+        wheelTracker.reset(0, e.timeStamp);
+      }
+      // No faster than the row may turn, whatever the pad sends and however often it sends it.
+      const dt = clamp(e.timeStamp - wheelLast, 4, 50) / 1000;
       wheelLast = e.timeStamp;
-      wheelTracker.push(wheelX, wheelLast);
+      const step = clamp(e.deltaX / A, -MAX_SPEED * dt, MAX_SPEED * dt);
+      wheelTo += step;
+      wheelGone += step;
+      wheelTracker.push(wheelGone, e.timeStamp);
+      const speed = wheelTracker.velocity(e.timeStamp);
+      wheelPeak = Math.max(wheelPeak, Math.abs(speed));
+
+      // Slowing: well under the speed the swipe had (a slow swipe has less to lose than a fast one).
+      const slow = clamp(1 - Math.abs(speed) / clamp(wheelPeak * 0.6, 0.5, 2.5), 0, 1);
+      wheelPull += ((wheelPeak > 0.8 ? slow * slow * (3 - 2 * slow) : 0) - wheelPull) * 0.25;
+      let to = wheelTo;
+      if (wheelPull > 0.001) {
+        // Where the momentum will run out; it keeps to a record until that is clearly another one.
+        const end = wheelTo + speed * 0.3;
+        if (!(Math.abs(end - wheelLand) <= 0.6)) wheelLand = Math.round(end);
+        to += (wheelLand - wheelTo) * wheelPull;
+      } else {
+        wheelLand = NaN;
+      }
       thrown = false;
-      pos.set(pos.value + step);
+      pos.to(to, WHEEL_FOLLOW);
       tick();
       clearTimeout(wheelIdle);
       wheelIdle = window.setTimeout(() => {
         wheelIdle = 0;
-        release(wheelTracker.velocity(wheelLast), false);
+        if (!rowDrag?.active) release(pos.velocity, false);
       }, 60);
     },
     { passive: false },
@@ -954,7 +990,12 @@ function init(root: HTMLElement, signal: AbortSignal) {
         // At rest, back into 0..n by whole turns: the same place on the ring, so nothing on screen
         // changes. "At rest" isn't always on a record: a trackpad swipe sets the row between two on
         // every event, and rounding it here made the whole row jump half a record once per turn.
-        if (pos.value < -0.5 || pos.value >= n - 0.5) pos.set(pos.value - n * Math.floor((pos.value + 0.5) / n));
+        if (pos.value < -0.5 || pos.value >= n - 0.5) {
+          const turns = n * Math.floor((pos.value + 0.5) / n);
+          pos.set(pos.value - turns);
+          wheelTo -= turns; // a swipe under way carries on from the same place
+          wheelLand -= turns;
+        }
       }
       busy = moving || busy;
     }
