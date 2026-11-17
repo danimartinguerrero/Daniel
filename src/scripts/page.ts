@@ -19,8 +19,18 @@ export function onPage(setup: (signal: AbortSignal) => void) {
     if (shown === document.body) return;
     shown = document.body;
     current?.abort();
-    current = new AbortController();
-    setup(current.signal);
+    const { signal } = (current = new AbortController());
+    // Not before the page has its styles. Coming back to a page already seen in this visit, Safari says
+    // the page is loaded while its stylesheet is still on the way in: a setup that measures then (the
+    // music carousel) measured a page with no layout, and the records were left off the screen.
+    const unstyled = [...document.querySelectorAll<HTMLLinkElement>('link[rel~="stylesheet"]')].filter((link) => !link.sheet && !link.disabled);
+    if (!unstyled.length) return setup(signal);
+    const styled = (link: HTMLLinkElement) => new Promise<void>((done) => {
+      link.addEventListener('load', () => done(), { once: true });
+      link.addEventListener('error', () => done(), { once: true });
+      setTimeout(done, 3000); // never held up for good by a stylesheet that doesn't come
+    });
+    void Promise.all(unstyled.map(styled)).then(() => { if (!signal.aborted) setup(signal); });
   };
   document.addEventListener('astro:before-swap', () => {
     current?.abort();
