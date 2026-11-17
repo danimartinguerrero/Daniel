@@ -1,27 +1,34 @@
 /**
  * The music page's intro. "I love" comes into focus in the middle of the screen, large, a word at a
- * time, and drifts up and shrinks, slowly, like a breath drawn in, while nothing else happens: the wait. Then "music" lands below it, much larger, its rainbow
- * racing, and "I love" is pushed up out of its way. A moment later the headline goes home into the
+ * time, and drifts up and shrinks, slowly, like a breath drawn in, while nothing else happens: the
+ * wait. Then "music" lands below it, much larger, its rainbow racing, and "I love" is pushed up out of its way. A moment later the headline goes home into the
  * page while the rest of the page comes in under it, and the rainbow slows down to its drift.
  *
  * It plays when the page is arrived at (the island's song, a link, a load), not when history steps back
  * to it, and not when the page opens scrolled down. Any touch, click, scroll or key during it plays the
  * rest three times as fast. With reduced motion the page is just there and the bands hold still.
  *
- * Everything is the Web Animations API on transform, opacity and filter, so it runs on the compositor,
- * also while the carousel sets itself up and the island's view transition opens the page. The rainbow's
- * speed changing is baked into keyframes (see `rush`), not a rate changed every frame.
+ * The two parts of the headline have to stay in step with each other to the frame, so one clock moves
+ * both: a script reads the time once a frame and writes each part's transform (and the landing's
+ * opacity and blur) itself. As two animations handed to the browser they did not stay in step on an
+ * iPhone: opened from the island, "I love" ran about 450 ms behind "music." all the way (measured on a
+ * screen recording), so "music." landed on top of it and went home before it. What needs no such step
+ * is still the Web Animations API on transform, opacity and filter: the words coming into focus, the
+ * rest of the page coming in, and the rainbow, whose change of speed is baked into keyframes (see
+ * `rush`), not a rate changed every frame.
  */
 import type { TransitionBeforeSwapEvent } from 'astro:transitions/client';
 import { onPage } from '@/scripts/page';
+import { bezier } from '@/scripts/easing';
 
-// The site's curves (emil-design-eng): a strong ease-out for arrivals, the iOS drawer curve for going home.
-const EASE_OUT = 'cubic-bezier(0.23, 1, 0.32, 1)';
-const EASE_DRAWER = 'cubic-bezier(0.32, 0.72, 0, 1)';
-// The wait (easings.net): words coming into focus on a long, soft ease-out (quint), and the drift and
-// shrink on a sine in-out, which starts and ends without a corner, as breathing does.
-const EASE_FOCUS = 'cubic-bezier(0.22, 1, 0.36, 1)';
-const EASE_BREATH = 'cubic-bezier(0.37, 0, 0.63, 1)';
+// The site's curves (emil-design-eng): a strong ease-out for arrivals, the iOS drawer curve for going
+// home. The wait (easings.net): words coming into focus on a long, soft ease-out (quint), and the drift
+// and shrink on a sine in-out, which starts and ends without a corner, as breathing does.
+const curve = (x1: number, y1: number, x2: number, y2: number) => ({ css: `cubic-bezier(${x1}, ${y1}, ${x2}, ${y2})`, at: bezier(x1, y1, x2, y2) });
+const EASE_OUT = curve(0.23, 1, 0.32, 1);
+const EASE_DRAWER = curve(0.32, 0.72, 0, 1);
+const EASE_FOCUS = curve(0.22, 1, 0.36, 1);
+const EASE_BREATH = curve(0.37, 0, 0.63, 1);
 
 // The timeline, in ms from the start.
 const FOCUS = 1300; // each word of "I love" coming into focus
@@ -97,18 +104,19 @@ function start(root: HTMLElement, signal: AbortSignal, fromHistory: boolean) {
   };
   // Each part scales about the side that faces the other ("I love" its right, "music." its left, as
   // set in the CSS), so neither swells into the other on the way home.
+  type Pose = { x: number; y: number; s: number };
+  /** A pose reached at `at` ms; `ease` shapes the way from it to the next one. */
+  type Key = Pose & { at: number; ease?: (p: number) => number };
   /** Puts a part's facing side at x and its middle at y, scaled by s. */
-  const place = (r: Box, side: 'left' | 'right', x: number, y: number, s: number) => {
-    const dx = side === 'right' ? x + (s * r.width) / 2 - r.right : x - (s * r.width) / 2 - r.left;
-    return `translate(${dx.toFixed(2)}px, ${(y - r.top - r.height / 2).toFixed(2)}px) scale(${s.toFixed(4)})`;
-  };
-  const home = 'translate(0px, 0px) scale(1)';
-  const T = SETTLE + LOVE_HOME;
-  const o = (ms: number) => ms / T;
-  const Tw = SETTLE + FOLLOW + HOME;
-  const ow = (ms: number) => ms / Tw;
+  const place = (r: Box, side: 'left' | 'right', x: number, y: number, s: number): Pose => ({
+    x: side === 'right' ? x + (s * r.width) / 2 - r.right : x - (s * r.width) / 2 - r.left,
+    y: y - r.top - r.height / 2,
+    s,
+  });
+  const HOME_POSE: Pose = { x: 0, y: 0, s: 1 };
+  const END = SETTLE + FOLLOW + HOME; // both parts are home
   /** The two parts' paths across the screen as it is now. */
-  const paths = () => {
+  const paths = (): { love: Key[]; word: Key[] } => {
     const L = rest(restLove), M = rest(restWord);
     const W = innerWidth, H = innerHeight;
     const sM = Math.min((W * 0.86) / M.width, (H * 0.4) / M.height); // "music." as wide as the screen allows
@@ -123,63 +131,95 @@ function start(root: HTMLElement, signal: AbortSignal, fromHistory: boolean) {
     const loveAt = (y: number, s: number) => place(L, 'right', cx, y, s);
     const wordAt = (s: number) => place(M, 'left', cx, wordY, s);
     return {
-      // "I love": in focus, shrinking steadily through the wait, shoved up as "music" lands, then home.
+      // "I love": in focus, shrinking through the wait, shoved up as "music" lands, then home.
       love: [
-        { offset: 0, transform: loveAt(cy + rise, sL0), easing: EASE_BREATH },
-        { offset: o(HIT), transform: loveAt(cy, sL1), easing: EASE_OUT },
-        { offset: o(HIT + PUNCH), transform: loveAt(loveY, sL2) },
-        { offset: o(SETTLE), transform: loveAt(loveY, sL2), easing: EASE_DRAWER },
-        { offset: 1, transform: home },
+        { at: 0, ...loveAt(cy + rise, sL0), ease: EASE_BREATH.at },
+        { at: HIT, ...loveAt(cy, sL1), ease: EASE_OUT.at },
+        { at: HIT + PUNCH, ...loveAt(loveY, sL2) },
+        { at: SETTLE, ...loveAt(loveY, sL2), ease: EASE_DRAWER.at },
+        { at: SETTLE + LOVE_HOME, ...HOME_POSE },
       ],
       // "music.": lands from larger than the screen allows, all at once, then follows "I love" home.
       word: [
-        { offset: 0, transform: wordAt(sM * 1.35) },
-        { offset: ow(HIT), transform: wordAt(sM * 1.35), easing: EASE_OUT },
-        { offset: ow(HIT + PUNCH), transform: wordAt(sM) },
-        { offset: ow(SETTLE + FOLLOW), transform: wordAt(sM), easing: EASE_DRAWER },
-        { offset: 1, transform: home },
+        { at: HIT, ...wordAt(sM * 1.35), ease: EASE_OUT.at },
+        { at: HIT + PUNCH, ...wordAt(sM) },
+        { at: SETTLE + FOLLOW, ...wordAt(sM), ease: EASE_DRAWER.at },
+        { at: END, ...HOME_POSE },
       ],
-    } satisfies Record<string, Keyframe[]>;
+    };
   };
-  const first = paths();
-  const loveMoves = love.animate(first.love, { duration: T, fill: 'both' });
-  const wordMoves = word.animate(first.word, { duration: Tw, fill: 'both' });
+  /** Where a path is at `t` ms, as a transform. */
+  const transform = (keys: Key[], t: number) => {
+    let i = 0;
+    while (i < keys.length - 2 && t >= keys[i + 1]!.at) i++;
+    const a = keys[i]!, b = keys[i + 1]!;
+    const p = Math.min(1, Math.max(0, (t - a.at) / (b.at - a.at)));
+    const e = a.ease ? a.ease(p) : p;
+    const mix = (from: number, to: number) => from + (to - from) * e;
+    return `translate(${mix(a.x, b.x).toFixed(2)}px, ${mix(a.y, b.y).toFixed(2)}px) scale(${mix(a.s, b.s).toFixed(4)})`;
+  };
+
+  // The clock: an animation that animates nothing, so the show's time is the browser's own, in step
+  // with the animations below, and is hurried (and, by a test, paused and sought) along with them.
+  const clock = root.animate(null, { duration: END });
+  let keys = paths();
+  const written = new Map<string, string>();
+  const write = (el: HTMLElement, prop: 'transform' | 'opacity' | 'filter', value: string) => {
+    const id = (el === love ? 'love.' : 'word.') + prop;
+    if (written.get(id) === value) return;
+    written.set(id, value);
+    el.style[prop] = value;
+  };
+  /** Both parts as they are at the clock's time now. */
+  const draw = () => {
+    const t = Number(clock.currentTime ?? 0);
+    write(love, 'transform', transform(keys.love, t));
+    write(word, 'transform', transform(keys.word, t));
+    // The landing: "music." comes out of a blur, at once.
+    const e = EASE_OUT.at(Math.min(1, Math.max(0, (t - HIT) / PUNCH)));
+    write(word, 'opacity', Math.min(1, e / 0.3).toFixed(3));
+    write(word, 'filter', e > 0 && e < 1 ? `blur(${(6 * (1 - e)).toFixed(2)}px)` : '');
+  };
+  love.style.opacity = '1'; // shown (the CSS hides it until now); its words come into focus below
+  draw();
+  let frame = requestAnimationFrame(function tick() {
+    draw();
+    frame = requestAnimationFrame(tick);
+  });
+  /** The parts let go of: they are the page's again. */
+  const release = () => {
+    cancelAnimationFrame(frame);
+    for (const el of [love, word]) for (const prop of ['transform', 'opacity', 'filter'] as const) el.style[prop] = '';
+  };
+  signal.addEventListener('abort', release);
+  // The screen changing size mid-show redraws the paths; the parts carry on from where they are in time.
+  const reflow = () => { keys = paths(); };
+  addEventListener('resize', reflow, { signal });
+  visualViewport?.addEventListener('resize', reflow, { signal });
 
   const show: Animation[] = [
-    loveMoves,
-    // Shown (the CSS hides it until now); its words come into focus one after the other.
-    love.animate([{ opacity: 1 }, { opacity: 1 }], { duration: T, fill: 'both' }),
+    clock,
+    // "I love" comes into focus, one word after the other.
     ...[...love.querySelectorAll<HTMLElement>('[data-intro-w]')].map((w, i) => w.animate(
       [{ opacity: 0, filter: 'blur(14px)' }, { opacity: 1, offset: 0.6 }, { opacity: 1, filter: 'blur(0px)' }],
-      { duration: FOCUS, delay: i * FOCUS_STAGGER, easing: EASE_FOCUS, fill: 'both' },
+      { duration: FOCUS, delay: i * FOCUS_STAGGER, easing: EASE_FOCUS.css, fill: 'both' },
     )),
-    wordMoves,
-    word.animate([{ opacity: 0, filter: 'blur(6px)' }, { opacity: 1, offset: 0.3 }, { opacity: 1, filter: 'blur(0px)' }], { duration: PUNCH, delay: HIT, easing: EASE_OUT, fill: 'both' }),
     // The rest of the page, in order down it, following the headline home.
     ...[...root.querySelectorAll<HTMLElement>('[data-intro-rest]'), document.querySelector<HTMLElement>('.music-footer')]
       .filter((el): el is HTMLElement => el !== null)
       .map((el, i) => el.animate([{ opacity: 0, transform: 'translateY(24px)' }, { opacity: 1, transform: 'translateY(0px)' }], {
-        duration: REST, delay: SETTLE + REST_AFTER + i * REST_STAGGER, easing: EASE_DRAWER, fill: 'both',
+        duration: REST, delay: SETTLE + REST_AFTER + i * REST_STAGGER, easing: EASE_DRAWER.css, fill: 'both',
       })),
   ];
   const { animation: rushing, end } = rush(bands, HIT, SETTLE - HIT);
   running.push(...show, rushing);
 
-  // The screen changing size mid-show redraws the paths; the parts carry on from where they are in time.
-  let settled = false;
-  const reflow = () => {
-    if (settled) return;
-    const next = paths();
-    (loveMoves.effect as KeyframeEffect).setKeyframes(next.love);
-    (wordMoves.effect as KeyframeEffect).setKeyframes(next.word);
-  };
-  addEventListener('resize', reflow, { signal });
-  visualViewport?.addEventListener('resize', reflow, { signal });
-
-  // Once in place, the page is the page again: no intro state, no animations holding it there.
+  // Once in place, the page is the page again: no intro state, nothing holding its parts there.
   Promise.all(show.map((a) => a.finished)).then(() => {
-    settled = true;
     root.removeAttribute('data-intro');
+    release();
+    removeEventListener('resize', reflow);
+    visualViewport?.removeEventListener('resize', reflow);
     show.forEach((a) => a.cancel());
   }, () => {});
   rushing.finished.then(() => {
