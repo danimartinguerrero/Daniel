@@ -8,3 +8,4 @@ Local changes (personal site), everything else is unmodified:
 - `view.tsx`: `IslandView` takes `pressTarget`, `pressStyle` and `joining`, which the surface already had, so a controlled island can press and join its bubble as the activity stack does.
 - `metrics.ts`, `surface.tsx`: `keyline.idle`, the keyline's strength on the bare pill and a pill no wider than it (0, as upstream, by default).
 - `surface.tsx`: the keyline's strength is set on its group (its paths drawn opaque), so overlapping bands aren't drawn twice as bright: that took a speck off the pill's top edge as the bubble came out and went in.
+- `surface.tsx`: a new `keyline` strength draws the island once when it is at rest, since a backdrop change alone doesn't move the shape: the band kept the strength of the last frame drawn (a lighter page scrolled past, the page before a change of page).

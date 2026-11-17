@@ -210,7 +210,13 @@ export const IslandNav = ({ home = '' }: {
     const below = islandMetrics.idle.height + 14 + 6;
     let ticking = false;
     let settle: number | undefined;
-    const read = () => setBackdrop(backdropUnder(below));
+    // Nothing found is no reading: the body always has a colour, but while a change of page's view
+    // transition runs, its layer takes every hit and only the transparent <html> comes back, which
+    // read as a white page and took the keyline off the island on the black music page.
+    const read = () => {
+      const colour = backdropUnder(below);
+      if (colour) setBackdrop(colour);
+    };
     const sense = () => {
       clearTimeout(settle);
       settle = window.setTimeout(read, 120);
@@ -221,13 +227,20 @@ export const IslandNav = ({ home = '' }: {
     read();
     addEventListener('scroll', sense, { passive: true });
     addEventListener('resize', sense);
-    // The island stays as the site changes page under it (Island.astro); a new page is new ground.
-    document.addEventListener('astro:after-swap', sense);
+    // The island stays as the site changes page under it (Island.astro); a new page is new ground,
+    // readable once its view transition is over (scripts/page.ts, loaded here rather than at the top:
+    // it reads the document as it loads, and this component is rendered on the server too).
+    let gone = false;
+    const swapped = () => {
+      void import('@/scripts/page').then(({ arrived }) => arrived()).then(() => { if (!gone) sense(); });
+    };
+    document.addEventListener('astro:after-swap', swapped);
     return () => {
+      gone = true;
       clearTimeout(settle);
       removeEventListener('scroll', sense);
       removeEventListener('resize', sense);
-      document.removeEventListener('astro:after-swap', sense);
+      document.removeEventListener('astro:after-swap', swapped);
     };
   }, []);
 

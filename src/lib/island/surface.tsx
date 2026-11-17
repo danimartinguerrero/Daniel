@@ -2059,6 +2059,14 @@ export const IslandSurface = (props: IslandSurfaceProps) => {
     retarget();
   });
 
+  // A new backdrop changes the keyline's strength without changing the shape, so `retarget` draws
+  // nothing for it. At rest, draw once so the band takes it: otherwise the island kept the strength
+  // of the last frame it moved on, as faint as a lighter page it scrolled past or the page before a
+  // change of page (personal site).
+  useLayoutEffect(() => {
+    if (!unsubscribe.current) draw(live.current.clock.now(), true);
+  }, [props.keyline, draw]);
+
   // Drop slot maps and presence for layers that are gone.
   useLayoutEffect(() => {
     const keep = new Set([contentKey, ...visibleLeaving.map((layer) => layer.key)]);
