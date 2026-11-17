@@ -1,0 +1,46 @@
+{
+  "damn": {
+    "tone": "light",
+    "label": "#a62932"
+  },
+  "dark-side": {
+    "tone": "dark",
+    "label": "#4f4b40"
+  },
+  "good-kid-maad-city": {
+    "tone": "dark",
+    "label": "#767145"
+  },
+  "igor": {
+    "tone": "light",
+    "label": "#f2acc2"
+  },
+  "illmatic": {
+    "tone": "dark",
+    "label": "#9d623e"
+  },
+  "in-the-court": {
+    "tone": "dark",
+    "label": "#d8776f"
+  },
+  "low-end-theory": {
+    "tone": "dark",
+    "label": "#923229"
+  },
+  "the-wall": {
+    "tone": "light",
+    "label": "#f8f8f3"
+  },
+  "to-pimp-a-butterfly": {
+    "tone": "dark",
+    "label": "#949292"
+  },
+  "we-dont-trust-you": {
+    "tone": "dark",
+    "label": "#595166"
+  },
+  "ye": {
+    "tone": "dark",
+    "label": "#345472"
+  }
+}

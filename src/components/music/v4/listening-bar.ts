@@ -61,12 +61,8 @@ function init(root: HTMLElement, signal: AbortSignal) {
     const lin = (c: number) => ((c /= 255) <= 0.04045 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4);
     const lum: number[] = [];
     for (const b of buttons) {
-      const svg = b.querySelector('.v4-art svg')?.cloneNode(true) as SVGSVGElement | undefined;
-      if (!svg) return;
-      svg.setAttribute('width', String(SIZE));
-      svg.setAttribute('height', String(SIZE));
-      const img = new Image();
-      img.src = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(new XMLSerializer().serializeToString(svg))}`;
+      const img = b.querySelector<HTMLImageElement>('.v4-art img');
+      if (!img) return;
       await img.decode();
       g.clearRect(0, 0, SIZE, SIZE);
       g.drawImage(img, 0, 0, SIZE, SIZE);
@@ -490,26 +486,18 @@ function init(root: HTMLElement, signal: AbortSignal) {
     revealScale = Math.min(1, (window.innerWidth - 32) / (So * 1.48));
   }
 
-  function luminance(hex: string) {
-    const m = /^#?([\da-f]{2})([\da-f]{2})([\da-f]{2})$/i.exec(hex);
-    if (!m) return 0;
-    const [r, g, b] = [m[1], m[2], m[3]].map((h) => {
-      const c = parseInt(h!, 16) / 255;
-      return c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4;
-    }) as [number, number, number];
-    return 0.2126 * r + 0.7152 * g + 0.0722 * b;
-  }
-
   function fill(i: number, v: Vinyl) {
     const tone = buttons[i]!.dataset.tone === 'light' ? 'light' : 'dark';
     overlay.dataset.tone = tone;
-    const [, mid, light] = v.palette;
-    // The label is the sleeve's middle colour, unless that would vanish into the black vinyl.
-    overlay.style.setProperty('--label-bg', luminance(mid) < 0.04 ? light : mid);
+    // The disc's label takes its colour from the cover (worked out with the covers, see sleeve.ts).
+    overlay.style.setProperty('--label-bg', buttons[i]!.dataset.label ?? '#444');
     art.innerHTML = q('.v4-art', buttons[i]!).innerHTML;
     title.textContent = v.title;
     meta.textContent = `${v.artist}, ${v.year}`;
-    q('[data-v4-why]').textContent = v.why;
+    q('[data-v4-about]').textContent = v.about;
+    const link = q<HTMLAnchorElement>('[data-v4-source]');
+    link.href = v.source.url;
+    q('[data-v4-source-label]', link).textContent = v.source.label;
     q('[data-tracklist]').replaceChildren(
       ...v.tracks.map((t) => {
         const li = document.createElement('li');

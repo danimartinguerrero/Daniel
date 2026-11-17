@@ -9,7 +9,7 @@
  */
 import MusicShell from '@/components/music/MusicShell.astro';
 import { musicCopy, vinyls } from '@/data/music';
-import { sleeveSvg, stripTone } from '@/components/music/v4/sleeve';
+import { sleeveImg, stripTone, labelColor } from '@/components/music/v4/sleeve';
 import '@/components/music/v4/listening-bar.css';
 
 // The record the carousel opens on (the script uses the same index).
@@ -66,12 +66,13 @@ const pose = (i: number) => {
                     type="button"
                     data-vinyl={v.id}
                     data-tone={stripTone(v)}
+                    data-label={labelColor(v)}
                     data-start={i === START ? '' : undefined}
                     aria-label={`${v.title} by ${v.artist}`}
                     style={`transform:${p.transform};z-index:${p.zIndex};opacity:${p.opacity}`}
                   >
                     <span class="v4-vinyl__face">
-                      <span class="v4-art" set:html={sleeveSvg(v)} />
+                      <span class="v4-art" set:html={sleeveImg(v)} />
                       <span class="v4-vinyl__gloss" />
                       <span class="v4-vinyl__shade" data-v4-shade style={`opacity:${p.shade}`} />
                     </span>
@@ -160,9 +161,18 @@ const pose = (i: number) => {
           </div>
 
           <div class="v4-details" data-v4-details hidden>
-            <section class="v4-block v4-block--why" data-record-why>
-              <h3 class="v4-block__title">{musicCopy.record.why}</h3>
-              <p class="v4-why" data-v4-why></p>
+            <section class="v4-block v4-block--why">
+              <h3 class="v4-block__title">{musicCopy.record.about}</h3>
+              <p class="v4-why" data-v4-about></p>
+              <a class="v4-source" data-v4-source target="_blank" rel="noopener">
+                <!-- Apple Music's mark: its red tile with the note in white (the note is Hugeicons' AppleMusicIcon). -->
+                <svg class="v4-source__logo" viewBox="0 0 24 24" width="20" height="20" aria-hidden="true">
+                  <defs><linearGradient id="v4-am" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fa5c76" /><stop offset="1" stop-color="#fa233b" /></linearGradient></defs>
+                  <rect width="24" height="24" rx="5.4" fill="url(#v4-am)" />
+                  <path d="M9.05181 16.0523L7.44711 16.6596C7.17802 16.7615 7 17.0193 7 17.3071C7 17.7968 7.49439 18.1317 7.94888 17.9498L8.87139 17.5806C9.25105 17.4287 9.5 17.0608 9.5 16.6517V9.5M15.5518 14.5517L13.9471 15.159C13.678 15.2608 13.5 15.5186 13.5 15.8064C13.5 16.2961 13.9944 16.631 14.4489 16.4491L15.3714 16.08C15.751 15.928 16 15.5602 16 15.1511V8.20125M9.5 9.5L16 8.20125M9.5 9.5V8.65872M16 8.20125V7.35063M16 7.35063V6.5L9.5 7.81743V8.65872M16 7.35063L9.5 8.65872" fill="none" stroke="#fff" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" />
+                </svg>
+                <span data-v4-source-label></span>
+              </a>
             </section>
             <section class="v4-block v4-block--tracks">
               <h3 class="v4-block__title">{musicCopy.record.tracklist}</h3>
