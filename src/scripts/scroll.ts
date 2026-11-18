@@ -98,6 +98,8 @@ export function initScroll(signal: AbortSignal) {
       pin: section.querySelector<HTMLElement>('.divider__pin')!,
       lit,
       words: lit.firstElementChild as HTMLElement,
+      // The site's soft edge (--fill-edge in global.css), as a share of the name.
+      edge: parseFloat(getComputedStyle(root).getPropertyValue('--fill-edge')) || 0.25,
       pinH: 0,
       fill: -1,
     };
@@ -113,7 +115,7 @@ export function initScroll(signal: AbortSignal) {
       const fill = clamp(hold / 0.7);
       if (fill !== d.fill) {
         d.lit.style.transform = `translate3d(${(fill - 1) * 100}%, 0, 0)`;
-        d.words.style.transform = `translate3d(${(1 - fill) * 125}%, 0, 0)`;
+        d.words.style.transform = `translate3d(${(1 - fill) * (1 + d.edge) * 100}%, 0, 0)`;
         d.fill = fill;
       }
     });

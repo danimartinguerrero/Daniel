@@ -189,10 +189,13 @@
 /* Lit, as the page's next paragraphs, until the climb's script takes them over (is-armed): then the
    words wait in grey and the light comes along each line over them (.v4-lit, climb.ts). */
 .v4-making .w { color: var(--on-dark); }
-.v4-making__page.is-armed .w { color: #3a3a3c; }
+.v4-making__page.is-armed .w { color: var(--fill-dim); }
+/* As tall as the scroll a line takes to fill, everywhere on the site (--fill-line): the climb reads it. */
+.v4-climb__probe { position: absolute; top: 0; left: 0; width: 0; height: var(--fill-line); visibility: hidden; pointer-events: none; }
 /* The light along a line: a white copy of that line, exactly over it, seen through a window with a
    soft right edge. The window slides along the line and the copy slides back the same distance, so the
-   letters never move and only the edge does: two transforms a frame, nothing painted again. */
+   letters never move and only the edge does: two transforms a frame, nothing painted again. It is the
+   home page's fill (.divider__lit in index.astro), line by line. */
 .v4-lit { position: absolute; inset: 0; pointer-events: none; }
 .v4-lit__win {
   position: absolute;

@@ -2,7 +2,8 @@
  * Music: the climb. Past the shelf the page does not scroll on to something else. The stage stays on
  * screen, and the scroll raises the camera: the records leave their row, lie down on the floor in a
  * ring, and you end up looking down on them, with how the collection came about standing in the
- * middle. Scrolling further fills those words with light, a letter at a time, one passage after another.
+ * middle. Scrolling further fills those words with light, a line at a time, at the site's one pace (the
+ * pace the home page's part names fill at), one passage after another.
  *
  * Nothing here plays on its own: every frame is drawn from where the page's scroll is, so it follows
  * the hand both ways, stops where the hand stops, and going back up is the same film backwards
@@ -43,15 +44,17 @@ export interface CameraView {
 
 const TILT = 56; // degrees: a floor seen from above and in front, not a plan
 const GAP = 1.06; // a sleeve's width and a little air, along the ring
-// The stretch of scroll, as shares of it: the camera rises, then the passages fill one after another,
-// then a breath before the page moves on.
-const CAMERA_UNTIL = 0.38;
-const WORDS_FROM = 0.4;
-const WORDS_UNTIL = 0.96;
-// A passage's own share of the words' stretch: it comes in, fills, is held lit, and makes way.
-const PAGE_IN = 0.08;
-const PAGE_FULL = 0.82;
-const PAGE_OUT = 0.9;
+// The stretch of scroll, in screens (the stage's height): the camera rises, then the passages fill one
+// after another at the site's one pace (--fill-line of scroll a line, as the home page's part names
+// fill), each held lit a moment and then making way for the next, and a breath before the page goes on.
+const CAMERA = 1.1;
+const BEFORE_WORDS = 0.06;
+const PAGE_IN = 0.12; // the next passage comes up into the place the last one left
+const PAGE_OUT = 0.12;
+const TAIL = 0.12;
+// Held lit after filling for as long as the home page holds a part name: the last 30% of its hold,
+// against 70% for filling it (index.astro, .divider).
+const HOLD = 3 / 7; // in lines' worth of scroll
 
 onPage((signal) => {
   const root = document.querySelector<HTMLElement>('[data-music-page].v4');
@@ -69,30 +72,32 @@ function init(root: HTMLElement, track: HTMLElement, signal: AbortSignal) {
   const wall = q('[data-climb-wall]');
   const floor = q('[data-climb-floor]');
   const caption = q('[data-v4-caption]');
+  const probe = q('[data-climb-probe]'); // as tall as the scroll a line of text takes to fill (--fill-line)
   // With reduced motion there is no climb (the CSS lays the page out without one), and nothing to do.
   const still = matchMedia('(prefers-reduced-motion: reduce)');
   const say = (view: CameraView) => root.dispatchEvent(new CustomEvent('v4:camera', { detail: view }));
 
-  /* The passages. In each, a word starts filling when the light reaches its first letter and is full
-     at its last: where each word starts and ends along the passage is counted in letters, so the light
-     moves through it at an even pace however long the words are. */
-  const LEAD = 5; // letters the soft edge of the light runs ahead
-  interface Line { from: number; to: number; span: number; win: HTMLElement; copy: HTMLElement }
-  const pages = [...track.querySelectorAll<HTMLElement>('[data-climb-page]')].map((el) => {
-    const words = [...el.querySelectorAll<HTMLElement>('[data-w]')];
-    let length = 0;
-    const spans = words.map((w) => {
-      const from = length;
-      length += (w.textContent ?? '').length + 1; // and the space after it
-      return { from, to: length - 1 };
-    });
-    return { el, words, spans, length, lines: [] as Line[] };
-  });
+  /* The passages, filled as everything on the site fills (--fill-* in global.css): line after line, each
+     taking the same scroll whatever its length, a soft edge a quarter of the line wide crossing it.
+     Where each passage comes in, fills, is held and goes, in px of scroll since the stage was pinned, is
+     worked out in measure from how many lines the browser broke it into. */
+  interface Line { span: number; win: HTMLElement; copy: HTMLElement }
+  const pages = [...track.querySelectorAll<HTMLElement>('[data-climb-page]')].map((el) => ({
+    el,
+    words: [...el.querySelectorAll<HTMLElement>('[data-w]')],
+    lines: [] as Line[],
+    start: 0, // the first line starts filling
+    held: 0, // the last line is full and held lit until here
+  }));
+  // The site's fill: the soft edge, as a share of the line, and the scroll a line takes, in px (read from
+  // the stretch itself, which is sized with it).
+  const edgeShare = () => parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--fill-edge')) || 0.25;
+  let LINE = 1;
 
   /* The light along the words. Painting the fill into the letters as it moved (a gradient in each word)
      repainted the passage on every frame, which an iPhone could not keep up with. Instead each line of
      a passage gets a white copy of its text laid exactly over it, inside a window whose right edge
-     fades out over a few letters. Lighting a line slides the window along it and the copy back by the
+     fades out over a quarter of the line (as the home page's part names do). Lighting a line slides the window along it and the copy back by the
      same amount, so the letters stay where they are and only the edge travels: two transforms per line.
      The lines are taken from where the browser broke them, and taken again whenever the page is laid
      out anew (measure). */
@@ -108,14 +113,14 @@ function init(root: HTMLElement, track: HTMLElement, signal: AbortSignal) {
       layer.className = 'v4-lit';
       layer.setAttribute('aria-hidden', 'true');
       const rects = page.words.map((w) => w.getBoundingClientRect());
+      const share = edgeShare();
       let start = 0;
       for (let k = 1; k <= page.words.length; k++) {
         if (k < page.words.length && Math.abs(rects[k]!.top - rects[start]!.top) < 2) continue;
         // Words start to k - 1 are one line.
         const first = rects[start]!, last = rects[k - 1]!;
         const width = last.right - first.left;
-        const from = page.spans[start]!.from, to = page.spans[k - 1]!.to;
-        const edge = (width / Math.max(1, to - from)) * LEAD;
+        const edge = width * share;
         const win = document.createElement('span');
         win.className = 'v4-lit__win';
         win.style.cssText = `left:${(first.left - box.left - pad).toFixed(2)}px;top:${(first.top - box.top - pad).toFixed(2)}px;width:${(width + 2 * pad + edge).toFixed(2)}px;height:${(first.height + 2 * pad).toFixed(2)}px;--edge:${edge.toFixed(2)}px`;
@@ -125,23 +130,23 @@ function init(root: HTMLElement, track: HTMLElement, signal: AbortSignal) {
         copy.textContent = page.words.slice(start, k).map((w) => w.textContent).join(' ');
         win.append(copy);
         layer.append(win);
-        page.lines.push({ from, to, span: width + 2 * pad + edge, win, copy });
+        page.lines.push({ span: width + 2 * pad + edge, win, copy });
         start = k;
       }
       page.el.append(layer);
       page.el.classList.add('is-armed');
     }
   }
-  /** Light a passage up to `at` letters along it (where the soft edge ends). A line's window holds its
-      text, the ink around it and the edge: it goes from all of it left of the line (dark) to just past
-      its end (lit), as the light goes from the line's first letter to its last and the edge beyond. */
-  function lightUp(page: (typeof pages)[number], at: number) {
-    for (const line of page.lines) {
-      const k = clamp((at - line.from) / (line.to + LEAD - line.from), 0, 1);
+  /** Light a passage for `s` px of scroll since the stage was pinned. Each line fills over LINE px, one
+      after another, at an even pace (linear, as the home page's names): its window goes from all of it
+      left of the line (dark) to just past its end (lit), the soft edge crossing the letters. */
+  function lightUp(page: (typeof pages)[number], s: number) {
+    page.lines.forEach((line, j) => {
+      const k = clamp((s - page.start - j * LINE) / LINE, 0, 1);
       const shift = (k - 1) * line.span;
       css(line.win, 'transform', `translate3d(${shift.toFixed(2)}px,0,0)`);
       css(line.copy, 'transform', `translate3d(${(-shift).toFixed(2)}px,0,0)`);
-    }
+    });
   }
 
 
@@ -159,6 +164,7 @@ function init(root: HTMLElement, track: HTMLElement, signal: AbortSignal) {
   let view: CameraView = { w: 0, R: 0, zoom: 1, y: 0, tilt: TILT, far: 1 };
   let lead = 0; // how far below the top of the screen the stage still is when the camera starts
   let run = 1; // px of scroll the stage stays on screen for
+  let stageH = 1; // the stage's height: a screen (100svh)
   let captionShift = 0;
   // Where the stretch starts in the page, so that a frame needs only the scroll position (scrollY) and
   // never asks the browser to lay the page out mid-scroll. Measured again whenever the page's size changes.
@@ -222,6 +228,18 @@ function init(root: HTMLElement, track: HTMLElement, signal: AbortSignal) {
     stage.style.setProperty('--words-fs', `${clamp(wordsW / 13.5, 17, 36).toFixed(1)}px`);
 
     lightLines();
+    // The stretch, sized for these passages as broken into lines on this screen: the camera, then each
+    // passage's lines at the site's pace and its hold, the passages handing over, and a breath.
+    LINE = probe.getBoundingClientRect().height || st.height * 0.35;
+    const H = (stageH = st.height);
+    let at = (CAMERA + BEFORE_WORDS) * H;
+    pages.forEach((page, i) => {
+      if (i > 0) at += (PAGE_OUT + PAGE_IN) * H;
+      page.start = at;
+      at += (page.lines.length + HOLD) * LINE;
+      page.held = at;
+    });
+    track.style.setProperty('--climb-run', `${(at + TAIL * H).toFixed(1)}px`);
     run = Math.max(1, track.offsetHeight - st.height);
     trackTop = track.getBoundingClientRect().top + scrollY;
     // The camera starts a little before the stage reaches the top of the screen, so the first of the
@@ -277,8 +295,7 @@ function init(root: HTMLElement, track: HTMLElement, signal: AbortSignal) {
     if (top === drawn) return;
     drawn = top;
 
-    const w = ease(clamp((lead - top) / (lead + run * CAMERA_UNTIL), 0, 1));
-    const light = part(-top / run, WORDS_FROM, WORDS_UNTIL);
+    const w = ease(clamp((lead - top) / (lead + CAMERA * stageH), 0, 1));
 
     // The row takes the whole stage as soon as the camera leaves the shelf, and gives it back there.
     track.classList.toggle('is-climbing', w > 0);
@@ -297,16 +314,15 @@ function init(root: HTMLElement, track: HTMLElement, signal: AbortSignal) {
 
     // The first passage comes up, unlit, once the ring has opened round its place, and is there before
     // the light is. Each one fills, is held, and lifts away as the next comes up into its place.
-    const along = light * pages.length;
+    const scrolled = -top;
     pages.forEach((page, i) => {
-      const t = clamp(along - i, 0, 1);
-      const arrive = i === 0 ? part(w, 0.86, 1) : part(t, 0, PAGE_IN);
-      const leave = i === pages.length - 1 ? 0 : part(t, PAGE_OUT, 1);
+      const arrive = i === 0 ? part(w, 0.86, 1) : part(scrolled, page.start - PAGE_IN * stageH, page.start);
+      const leave = i === pages.length - 1 ? 0 : part(scrolled, page.held, page.held + PAGE_OUT * stageH);
       const shown = arrive * (1 - leave);
       // Faded, never hidden: a layer made visible again would be drawn anew mid-scroll.
       css(page.el, 'opacity', shown.toFixed(3));
       css(page.el, 'transform', `translate3d(0,${((1 - arrive) * 12 - leave * 12).toFixed(1)}px,0)`);
-      lightUp(page, part(t, i === 0 ? 0 : PAGE_IN, PAGE_FULL) * (page.length + LEAD));
+      lightUp(page, scrolled);
     });
   }
   measure();

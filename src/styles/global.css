@@ -15,6 +15,14 @@
   --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
   --ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);
 
+  /* Text that fills with light as the page is scrolled, the same everywhere on the site (the home
+     page's part names, the music page's passages): it waits in --fill-dim, a soft edge a quarter of the
+     line wide (--fill-edge, of the line's width) crosses it left to right, and a line takes
+     --fill-line of scroll to fill, whatever its length. */
+  --fill-dim: #2c2c2e;
+  --fill-edge: 0.25;
+  --fill-line: 35vh;
+
   --nav-h: 0px; /* the navigation floats as an island; nothing is reserved for it */
   --gutter: max(1rem, 4vw);
   --content: 980px;
