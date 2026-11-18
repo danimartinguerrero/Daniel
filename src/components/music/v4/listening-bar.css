@@ -186,35 +186,50 @@
   font-size: clamp(1.25rem, 3vw, 1.75rem); line-height: 1.16; font-weight: 600; letter-spacing: -0.02em;
   text-align: center; text-wrap: balance;
 }
-/* Each word is filled from its left by --f (0 to 1), with a soft edge, as light coming along the line.
-   Left alone it is 1: lit. */
-.v4-making .w { --f: 1; color: var(--on-dark); }
-@supports ((-webkit-background-clip: text) or (background-clip: text)) {
-  .v4-making .w {
-    background: linear-gradient(90deg, var(--on-dark) calc(var(--f) * 124% - 24%), #3a3a3c calc(var(--f) * 124%));
-    -webkit-background-clip: text; background-clip: text;
-    -webkit-text-fill-color: transparent; color: transparent;
-    /* The letters' ink reaches a little past their box (the tail of a "y", a slanted stroke). */
-    padding: 0.12em 0.04em; margin: -0.12em -0.04em;
-  }
+/* Lit, as the page's next paragraphs, until the climb's script takes them over (is-armed): then the
+   words wait in grey and the light comes along each line over them (.v4-lit, climb.ts). */
+.v4-making .w { color: var(--on-dark); }
+.v4-making__page.is-armed .w { color: #3a3a3c; }
+/* The light along a line: a white copy of that line, exactly over it, seen through a window with a
+   soft right edge. The window slides along the line and the copy slides back the same distance, so the
+   letters never move and only the edge does: two transforms a frame, nothing painted again. */
+.v4-lit { position: absolute; inset: 0; pointer-events: none; }
+.v4-lit__win {
+  position: absolute;
+  -webkit-mask-image: linear-gradient(90deg, #000 calc(100% - var(--edge)), transparent);
+  mask-image: linear-gradient(90deg, #000 calc(100% - var(--edge)), transparent);
+  -webkit-mask-size: 100% 100%; mask-size: 100% 100%;
+  -webkit-mask-repeat: no-repeat; mask-repeat: no-repeat;
+  will-change: transform;
 }
+.v4-lit__line { position: absolute; white-space: pre; color: var(--on-dark); will-change: transform; }
 @media (forced-colors: active) {
-  .v4-making .w { background: none; -webkit-text-fill-color: currentColor; color: CanvasText; }
+  .v4-lit { display: none; }
+  .v4-making__page.is-armed .w, .v4-making .w { color: CanvasText; }
 }
 
 @media (prefers-reduced-motion: no-preference) {
   /* The stretch of scroll the climb takes: the camera's rise, then the passages, then a breath. */
   html.js .v4-shelf[data-climb] { height: calc(100svh + var(--climb-run, 290svh)); padding-bottom: 0; }
   html.js [data-climb] .v4-climb__stage { position: sticky; top: 0; height: 100svh; }
+  /* Everything the climb moves or fades has a layer of its own from the start, so a frame of the climb
+     is only a composite: nothing is painted again as the camera rises, and no layer is made mid-scroll.
+     (The wall's lamp is a masked gradient across the whole stage: faded in place, it was repainted on
+     every frame.) */
   html.js [data-climb] .v4-caption { pointer-events: none; will-change: transform; }
   html.js [data-climb] .v4-shelf__head { will-change: transform, opacity; }
+  html.js [data-climb] .v4-bar__wall { will-change: opacity; }
+  html.js [data-climb].is-climbing .v4-shelf__head { pointer-events: none; }
 
-  /* A pool of the lamp's light on the floor, under the ring. */
+  /* A pool of the lamp's light on the floor, under the ring. It is a soft glow several screens' worth
+     of pixels across, so it is drawn at a quarter of its size and scaled up: the same light from a
+     sixteenth of the memory and of the work to put it on screen. */
   html.js [data-climb] .v4-floor {
     display: block; position: absolute; left: 50%; top: var(--ring-y, 50%);
-    width: var(--ring-w, 60vw); height: var(--ring-h, 60vw);
-    margin: calc(var(--ring-h, 60vw) / -2) 0 0 calc(var(--ring-w, 60vw) / -2);
+    width: calc(var(--ring-w, 60vw) / 4); height: calc(var(--ring-h, 60vw) / 4);
+    margin: calc(var(--ring-h, 60vw) / -8) 0 0 calc(var(--ring-w, 60vw) / -8);
     background: radial-gradient(closest-side, rgba(255, 240, 224, 0.075), rgba(255, 240, 224, 0.03) 52%, transparent);
+    transform: scale(4);
     opacity: 0; pointer-events: none; will-change: opacity;
   }
 
@@ -236,7 +251,7 @@
     font-size: var(--words-fs, 1.5rem);
     pointer-events: none;
   }
-  html.js [data-climb] .v4-making__page { grid-area: 1 / 1; align-self: center; opacity: 0; will-change: transform, opacity; }
+  html.js [data-climb] .v4-making__page { position: relative; grid-area: 1 / 1; align-self: center; opacity: 0; will-change: transform, opacity; }
 }
 
 /* Without the script the row is simply a row you can scroll. */
