@@ -5,14 +5,14 @@ Each WebP is served locally when its record opens. The sources below identify th
 | Album | Image source |
 | --- | --- |
 | good kid, m.A.A.d city | [Minivan, widescreen adaptation of the deluxe artwork](https://wallpapers.com/wallpapers/good-kid-maad-city-van-dng22y0mbldxxywg.html) |
-| To Pimp a Butterfly | [Kendrick Lamar, “Alright”](https://www.youtube.com/watch?v=Z-48u_uWMHY) |
-| DAMN. | [Kendrick Lamar, “HUMBLE.”](https://www.youtube.com/watch?v=tvTRZJ-4EyI) |
-| ye | [Wyoming photograph from the ye cover generator, reproduced by Highsnobiety](https://www.highsnobiety.com/p/create-your-own-ye-album-cover/) |
-| We Don’t Trust You | [Future, Metro Boomin and The Weeknd, “Young Metro”](https://www.youtube.com/watch?v=-kSAvHlXRUs) |
-| IGOR | [Tyler, the Creator, “EARFQUAKE”](https://www.youtube.com/watch?v=HmAsUQEFYGI) |
-| In the Court of the Crimson King | [Barry Godber’s gatefold artwork, reproduced by All Things Music Plus](https://www.allthingsmusicplus.com/post/how-in-the-court-of-the-crimson-king-launched-progressive-rock) |
-| The Dark Side of the Moon | [Pink Floyd, “Time”, animated promo by Stefano Bertelli](https://www.youtube.com/watch?v=ae2Tvh35qN4) |
-| The Wall | [Marching hammers from Pink Floyd — The Wall, reproduced by Cartoon Brew](https://www.cartoonbrew.com/feature-film/the-animation-that-changed-me-hisko-hulsing-on-pink-floyd-the-wall-199946.html) |
-| The Low End Theory | [A Tribe Called Quest, “Check The Rhime”](https://www.youtube.com/watch?v=1QWEPdgS3As) |
-| Illmatic | [Nas, “The World Is Yours”](https://www.youtube.com/watch?v=e5PnuIRnJW8) |
-| It Takes a Nation of Millions to Hold Us Back | [Public Enemy, “Black Steel In The Hour Of Chaos”](https://www.youtube.com/watch?v=ZM5_6js19eM) |
+| To Pimp a Butterfly | [Butterfly illustration](https://i.pinimg.com/originals/8a/45/11/8a4511eaefce2c771d14b229f1aacf9b.jpg) |
+| DAMN. | [Phone booth artwork](https://au.pinterest.com/pin/kendrick-lamar-wallpaper-with-damn--418201515417993055/) |
+| ye | [Wyoming mountain panorama](https://in.pinterest.com/pin/simp--16395986138626715/) |
+| We Don’t Trust You | Desert still supplied by the site owner |
+| IGOR | [Tyler, the Creator at Brixton, photographed by Burak Cingi for The Line of Best Fit](https://www.thelineofbestfit.com/news/latest-news/tyler-the-creator-announces-igor-halloween-costumes) |
+| In the Court of the Crimson King | [Painting inspired by the album](https://co.pinterest.com/pin/453737731201018711/) |
+| The Dark Side of the Moon | [Prism and spectrum artwork](https://www.pinterest.at/pin/92746073559787279/) |
+| The Wall | [Marching Hammers poster, landscape detail](https://www.pinterest.com/pin/649785052493771647/) |
+| The Low End Theory | [Illustrated New York street corner](https://www.pinterest.com/pin/a-tribe-called-quest-music-movie-poster-hip-hop-neon-new-york-city-1080p-wallpaper-hdwallpaper-desktop--272960427405121089/) |
+| Illmatic | [Nas street collage](https://www.pinterest.com/pin/me--1085297210174617639/) |
+| It Takes a Nation of Millions to Hold Us Back | [Detail of the sleeve photograph](https://www.pinterest.com/pin/public-enemy-it-takes-a-nation-of-millions-to-hold-us-back-rare-promo-vinyl-lp-def-jam-recordings-c-44303-columbia-c-44303-etsy--155303887746011140/) |
