@@ -18,6 +18,7 @@
 .lu__heading-line.is-armed { color: var(--fill-dim); }
 .is-scrubbed .lu__heading {
   position: absolute; inset: 0; display: grid; align-content: center;
+  padding-inline: var(--gutter);
   pointer-events: none;
 }
 .lu__scene { position: relative; display: grid; gap: 2rem; }
@@ -87,9 +88,14 @@
 .lu__grab:focus-visible { box-shadow: 0 0 0 2px var(--link-on-dark); }
 
 @media (max-width: 760px) {
+  .lu__heading { font-size: clamp(1.9rem, min(9.4vw, 13.5svh), 4.5rem); }
   .lu__show:not(.is-scrubbed) .lu__cam { height: min(145vw, 72svh); overflow: clip; }
   .lu__still { left: 50%; translate: -50% 0; width: auto; max-width: none; }
-  .is-scrubbed .lu__words { top: max(4.5rem, 10svh); }
-  .lu__title { font-size: clamp(2rem, 8.4vw, 3rem); }
-  .lu__body { font-size: 1rem; }
+  .is-scrubbed .lu__stage { padding-bottom: calc(clamp(16px, 2.8svh, 28px) + env(safe-area-inset-bottom, 0px)); }
+  .is-scrubbed .lu__words {
+    top: calc(env(safe-area-inset-top, 0px) + clamp(4.25rem, 7.5svh, 4.75rem) + var(--words-shift, 0px));
+    gap: .5rem;
+  }
+  .lu__title { font-size: clamp(1.625rem, 6.8vw, 2.35rem); line-height: 1.08; letter-spacing: -.025em; }
+  .lu__body { max-width: min(100%, 40ch); font-size: clamp(.875rem, 3.85vw, .96875rem); line-height: 1.4; }
 }

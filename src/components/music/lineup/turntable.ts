@@ -143,6 +143,8 @@ export async function createTurntable(canvas: HTMLCanvasElement, folder: string,
       if (canvas.height === height) return;
       canvas.width = Math.max(1, Math.round(height * ASPECT));
       canvas.height = height;
+      context.imageSmoothingEnabled = true;
+      context.imageSmoothingQuality = 'high';
       painted = false;
       dirty = true;
     },

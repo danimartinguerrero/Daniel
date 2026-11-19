@@ -276,27 +276,45 @@ onPage(signal => {
   }
 
   // A scene's line-up on this screen: the instrument in the middle of the space under the words, all seven
-  // the same height, a body's width and a little air apart (overlapping on a phone), as large as the space
-  // and the screen's width allow. Both scenes are one row (the slide runs along it), so both take the
-  // space under the taller of the two blocks of words: same size, same level.
-  function place(scene: Scene, wordsBottom: number) {
+  // the same height, a body's width and a little air apart (overlapping like a hand of cards on a phone),
+  // as large as the space and the screen's width allow. Both scenes are one row (the slide runs along it),
+  // so both take the space under the taller of the two blocks of words: same size, same level.
+  function layoutLineup(baseWordsBottom: number) {
     const width = stage.clientWidth;
     const height = stage.clientHeight;
-    const top = wordsBottom + (narrow.matches ? 12 : 22);
-    const bottom = height - (narrow.matches ? 76 : 84); // clear of the dock
+    if (narrow.matches) {
+      const gapMin = Math.min(28, Math.max(16, height * .028));
+      const bottomPad = parseFloat(getComputedStyle(stage).paddingBottom) || gapMin;
+      const maxBand = Math.max(80, height - bottomPad - (baseWordsBottom + gapMin));
+      // Cap instrument size to the viewport width so tall phones don't crush the rainbow fan.
+      const frame = Math.min(maxBand * FRAME_WIDTH, width * 1.18);
+      const length = frame / FRAME_WIDTH;
+      // Share spare height on tall screens across the whole composition so the caption stays connected.
+      const spare = Math.max(0, maxBand - length);
+      const wordsShift = Math.min(spare * .42, 56);
+      const gap = gapMin + Math.min(spare * .16, 20);
+      show.style.setProperty('--words-shift', `${wordsShift.toFixed(1)}px`);
+      const y = baseWordsBottom + wordsShift + gap + length / 2;
+      const edgePad = Math.max(6, width * .018);
+      const naturalSpacing = BODY * frame * .92;
+      // At the fanned 50° pose, the widest outline (the guitar) extends .115 frame widths from centre.
+      const fanSpacing = Math.max(0, Math.min(naturalSpacing, (width / 2 - edgePad - frame * .115) / blue.rank));
+      return { width, frame, length, y, fanSpacing };
+    }
+    show.style.removeProperty('--words-shift');
+    const top = baseWordsBottom + 22;
+    const bottom = height - 84;
     const band = Math.max(80, bottom - top);
-    const air = narrow.matches ? .8 : 1.14;
-    // Fit the fan to the width independently of instrument height on narrow screens.
+    const air = 1.14;
     const halfRow = BODY * (air * (blue.rank + 1) + .5);
-    const widthLimit = narrow.matches ? width * 1.65 : (width / 2 - 8) / halfRow;
-    const frame = Math.min(band * FRAME_WIDTH, widthLimit);
-    const naturalSpacing = BODY * frame * air;
-    // At any yaw the widest outline extends at most .151 frame widths from the centre.
-    const fanSpacing = narrow.matches
-      ? Math.min(naturalSpacing, (width / 2 - 8 - frame * .155) / blue.rank)
-      : naturalSpacing;
+    const frame = Math.min(band * FRAME_WIDTH, (width / 2 - 8) / halfRow);
     const length = frame / FRAME_WIDTH;
     const y = top + band / 2;
+    return { width, frame, length, y, fanSpacing: BODY * frame * air };
+  }
+
+  function place(scene: Scene, metrics: ReturnType<typeof layoutLineup>) {
+    const { width, frame, length, y, fanSpacing } = metrics;
     scene.centre = { x: width / 2, y, size: frame };
     for (const copy of scene.copies) {
       copy.slot = { x: width / 2 + copy.side * fanSpacing * copy.rank, y, size: frame };
@@ -305,7 +323,8 @@ onPage(signal => {
     scene.cam.style.setProperty('--frame-size', `${frame}px`);
     scene.cam.style.setProperty('--frame-top', `${(y - frame / 2).toFixed(1)}px`);
     const grab = scene.grab.style;
-    const gw = frame * .42, gh = length * 1.02;
+    const gw = narrow.matches ? Math.min(width * .72, frame * .58) : frame * .42;
+    const gh = length * 1.02;
     grab.width = `${gw.toFixed(1)}px`; grab.height = `${gh.toFixed(1)}px`;
     grab.left = `${(width / 2 - gw / 2).toFixed(1)}px`; grab.top = `${(y - gh / 2).toFixed(1)}px`;
     scene.perPixel = 360 / Math.max(420, frame * .8);
@@ -333,6 +352,7 @@ onPage(signal => {
       prepareSlideStrip();
       headingRows.forEach(clearTextFill);
       show.style.removeProperty('height');
+      show.style.removeProperty('--words-shift');
       upper.style.transform = lower.style.transform = heading.style.opacity = '';
       bass.words.style.opacity = bass.words.style.transform = '';
       for (const scene of scenes) { stand(scene, false); reset(scene); }
@@ -340,9 +360,11 @@ onPage(signal => {
     }
     headingFill = headingRows.flatMap(measureTextFill);
     introEnd = headingFill.length + BASS_ENTRANCE;
-    // Keep the reading time responsive to wrapping without changing the text during scroll.
+    // Measure captions at their CSS baseline before applying any tall-phone vertical centring shift.
+    show.style.removeProperty('--words-shift');
     const wordsBottom = Math.max(...scenes.map(({ words }) => words.offsetTop + words.offsetHeight));
-    for (const scene of scenes) place(scene, wordsBottom);
+    const metrics = layoutLineup(wordsBottom);
+    for (const scene of scenes) place(scene, metrics);
     resizeCopyLayer();
     bass.cam.style.transformOrigin = `${bass.centre.x}px ${bass.centre.y}px`;
     const chapterLines = (scene: Scene) => Array.from(scene.words.children).reduce((sum, el) => sum + lineCount(el), 0);
@@ -353,7 +375,7 @@ onPage(signal => {
     span.end = span.moveAt + MOVE + guitarHold + FILL_HOLD;
     show.style.height = `${(stage.offsetHeight + span.end * line).toFixed(1)}px`;
     // Every piece of the row leans on its foot.
-    for (const element of [...pieces, guitar.still]) element.style.transformOrigin = `50% ${(50 + 50 / 1.1).toFixed(2)}%`;
+    for (const element of [...pieces, bass.still, guitar.still]) element.style.transformOrigin = `50% ${(50 + 50 / 1.1).toFixed(2)}%`;
     still();
     spacing = (blue.slot.x - bass.centre.x) / blue.rank;
     // The two captions still need a viewport between them when the fans overlap tightly.
@@ -491,7 +513,7 @@ onPage(signal => {
   // second, so it feels the same on any screen; a phone's tighter row leans less, so heads don't touch.
   // Each piece answers with its own weight (Apple's response and damping ratio, a little different from
   // one to the next): underdamped, so the swing shows, but damped enough to come to rest in a beat or two.
-  const RACK = { perSpeed: 10.5, most: 10, mostNarrow: 7, smoothing: .06, yaw: 3.2 };
+  const RACK = { perSpeed: 10.5, most: 10, mostNarrow: 5.5, smoothing: .06, yaw: 3.2 };
   type Piece = { element: SVGSVGElement | HTMLCanvasElement; at: () => number; lean: number; speed: number; x: number; moving: number; response: number; damping: number };
   const rowX = () => -reach * smooth(clamp((shown - span.moveAt) / MOVE)); // the bass's row; the guitar's moves with it
   const bassAt = () => clamp((shown - introEnd) / span.bass);
@@ -579,7 +601,7 @@ onPage(signal => {
   function prepareSlideStrip() {
     const { y, size } = bass.centre;
     const width = stage.clientWidth + reach;
-    const density = Math.min(devicePixelRatio || 1, mobileView.matches ? 1.5 : 2);
+    const density = Math.min(devicePixelRatio || 1, 2);
     const ratio = Math.min(density, 4096 / width, 4096 / size);
     // Keep live vector edges on desktops whose complete row won't fit at native density.
     if (!enabled || !ready(bass) || !ready(guitar) || (!mobileView.matches && ratio < density)) {
@@ -622,7 +644,7 @@ onPage(signal => {
 
   function resizeCopyLayer() {
     const { y, size } = bass.centre;
-    const ratio = Math.min(devicePixelRatio || 1, narrow.matches ? 1.5 : 2);
+    const ratio = Math.min(devicePixelRatio || 1, 2);
     outlineLayer?.resize(stage.clientWidth, y, size, size * (.5 + .5 / FRAME_WIDTH), ratio);
     copyLayer?.resize(stage.clientWidth, stage.clientHeight);
   }
@@ -740,8 +762,10 @@ onPage(signal => {
         item.svg.style.opacity = smooth(clamp(reveals[item.rank]! * 4)).toFixed(3);
       }
     }
-    for (const scene of scenes) scene.canvas.style.transform = leaning(scene.canvas);
-    if (!guitar.instrument) guitar.still.style.transform = guitar.canvas.style.transform;
+    for (const scene of scenes) {
+      scene.canvas.style.transform = leaning(scene.canvas);
+      if (!scene.instrument) scene.still.style.transform = scene.canvas.style.transform;
+    }
     // The bass's line-up is off the screen's left edge after the slide, all but the in-between copies
     // nearest the guitar, which stay; so it is never hidden.
     guitar.element.style.visibility = move <= 0 ? 'hidden' : '';

@@ -22,7 +22,7 @@ export function createCopyLayer(stage: HTMLElement, copies: FlatCopy[], view: nu
     resize(w: number, h: number) {
       width = w;
       height = h;
-      ratio = Math.min(devicePixelRatio || 1, 1.5);
+      ratio = Math.min(devicePixelRatio || 1, 2);
       canvas.width = Math.ceil(w * ratio);
       canvas.height = Math.ceil(h * ratio);
     },
