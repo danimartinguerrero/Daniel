@@ -39,7 +39,7 @@ import type { Instrument } from './instrument';
 
 const FOLLOW = 0.07; // s: the screen follows the scroll this closely
 const DECELERATION = 0.998; // Apple's normal scroll deceleration, for projecting a flick
-const REST = -50; // degrees: turned well round, so its depth shows next to the flat copies
+const THREE_QUARTER_YAW = -50; // degrees from face-on
 const BODY = .27; // a body's width, in frame widths (the outlines in silhouettes.ts)
 const HOLD = .8; // lines of scroll the lit bass waits before the move
 const MOVE = 4.2; // lines of scroll the slide takes
@@ -374,15 +374,14 @@ onPage(signal => {
     }
     return true;
   }
-  // Start face-on. The turn begins with the first card and reaches the resting pose as the fan opens.
-  function turn(scene: Scene, progress: number, extra = 0) {
-    const reveal = smooth(clamp((progress - .02) / .58));
-    const yaw = (REST + extra) * reveal + scene.angle;
+  function turn(scene: Scene, threeQuarterShare: number) {
+    const swayYaw = (lean.get(scene.canvas) ?? 0) * RACK.yaw;
+    const yaw = (THREE_QUARTER_YAW + swayYaw) * threeQuarterShare + scene.angle;
     scene.yaw = yaw;
     scene.instrument?.pose(yaw);
-    const angle = Math.round(wrap(yaw - REST)) % 360;
+    const angle = Math.round(wrap(yaw)) % 360;
     scene.grab.setAttribute('aria-valuenow', String(angle));
-    const side = angle < 30 || angle > 330 ? 'Three quarters on' : angle > 150 && angle < 210 ? 'From the back' : 'Turned';
+    const side = angle === 0 ? 'Facing forward' : `${angle} degrees`;
     if (scene.grab.getAttribute('aria-valuetext') !== side) scene.grab.setAttribute('aria-valuetext', side);
   }
 
@@ -497,7 +496,8 @@ onPage(signal => {
     bass.cam.classList.toggle('is-sliding', move > 0);
     guitar.element.style.visibility = move <= 0 ? 'hidden' : '';
     const leave = easeOut(clamp(move / .3)); // the bass's words going
-    const come = easeOut(clamp((move - .6) / .4)); // the guitar's arriving
+    const arrival = clamp((move - .6) / .4);
+    const come = easeOut(arrival); // the guitar's words arriving
     words(bass, 1 - leave, -14 * leave);
     words(guitar, come, 14 * (1 - come));
     // The slide: the row travels left by the distance between the two line-ups.
@@ -506,9 +506,9 @@ onPage(signal => {
     guitar.cam.style.transform = `translate3d(${(reach * (1 - e)).toFixed(2)}px,0,0)`;
     bass.words.style.transform += ` translate3d(${(-reach * .5 * e).toFixed(2)}px,0,0)`;
     guitar.words.style.transform += ` translate3d(${(reach * .5 * (1 - e)).toFixed(2)}px,0,0)`;
-    // The real ones also turn on their axis as the rack sways.
-    turn(bass, bassProgress, (lean.get(bass.canvas) ?? 0) * RACK.yaw);
-    turn(guitar, 1, (lean.get(guitar.canvas) ?? 0) * RACK.yaw);
+    // The bass turns as the fan opens. The guitar turns to face the reader as its words arrive.
+    turn(bass, smooth(clamp((bassProgress - .02) / .58)));
+    turn(guitar, 1 - smooth(arrival));
 
     // The hand: a scene's instrument is free once its words are lit and the move is over.
     stand(bass, bassProgress > .995 && move <= 0);

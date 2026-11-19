@@ -20,4 +20,4 @@ gltf-transform optimize pj-bass.raw.glb public/music/instruments/pj-bass.glb --c
 gltf-transform optimize les-paul.raw.glb public/music/instruments/les-paul.glb --compress meshopt --simplify false --texture-compress webp --texture-size 2048
 ```
 
-For each still, call the live renderer’s `resize(1624, 1)` and `pose(1)`, capture its canvas in the same frame, then downsample to 960 × 960 and save as WebP. These tools are only used when regenerating the assets.
+For each still, call the live renderer’s `resize(1624, 1)` and set the pose with `pose(0)` for the guitar or `pose(1)` for the bass. Capture its canvas in the same frame, then downsample to 960 × 960 and save as WebP. These tools are only used when regenerating the assets.

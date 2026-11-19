@@ -10,7 +10,7 @@
  *     As the words fill, the copies fan out from behind it like a hand of cards, and it turns three quarters on;
  *   - then the screen slides along the row to the guitar's line-up, past copies of the blue bass that turn,
  *     step by step, into the green guitar;
- *   - the guitar: its line-up arrives whole with the slide, swaying to rest; its words fill.
+ *   - the guitar: its line-up arrives whole with the slide and turns to face the reader as its words appear.
  *   Everything on the row has weight and leans against its own motion (lineup.ts).
  *
  * Behaviour lives in lineup.ts. Without the script, or with reduced motion: lit text and the stills.
@@ -63,7 +63,7 @@ const copies = [
             <canvas class="lu__frame" width="1" height="1"></canvas>
           </div>
           <div class="lu__grab" role="slider" tabindex="-1" aria-label={`Turn the ${noun}`}
-            aria-valuemin="0" aria-valuemax="359" aria-valuenow="0" aria-valuetext="Three quarters on" data-lu-grab></div>
+            aria-valuemin="0" aria-valuemax="359" aria-valuenow="0" aria-valuetext="Facing forward" data-lu-grab></div>
           <div class="lu__words" data-lu-words>
             <h3 class="lu__title" data-fill-text>{title.split(' ').map(word => <><span class="w" data-w>{word}</span>{' '}</>)}</h3>
             <p class="lu__body" data-fill-text>{body.split(' ').map(word => <><span class="w" data-w>{word}</span>{' '}</>)}</p>
