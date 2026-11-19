@@ -1,0 +1,84 @@
+---
+/**
+ * The instruments on the music page, after the records. One held screen tells both
+ * instruments, one after the other:
+ *
+ *   - the bass: the instrument itself in the middle, live in WebGL and turned on its long axis so it
+ *     reads in depth, and either side of it flat copies of its outline, all the same height, one colour
+ *     each from the rainbow in "music." (the page's headline, listening-bar.css). Left to right the
+ *     colours run the rainbow through the instrument: green, yellow, orange | it | red, purple, blue.
+ *     As the words fill, the copies fan out from behind it like a hand of cards, and it turns three quarters on;
+ *   - then the screen slides along the row to the guitar's line-up, past copies of the blue bass that turn,
+ *     step by step, into the green guitar;
+ *   - the guitar: its line-up arrives whole with the slide, swaying to rest; its words fill.
+ *   Everything on the row has weight and leans against its own motion (lineup.ts).
+ *
+ * Behaviour lives in lineup.ts. Without the script, or with reduced motion: lit text and the stills.
+ */
+import './lineup.css';
+import '@/styles/statement.css';
+import '../v4/text-fill.css';
+import { VIEW, silhouettes } from './silhouettes';
+
+const heading = 'I play a few instruments, too.';
+// The rainbow of "music." (listening-bar.css, .v4-music__rainbow), in its order.
+const rainbow = ['#61bb46', '#fdb827', '#f5821f', '#e03a3e', '#963d97', '#009ddc'];
+const chapters = [
+  {
+    noun: 'bass', instrument: 'pj-bass', paint: 'BodyMaterial',
+    title: 'My dad taught me to play bass.',
+    body: 'I used to play bass in my school band. At home I could stop and ask my dad to show me a part again. At school I had to keep an ear on the drums and stay with everyone else.',
+  },
+  {
+    noun: 'guitar', instrument: 'les-paul', paint: 'MainBake',
+    title: 'Acoustic came next.',
+    body: 'My dad taught me acoustic guitar, too. When I switched to electric, I learned on my own. I still love putting on a song and working out where those notes are on the fretboard.',
+  },
+];
+// Left of the instrument, nearest first (orange, yellow, green); right of it, nearest first (red, purple, blue).
+const copies = [
+  ...[2, 1, 0].map((colour, index) => ({ colour: rainbow[colour]!, side: -1, rank: index + 1 })),
+  ...[3, 4, 5].map((colour, index) => ({ colour: rainbow[colour]!, side: 1, rank: index + 1 })),
+];
+---
+<div class="lu" data-lu>
+  <svg class="lu__defs" aria-hidden="true" width="0" height="0">
+    <defs>
+      {Object.entries(silhouettes).map(([name, d]) => <path id={`lu-${name}`} d={d} fill-rule="evenodd" />)}
+    </defs>
+  </svg>
+  <section class="lu__intro" id="instruments" aria-labelledby="part-instruments" data-fill-section>
+    <div class="lu__intro-stage statement__slide" data-fill-stage>
+      <h2 class="lu__heading" id="part-instruments" data-fill-text>{heading.split(' ').map(word => <><span class="w" data-w>{word}</span>{' '}</>)}</h2>
+    </div>
+  </section>
+  <section class="lu__show" aria-label="Bass and guitar" data-lu-show>
+    <div class="lu__stage statement__slide" data-lu-stage>
+      {chapters.map(({ noun, instrument, paint, title, body }, index) => (
+        <div class="lu__scene" data-lu-scene data-model={`/music/instruments/${instrument}.glb`} data-paint={paint}
+          data-colours={copies.map(copy => copy.colour).join(',')}>
+          <div class="lu__cam" aria-hidden="true" data-lu-cam>
+            {copies.map(({ colour, side, rank }) => (
+              <svg class="lu__copy" viewBox={`0 0 ${VIEW} ${VIEW}`} style={`--c:${colour}`} data-side={side} data-rank={rank} data-lu-copy>
+                <use href={`#lu-${instrument}`} />
+              </svg>
+            ))}
+            <img class="lu__still" loading="lazy" decoding="async" alt="" width="960" height="960"
+              src={`/music/instruments/${instrument}/rest.webp`} />
+            <canvas class="lu__frame" width="1" height="1"></canvas>
+          </div>
+          <div class="lu__grab" role="slider" tabindex="-1" aria-label={`Turn the ${noun}`}
+            aria-valuemin="0" aria-valuemax="359" aria-valuenow="0" aria-valuetext="Three quarters on" data-lu-grab></div>
+          <div class="lu__words" data-lu-words>
+            <h3 class="lu__title" data-fill-text>{title.split(' ').map(word => <><span class="w" data-w>{word}</span>{' '}</>)}</h3>
+            <p class="lu__body" data-fill-text>{body.split(' ').map(word => <><span class="w" data-w>{word}</span>{' '}</>)}</p>
+          </div>
+        </div>
+      ))}
+    </div>
+  </section>
+</div>
+
+<script>
+  import './lineup';
+</script>

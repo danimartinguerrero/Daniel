@@ -1,0 +1,87 @@
+/* The instruments on the music page (LineupStory.astro, lineup.ts). Plain sections first: the heading,
+   then each chapter's words above its instrument's still. With the script (is-scrubbed) each screen is
+   held: the words at the top, centred, and under them the line-up, placed by the script. */
+.lu { position: relative; color: var(--on-dark); }
+.lu__defs { position: absolute; width: 0; height: 0; overflow: hidden; }
+
+.lu__intro-stage {
+  display: grid; place-items: center;
+  padding: clamp(6rem, 18svh, 12rem) var(--gutter);
+  background: var(--dark);
+}
+.is-scrubbed .lu__intro-stage { padding-block: 0; }
+.lu__heading {
+  position: relative; margin: 0; max-width: 13ch;
+  font-size: clamp(2.4rem, min(11vw, 16svh), 11rem); line-height: 1; font-weight: 600;
+  letter-spacing: -.028em; text-align: center; text-wrap: balance;
+}
+
+.lu__stage {
+  position: relative; isolation: isolate; overflow: clip;
+  display: grid; gap: clamp(5rem, 12vw, 9rem); padding: clamp(3rem, 7vw, 7rem) var(--gutter);
+  background: var(--dark);
+}
+.lu__scene { position: relative; display: grid; gap: 2rem; }
+.lu__words {
+  position: relative; z-index: 2; grid-row: 1;
+  display: grid; justify-items: center; gap: clamp(.7rem, 1.4vw, 1.1rem);
+  margin-inline: auto; max-width: 60rem; text-align: center;
+}
+.lu__title, .lu__body { position: relative; margin: 0; }
+/* Apple's tracking at these sizes: the title tight but never touching, one line where it fits; the story
+   at a reading weight, a hair open, in the page's second grey, filling to that grey (text-fill.css reads
+   --on-dark), so the title is the bright thing over the colours. */
+.lu__title {
+  font-size: clamp(2.1rem, min(4.6vw, 8.4svh), 4.6rem); line-height: 1.04; letter-spacing: -.026em; font-weight: 600;
+  text-wrap: balance;
+}
+.lu__body {
+  --on-dark: var(--on-dark-2);
+  max-width: 44ch; color: var(--on-dark-2);
+  font-size: clamp(1rem, min(1.45vw, 2.6svh), 1.3rem); line-height: 1.42; letter-spacing: .004em; font-weight: 400;
+  text-wrap: pretty;
+}
+
+.lu__cam { position: relative; height: min(110vw, 72svh); }
+.lu__still { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; }
+.lu__copy, .lu__frame, .lu__grab { display: none; }
+
+/* Held: both scenes share the screen, one shown at a time; the script moves between them. Each scene's
+   camera (.lu__cam) is a layer the size of the screen, moved and scaled from its top left corner. */
+.is-scrubbed .lu__stage { display: block; padding: 0; }
+.is-scrubbed .lu__scene { position: absolute; inset: 0; display: block; }
+.is-scrubbed .lu__words { position: absolute; left: 50%; translate: -50% 0; top: max(5.25rem, 10svh); width: min(100% - 2 * var(--gutter), 60rem); }
+.is-scrubbed .lu__cam { position: absolute; inset: 0; height: auto; z-index: 1; transform-origin: 0 0; }
+.is-scrubbed .lu__still { display: none; }
+.is-scrubbed .lu__frame {
+  display: block; position: absolute; top: 0; left: 0; z-index: 2;
+  will-change: transform, opacity;
+}
+/* The copies: flat, one colour each, behind the instrument, the farther ones further back. Their place and
+   size are set by the script (left, top, width); the script moves them out with transform and opacity. */
+.is-scrubbed .lu__copy {
+  display: block; position: absolute; top: 0; left: 0; overflow: visible;
+  fill: var(--c); transform-origin: 50% 50%; will-change: transform, opacity;
+}
+.is-scrubbed .lu__copy[data-rank='1'] { z-index: 1; }
+.is-scrubbed .lu__copy[data-rank='2'] { z-index: 0; }
+.is-scrubbed .lu__copy[data-rank='3'] { z-index: -1; }
+.is-scrubbed .lu__copy.is-away { visibility: hidden; }
+
+/* The hand, over the instrument only, once the words are lit (is-standing). */
+.is-scrubbed .lu__grab {
+  display: block; position: absolute; z-index: 3;
+  touch-action: pan-y; cursor: grab; outline: none; pointer-events: none; border-radius: 40px;
+}
+.is-standing .lu__grab { pointer-events: auto; }
+.is-turning .lu__grab { cursor: grabbing; }
+.lu__grab:focus-visible { box-shadow: 0 0 0 2px var(--link-on-dark); }
+
+@media (max-width: 760px) {
+  .is-scrubbed .lu__words { top: max(4.5rem, 10svh); }
+  .lu__title { font-size: clamp(2rem, 8.4vw, 3rem); }
+  .lu__body { font-size: 1rem; }
+}
+
+.lu .is-armed .w { color: var(--fill-dim); }
+@media (forced-colors: active) { .lu .is-armed .w { color: CanvasText; } }
