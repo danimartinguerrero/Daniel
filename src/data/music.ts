@@ -55,6 +55,8 @@ export interface Vinyl {
   tracks: readonly Track[];
   /** A couple of sentences on what the album is, written from `source`. */
   about: string;
+  /** The owner's personal connection to this record, collected in conversation. */
+  whyILikeIt?: string;
   /** Where `about` comes from, shown as a link under it. */
   source: { label: string; url: string };
 }
@@ -64,6 +66,7 @@ const apple = (url: string) => ({ label: 'Based on Apple Music’s notes', url }
 export const vinyls: readonly Vinyl[] = [
   {
     id: 'to-pimp-a-butterfly',
+    whyILikeIt: "I bought this vinyl because it’s my favourite Kendrick album and one of my favourite albums of all time. Its narrative feels complete, exploring so many of the problems facing Black communities in the US through jazz and rap. In secondary school, I wrote a philosophical and literary analysis of it. My reading is that Kendrick uses genres built by the community to tell the community’s own stories and struggles. I think the whole album is brilliant, especially “How Much a Dollar Cost”.",
     title: 'To Pimp a Butterfly',
     artist: 'Kendrick Lamar',
     year: 2015,
@@ -76,6 +79,7 @@ export const vinyls: readonly Vinyl[] = [
   },
   {
     id: 'damn',
+    whyILikeIt: "My girlfriend gave me this vinyl. I love how complete its narrative feels: listening from beginning to end or in reverse gives me two completely different readings of the album. The psychedelic beats are another highlight, alongside the more classic production on “FEAR.” by The Alchemist. It brings together so much of what I enjoy, from trap to classic rap, with Kendrick exploring the genre and playing with the beats. It’s an album I’d always recommend.",
     title: 'DAMN.',
     artist: 'Kendrick Lamar',
     year: 2017,
@@ -88,6 +92,7 @@ export const vinyls: readonly Vinyl[] = [
   },
   {
     id: 'ye',
+    whyILikeIt: "My girlfriend gave me this vinyl too. I love how much this short album has to say, especially about Kanye’s bipolar disorder. The beats are incredible. Some songs move away from his usual production style, while others, like “All Mine”, capture his personality perfectly for me. “No Mistakes” is a work of art.",
     title: 'ye',
     artist: 'Kanye West',
     year: 2018,
@@ -100,6 +105,7 @@ export const vinyls: readonly Vinyl[] = [
   },
   {
     id: 'good-kid-maad-city',
+    whyILikeIt: "A friend gave me this record for my birthday. It’s a classic with such a solid tracklist, from “Money Trees” to “The Art of Peer Pressure”, and I love hearing Kendrick and Drake together on “Poetic Justice”. To me, this is the album that made Kendrick a star and set him on the path to To Pimp a Butterfly, his best album in my opinion.",
     title: 'good kid, m.A.A.d city',
     artist: 'Kendrick Lamar',
     year: 2012,
@@ -112,6 +118,7 @@ export const vinyls: readonly Vinyl[] = [
   },
   {
     id: 'we-dont-trust-you',
+    whyILikeIt: "I bought the red vinyl edition myself. Future and Metro had such a recognisable sound together throughout the 2010s that a full collaborative album felt overdue. I love the beats, and every guest fits perfectly. It’s one of my favourite modern trap albums, especially “Type Shit” and “Everyday Hustle”. “Like That” also kicked off the Kendrick and Drake feud, and I think this record will go down in trap history. I like the more R&B-focused follow-up, We Still Don’t Trust You, but I prefer this first volume.",
     title: 'We Don’t Trust You',
     artist: 'Future & Metro Boomin',
     year: 2024,
@@ -124,6 +131,7 @@ export const vinyls: readonly Vinyl[] = [
   },
   {
     id: 'igor',
+    whyILikeIt: "I bought this vinyl myself. I love how involved Tyler is in every part of his albums, from writing to production. IGOR tells a deeply personal story through an alter ego that, to me, marked a turning point in his career. After the success of Flower Boy, he chose to make something much harder to digest. I admire that decision, and I think the result is one of his most culturally significant records. I love it.",
     title: 'IGOR',
     artist: 'Tyler, the Creator',
     year: 2019,
@@ -136,6 +144,7 @@ export const vinyls: readonly Vinyl[] = [
   },
   {
     id: 'in-the-court',
+    whyILikeIt: "I bought this vinyl myself. This is one of my favourite albums. To me, it explores psychedelic rock in a way that feels unlike anything that came before it. I hear it as a precursor to The Dark Side of the Moon. It’s a difficult record to get into, but once you become familiar with its sound, you learn to appreciate it. That process is part of what I love about it.",
     title: 'In the Court of the Crimson King',
     artist: 'King Crimson',
     year: 1969,
@@ -148,6 +157,7 @@ export const vinyls: readonly Vinyl[] = [
   },
   {
     id: 'dark-side',
+    whyILikeIt: "This was the first vinyl I ever bought. It’s one of my favourite Pink Floyd albums, and I see it as a turning point for both the band and the history of rock. I love how the longer songs tell real stories, and the changes in rhythm throughout the record. My favourites are “Time” and “The Great Gig in the Sky”.",
     title: 'The Dark Side of the Moon',
     artist: 'Pink Floyd',
     year: 1973,
@@ -160,6 +170,7 @@ export const vinyls: readonly Vinyl[] = [
   },
   {
     id: 'the-wall',
+    whyILikeIt: "I bought this record in a vintage vinyl shop. I love it: alongside The Dark Side of the Moon, it’s one of my favourite Pink Floyd albums. A little long, though.",
     title: 'The Wall',
     artist: 'Pink Floyd',
     year: 1979,
@@ -172,6 +183,7 @@ export const vinyls: readonly Vinyl[] = [
   },
   {
     id: 'low-end-theory',
+    whyILikeIt: "I bought this vinyl myself. This is my favourite A Tribe Called Quest album. I love its classic East Coast boom bap sound and the way it brings funk rhythms together with rap. The fusion is spectacular, and the whole record is so much fun. My favourite track is “Butter”. It’s an album I’d happily recommend.",
     title: 'The Low End Theory',
     artist: 'A Tribe Called Quest',
     year: 1991,
@@ -184,6 +196,7 @@ export const vinyls: readonly Vinyl[] = [
   },
   {
     id: 'illmatic',
+    whyILikeIt: "My girlfriend gave me the special coloured vinyl edition. It’s a classic East Coast boom bap record and, honestly, one of the greatest rap albums of all time in my opinion.",
     title: 'Illmatic',
     artist: 'Nas',
     year: 1994,
@@ -196,6 +209,7 @@ export const vinyls: readonly Vinyl[] = [
   },
   {
     id: 'nation-of-millions',
+    whyILikeIt: "My uncle gave me this record from his own collection. I love its aggressive rap sound, which reminds me of N.W.A. To me, it’s an essential album for understanding rap.",
     title: 'It Takes a Nation of Millions to Hold Us Back',
     artist: 'Public Enemy',
     year: 1988,

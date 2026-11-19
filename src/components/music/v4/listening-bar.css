@@ -1,6 +1,7 @@
 /* Music, design 4: "Listening bar". Only this page loads this file; every class is prefixed v4-.
    Spacing sits on a 4px grid. Text uses the site's three dark roles: --on-dark, --on-dark-2 and a
    muted step (--v4-muted). An open record has no accent of its own: its colour is the sleeve's. */
+@import './open-record.css';
 @import './text-fill.css';
 
 .v4 {
@@ -478,77 +479,6 @@ html:not(.js) .v4-vinyl__shade { opacity: 0 !important; }
 .v4-open[data-record-unwrapped] .v4-strip, .v4-open[data-record-unwrapped] .v4-tab { visibility: hidden; transition: visibility 0s linear 320ms; }
 .v4-open.is-instant .v4-plastic, .v4-open.is-instant .v4-tab__knob, .v4-open.is-instant .v4-strip, .v4-open.is-instant .v4-tab { transition: none !important; }
 
-/* Sealed, the record and its name sit in the middle of the screen; once open they make room at the top. */
-.v4-stage { display: flex; flex-direction: column; align-items: center; width: 100%; }
-.v4-open:not([data-layout-open]) .v4-stage { margin-block: auto; }
-.v4-open__titles { margin-top: 1.75rem; display: grid; justify-items: center; gap: 0.25rem; text-align: center; max-width: 34rem; }
-.v4-open__title { font-size: clamp(1.75rem, 4vw, 2.5rem); line-height: 1.1; font-weight: 600; letter-spacing: -0.015em; text-wrap: balance; }
-.v4-open__title:focus { outline: none; }
-.v4-open__meta { font-size: 1.0625rem; line-height: 1.25; color: var(--on-dark-2); font-variant-numeric: tabular-nums; }
-.v4-open__hint { margin-top: 0.75rem; font-size: 0.9375rem; line-height: 1.25; color: var(--v4-muted); }
-.v4-open[data-layout-open] .v4-open__hint { display: none; }
-
-/* The details rise in beneath the record. */
-.v4-details {
-  width: min(100%, 36rem); margin-top: 3rem; padding-bottom: 0.5rem;
-  display: grid; gap: 3rem;
-}
-.v4-details[hidden] { display: none; }
-.v4-details > * { opacity: 0; transform: translateY(20px); transition: opacity 260ms ease, transform 560ms var(--ease-out); }
-.v4-open[data-show-details] .v4-details > * { opacity: 1; transform: none; }
-.v4-open[data-show-details] .v4-details > :nth-child(2) { transition-delay: 60ms; }
-.v4-open[data-show-details] .v4-details > :nth-child(3) { transition-delay: 120ms; }
-.v4-block__title { font-size: 0.9375rem; line-height: 1.25; font-weight: 500; color: var(--on-dark-2); }
-.v4-why { margin-top: 0.75rem; font-size: 1.25rem; line-height: 1.4; font-weight: 500; color: var(--on-dark); text-wrap: pretty; }
-/* Where the words above come from: a quiet link under them. */
-.v4-source {
-  display: inline-flex; align-items: center; gap: 0.5rem; min-height: 44px; margin-top: 0.25rem;
-  font-size: 0.9375rem; line-height: 1.25; color: var(--on-dark-2); text-decoration: none;
-}
-.v4-source::after { content: '\2197'; margin-left: 0.25em; }
-.v4-source__logo { flex: none; display: block; }
-@media (hover: hover) { .v4-source:hover { color: var(--on-dark); } }
-.v4-source:focus-visible { outline: 2px solid var(--blue); outline-offset: 2px; border-radius: 4px; }
-.v4-tracks { list-style: none; margin: 0.5rem 0 0; padding: 0; counter-reset: v4-track; }
-.v4-tracks li {
-  counter-increment: v4-track;
-  display: grid; grid-template-columns: 1.5rem 1fr; column-gap: 1rem; align-items: center;
-  min-height: 44px; padding-block: 0.5rem;
-  font-size: 1.0625rem; line-height: 1.3;
-}
-.v4-tracks li + li { box-shadow: 0 -1px 0 var(--v4-hair); }
-.v4-tracks li::before { content: counter(v4-track); text-align: right; color: var(--v4-muted); font-size: 0.9375rem; font-variant-numeric: tabular-nums; }
-.v4-tracks__feat { color: var(--on-dark-2); }
-/* The facts: three short ones on top, the two long ones under them. */
-.v4-facts { margin: 0.75rem 0 0; display: grid; grid-template-columns: repeat(6, 1fr); gap: 0.5rem; }
-.v4-fact {
-  grid-column: span 2;
-  display: grid; align-content: space-between; gap: 0.75rem;
-  min-height: 5.5rem; padding: 1rem; border-radius: 16px;
-  background: var(--dark-tile); box-shadow: inset 0 0 0 1px var(--v4-hair);
-}
-.v4-fact--label, .v4-fact--genre { grid-column: span 3; }
-.v4-fact dt { font-size: 0.8125rem; line-height: 1.25; color: var(--on-dark-2); }
-.v4-fact dd { margin: 0; font-size: 1.0625rem; line-height: 1.25; font-weight: 500; text-wrap: balance; }
-.v4-fact--year dd, .v4-fact--format dd, .v4-fact--tracks dd { font-size: 1.5rem; line-height: 1; letter-spacing: -0.01em; font-weight: 600; font-variant-numeric: tabular-nums; }
-@media (min-width: 900px) {
-  .v4-details { width: min(100%, 60rem); grid-template-columns: 1fr 1fr; column-gap: 4rem; }
-  .v4-block--why { grid-column: 1 / -1; max-width: 40rem; }
-}
-
-/* "Put it back" floats at the bottom, thumb-reachable; the content fades out beneath it, and the end of
-   the details always scrolls clear of it. */
-.v4-open__bar {
-  position: sticky; bottom: 0; z-index: 2;
-  display: flex; justify-content: center;
-  margin-inline: calc(var(--gutter) * -1); width: calc(100% + 2 * var(--gutter));
-  padding: 3.5rem 0 calc(1.25rem + env(safe-area-inset-bottom, 0px));
-  background: linear-gradient(180deg, rgba(11, 11, 12, 0), rgba(11, 11, 12, 0.9) 48%, var(--v4-stage) 78%);
-  pointer-events: none;
-}
-.v4-open[data-layout-open] .v4-open__bar { margin-top: auto; }
-.v4-close { pointer-events: auto; min-width: 9.5rem; color: var(--on-dark); font-weight: 500; }
-
 @media (prefers-reduced-motion: reduce) {
   .v4-details > * { transform: none; transition: opacity 200ms ease; }
   .v4-open[data-record-unwrapped] .v4-plastic { transform: none; transition: opacity 200ms ease; }
@@ -558,7 +488,6 @@ html:not(.js) .v4-vinyl__shade { opacity: 0 !important; }
   .v4-strip__band { background: var(--tape-matte); -webkit-backdrop-filter: none; backdrop-filter: none; }
   .v4-strip__label { color: var(--tape-matte-ink); text-shadow: none; }
   .v4-tab__knob { background: #3a3a3c; -webkit-backdrop-filter: none; backdrop-filter: none; }
-  .v4-open__bar { background: linear-gradient(180deg, transparent, var(--v4-stage) 40%); }
 }
 @media (prefers-contrast: more) {
   .v4-caption__meta, .v4-open__meta, .v4-block__title, .v4-fact dt, .v4-open__hint { color: #c7c7cc; }

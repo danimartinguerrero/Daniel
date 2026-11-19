@@ -13,7 +13,8 @@
  * row in flight can be caught, a record on its way out can be sent back, and a peel let go early
  * springs home from where the finger left it.
  */
-import { musicCopy, vinyls, type Vinyl } from '@/data/music';
+import { vinyls } from '@/data/music';
+import { fillOpenRecord } from '../v4/open-record';
 import { Spring, VelocityTracker, clamp, project, rubberband } from '../v4/physics';
 import { onPage } from '@/scripts/page';
 import type { CameraView } from './climb';
@@ -784,10 +785,8 @@ function init(root: HTMLElement, signal: AbortSignal) {
   const shadow = q('[data-v4-shadow]');
   const group = q('[data-v4-group]');
   const disc = q('[data-v4-disc]');
-  const art = q('[data-v4-art]');
   const titles = q('[data-v4-titles]');
   const title = q('[data-v4-title]');
-  const meta = q('[data-v4-meta]');
   const details = q('[data-v4-details]');
   const bar = q('[data-v4-bar]');
   const closeButton = q<HTMLButtonElement>('[data-record-close]');
@@ -867,55 +866,6 @@ function init(root: HTMLElement, signal: AbortSignal) {
     overlay.style.setProperty('--cast', `${S}px`); // its shadow on the floor is a sleeve's footprint
   }
 
-  function fill(i: number, v: Vinyl) {
-    const tone = buttons[i]!.dataset.tone === 'light' ? 'light' : 'dark';
-    overlay.dataset.tone = tone;
-    // The disc's label takes its colour from the cover (worked out with the covers, see sleeve.ts).
-    overlay.style.setProperty('--label-bg', buttons[i]!.dataset.label ?? '#444');
-    art.innerHTML = q('.v4-art', buttons[i]!).innerHTML;
-    title.textContent = v.title;
-    meta.textContent = `${v.artist}, ${v.year}`;
-    q('[data-v4-about]').textContent = v.about;
-    const link = q<HTMLAnchorElement>('[data-v4-source]');
-    link.href = v.source.url;
-    q('[data-v4-source-label]', link).textContent = v.source.label;
-    q('[data-tracklist]').replaceChildren(
-      ...v.tracks.map((t) => {
-        const li = document.createElement('li');
-        const name = document.createElement('span');
-        name.textContent = typeof t === 'string' ? t : t.title;
-        if (typeof t !== 'string') {
-          const feat = document.createElement('span');
-          feat.className = 'v4-tracks__feat';
-          feat.textContent = `feat. ${t.feat}`;
-          name.append(' ', feat);
-        }
-        li.append(name);
-        return li;
-      }),
-    );
-    const f = musicCopy.record.fields;
-    const facts: [string, string, string][] = [
-      ['year', f.year, String(v.year)],
-      ['format', f.format, v.format],
-      ['tracks', f.tracks, String(v.tracks.length)],
-      ['label', f.label, v.label],
-      ['genre', f.genre, v.genre],
-    ];
-    q('[data-v4-facts]').replaceChildren(
-      ...facts.map(([key, name, value]) => {
-        const box = document.createElement('div');
-        box.className = `v4-fact v4-fact--${key}`;
-        const dt = document.createElement('dt');
-        dt.textContent = name;
-        const dd = document.createElement('dd');
-        dd.textContent = value;
-        box.append(dt, dd);
-        return box;
-      }),
-    );
-  }
-
   function setBackgroundInert(on: boolean) {
     pageContent.inert = on;
     if (footer) footer.inert = on;
@@ -929,7 +879,7 @@ function init(root: HTMLElement, signal: AbortSignal) {
     phase = 'open';
     unwrapped = false;
     closeStep = 'fly';
-    fill(i, v);
+    fillOpenRecord(overlay, buttons[i]!, v);
     say('v4:open', { index: i, id: v.id });
 
     overlay.hidden = false;
