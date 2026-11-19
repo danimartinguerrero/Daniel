@@ -28,7 +28,7 @@ export interface SurroundPose {
 
 export interface Instrument {
   pose(degrees: number, surround?: readonly SurroundPose[]): void; // turned about its own long axis; 0 faces you
-  resize(size: number, ratio: number): void;
+  resize(size: number, compact: boolean): void;
   dispose(): void;
 }
 
@@ -82,14 +82,15 @@ export async function createInstrument(
   canvas: HTMLCanvasElement,
   url: string,
   paint: string,
-  surround: readonly SurroundLight[] = [],
+  surround: readonly SurroundLight[],
+  compact: boolean,
 ): Promise<Instrument> {
   const renderer = new WebGLRenderer({ canvas, antialias: true, alpha: true, premultipliedAlpha: true, powerPreference: 'high-performance' });
   renderer.setClearColor(0x000000, 0);
   renderer.outputColorSpace = SRGBColorSpace;
   renderer.toneMapping = AgXToneMapping;
   renderer.toneMappingExposure = .92;
-  renderer.shadowMap.enabled = true;
+  renderer.shadowMap.enabled = !compact;
   renderer.shadowMap.type = PCFSoftShadowMap;
 
   const scene = new Scene();
@@ -204,11 +205,17 @@ export async function createInstrument(
       holder.rotation.y = MathUtils.degToRad(degrees);
       renderer.render(scene, camera);
     },
-    resize(css, ratio) {
-      if (css === size && ratio === renderer.getPixelRatio()) return;
+    resize(css, compact) {
+      const ratio = Math.min(devicePixelRatio || 1, compact ? 1.5 : 2);
+      if (css === size && ratio === renderer.getPixelRatio() && renderer.shadowMap.enabled === !compact) return;
       size = css;
-      renderer.setPixelRatio(ratio);
-      renderer.setSize(css, css, false);
+      renderer.shadowMap.enabled = !compact;
+      // Keep the square camera framing, but only allocate the strip containing the turning model.
+      const width = compact ? css * .4 : css;
+      camera.setViewOffset(css, css, (css - width) / 2, 0, width, css);
+      canvas.style.width = `${width}px`;
+      canvas.style.height = `${css}px`;
+      renderer.setDrawingBufferSize(width, css, ratio);
       shown = NaN;
       lastSurround.fill(NaN);
     },

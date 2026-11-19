@@ -78,16 +78,16 @@ function fromLab([L, A, B]: Lab) {
 
 // ── Outlines as the instrument turns ─────────────────────────────────────────────────────────────────
 // The outline at `yaw` degrees, between the two nearest that were drawn, into `out`.
-function shapeAt(data: Uint16Array, yaw: number, out: Float32Array) {
+function shapeAt(data: Uint16Array, yaw: number, out: Float32Array, stride: number) {
   const at = wrap(yaw) / TURN_STEP;
   const count = data.length / (POINTS * 2);
   const a = Math.floor(at) % count, b = (a + 1) % count, t = at - Math.floor(at);
-  for (let i = 0; i < POINTS * 2; i++) out[i] = (data[a * POINTS * 2 + i]! * (1 - t) + data[b * POINTS * 2 + i]! * t) / UNITS;
+  for (let i = 0; i < POINTS * 2; i += stride * 2) out[i] = (data[a * POINTS * 2 + i]! * (1 - t) + data[b * POINTS * 2 + i]! * t) / UNITS;
   return out;
 }
-function pathOf(points: Float32Array) {
+function pathOf(points: Float32Array, stride: number) {
   let d = '';
-  for (let i = 0; i < POINTS; i++) d += `${i ? 'L' : 'M'}${points[i * 2]!.toFixed(1)} ${points[i * 2 + 1]!.toFixed(1)}`;
+  for (let i = 0; i < POINTS; i += stride) d += `${i ? 'L' : 'M'}${points[i * 2]!.toFixed(1)} ${points[i * 2 + 1]!.toFixed(1)}`;
   return `${d}Z`;
 }
 
@@ -216,14 +216,26 @@ onPage(signal => {
         scene.model,
         scene.paint,
         scene.copies.map(({ colour, side, rank }) => ({ colour, side, rank })),
+        narrow.matches,
       );
       if (stopped) return instrument.dispose();
       scene.instrument = instrument;
-      instrument.resize(scene.centre.size, Math.min(devicePixelRatio || 1, 2));
+      instrument.resize(scene.centre.size, narrow.matches);
       request();
     } catch {
       scene.loading = false;
     }
+  }
+
+  // Keep the composited SVG layers close to the artwork as the mobile lineup grows.
+  function placeCopy(svg: SVGSVGElement, { x, y, size }: Slot) {
+    const fraction = narrow.matches ? .4 : 1;
+    const width = size * fraction;
+    svg.setAttribute('viewBox', `${VIEW * (1 - fraction) / 2} 0 ${VIEW * fraction} ${VIEW}`);
+    svg.style.width = `${width.toFixed(1)}px`;
+    svg.style.height = `${size.toFixed(1)}px`;
+    svg.style.left = `${(x - width / 2).toFixed(1)}px`;
+    svg.style.top = `${(y - size / 2).toFixed(1)}px`;
   }
 
   // A scene's line-up on this screen: the instrument in the middle of the space under the words, all seven
@@ -237,32 +249,30 @@ onPage(signal => {
     const bottom = height - (narrow.matches ? 76 : 84); // clear of the dock
     const band = Math.max(80, bottom - top);
     const air = narrow.matches ? .8 : 1.14;
-    // Make room for the first transition silhouette, one slot beyond the blue bass.
+    // On phones the outer copies can run past the edges. On desktop the first bridge copy fits too.
     const halfRow = BODY * (air * (blue.rank + 1) + .5);
-    const frame = Math.min(band * 1.1, (width / 2 - 8) / halfRow);
-    const length = frame / 1.1;
+    const widthLimit = narrow.matches ? width * 1.65 : (width / 2 - 8) / halfRow;
+    const frame = Math.min(band * FRAME_WIDTH, widthLimit);
+    const length = frame / FRAME_WIDTH;
     const y = top + band / 2;
     scene.centre = { x: width / 2, y, size: frame };
     for (const copy of scene.copies) {
       copy.slot = { x: width / 2 + copy.side * BODY * frame * air * copy.rank, y, size: frame };
-      const style = copy.svg.style;
-      style.width = style.height = `${frame.toFixed(1)}px`;
-      style.left = `${(copy.slot.x - frame / 2).toFixed(1)}px`;
-      style.top = `${(y - frame / 2).toFixed(1)}px`;
+      placeCopy(copy.svg, copy.slot);
     }
-    const style = scene.canvas.style;
-    style.width = style.height = `${frame.toFixed(1)}px`;
-    style.left = `${(width / 2 - frame / 2).toFixed(1)}px`;
-    style.top = `${(y - frame / 2).toFixed(1)}px`;
+    scene.canvas.style.top = `${(y - frame / 2).toFixed(1)}px`;
     const grab = scene.grab.style;
     const gw = frame * .42, gh = length * 1.02;
     grab.width = `${gw.toFixed(1)}px`; grab.height = `${gh.toFixed(1)}px`;
     grab.left = `${(width / 2 - gw / 2).toFixed(1)}px`; grab.top = `${(y - gh / 2).toFixed(1)}px`;
     scene.perPixel = 360 / Math.max(420, frame * .8);
-    scene.instrument?.resize(frame, Math.min(devicePixelRatio || 1, 2));
+    scene.instrument?.resize(frame, narrow.matches);
   }
 
   function measure() {
+    // The outline sampling density can change when crossing the mobile breakpoint.
+    for (const follower of following.values()) follower.drawn = NaN;
+    for (const item of steps) item.turn.drawn = NaN;
     line = measureFillLine(root!);
     enabled = allowed.matches;
     for (const section of [intro, show]) {
@@ -292,10 +302,7 @@ onPage(signal => {
     spacing = (blue.slot.x - bass.centre.x) / blue.rank;
     reach = blue.slot.x + (STEPS + 1) * spacing - green.slot.x;
     steps.forEach(({ svg }, index) => {
-      const frame = blue.slot.size;
-      svg.style.width = svg.style.height = `${frame.toFixed(1)}px`;
-      svg.style.left = `${(blue.slot.x + (index + 1) * spacing - frame / 2).toFixed(1)}px`;
-      svg.style.top = `${(blue.slot.y - frame / 2).toFixed(1)}px`;
+      placeCopy(svg, { ...blue.slot, x: blue.slot.x + (index + 1) * spacing });
       svg.style.zIndex = String(-2 - index); // further right, further under, as the copies at the right are
     });
     shown = -1;
@@ -328,7 +335,7 @@ onPage(signal => {
     const first = stepOut(progress, 1);
     const opacity = clamp(first * 4).toFixed(3);
     for (const copy of scene.copies) {
-      copy.svg.style.transform = `translate3d(${dealt(copy, progress).toFixed(2)}px,0,0)`;
+      copy.svg.style.transform = `translate3d(${dealt(copy, progress).toFixed(2)}px,0,0)${leaning(copy.svg)}`;
       // Only the first card, out from behind the turned instrument, fades up; the others are switched on
       // once it is opaque, while still exactly behind it.
       copy.svg.style.opacity = copy.rank === 1 ? opacity : (first >= .25 ? '1' : '0');
@@ -428,7 +435,7 @@ onPage(signal => {
   const lean = new Map<Element, number>();
   function still() { for (const piece of rack) { piece.x = NaN; piece.moving = 0; } }
   function sway(dt: number) {
-    const width = stage.clientWidth || 1;
+    const width = bass.centre.x * 2 || 1;
     const most = narrow.matches ? RACK.mostNarrow : RACK.most;
     let moving = false;
     for (const piece of rack) {
@@ -457,18 +464,33 @@ onPage(signal => {
     return Math.abs(degrees) < .001 ? '' : ` rotate(${degrees.toFixed(3)}deg)`;
   };
 
+  // Allow for the widest body and the head swinging sideways about the foot.
+  function onScreen(x: number) {
+    const margin = bass.centre.size * .32;
+    return x >= -margin && x <= 2 * bass.centre.x + margin;
+  }
+
   // The copies' outlines, turned as their instrument is (each through its follower), and the in-between
   // copies', bass to guitar at their step. A path is rewritten only when its turn has changed.
   function turnCopies(dt: number, snap: boolean) {
+    const compact = narrow.matches;
+    const stride = compact ? 4 : 1;
+    const minTurn = compact ? .6 : .05;
+    const travel = rowX();
+    const progress = bassAt();
     let moving = false;
     for (const scene of scenes) {
       const data = outlines.get(scene);
       for (const copy of scene.copies) {
         const follower = following.get(copy.svg)!;
         if (follow(follower, scene.yaw, dt, snap)) moving = true;
-        if (!data?.length || Math.abs(follower.yaw - follower.drawn) < .05) continue;
+        if (!data?.length || Math.abs(follower.yaw - follower.drawn) < minTurn) continue;
+        if (compact) {
+          const offset = scene === bass ? dealt(copy, progress) : reach;
+          if (!onScreen(travel + copy.slot.x + offset)) continue;
+        }
         follower.drawn = follower.yaw;
-        follower.path.setAttribute('d', pathOf(shapeAt(data, follower.yaw, scratch[0])));
+        follower.path.setAttribute('d', pathOf(shapeAt(data, follower.yaw, scratch[0], stride), stride));
       }
     }
     if (!ready(bass) || !ready(guitar)) return moving;
@@ -478,12 +500,13 @@ onPage(signal => {
       let target = bass.yaw + apart * item.t;
       if (!Number.isNaN(item.turn.yaw)) target = item.turn.yaw + (((target - item.turn.yaw) % 360 + 540) % 360 - 180);
       if (follow(item.turn, target, dt, snap)) moving = true;
-      if (Math.abs(item.turn.yaw - item.turn.drawn) < .05) continue;
+      if (Math.abs(item.turn.yaw - item.turn.drawn) < minTurn) continue;
+      if (compact && !onScreen(travel + bass.centre.x + item.rank * spacing + dealt(item, progress))) continue;
       item.turn.drawn = item.turn.yaw;
-      const from = shapeAt(outlines.get(bass)!, item.turn.yaw, scratch[0]);
-      const to = shapeAt(outlines.get(guitar)!, item.turn.yaw, scratch[1]);
-      for (let i = 0; i < from.length; i++) from[i] = from[i]! + (to[i]! - from[i]!) * item.t;
-      item.path.setAttribute('d', pathOf(from));
+      const from = shapeAt(outlines.get(bass)!, item.turn.yaw, scratch[0], stride);
+      const to = shapeAt(outlines.get(guitar)!, item.turn.yaw, scratch[1], stride);
+      for (let i = 0; i < from.length; i += stride * 2) from[i] = from[i]! + (to[i]! - from[i]!) * item.t;
+      item.path.setAttribute('d', pathOf(from, stride));
     }
     return moving;
   }
@@ -498,7 +521,6 @@ onPage(signal => {
     // The bass is dealt out and turned as its words fill; the guitar's line-up is whole from the move on.
     // Every piece of the row leans on its foot as the rack sways.
     deal(bass, bassProgress);
-    for (const copy of bass.copies) copy.svg.style.transform += leaning(copy.svg);
     for (const copy of guitar.copies) copy.svg.style.transform = leaning(copy.svg);
     for (const item of steps) {
       item.svg.style.transform = `translate3d(${dealt(item, bassProgress).toFixed(2)}px,0,0)${leaning(item.svg)}`;
@@ -547,11 +569,13 @@ onPage(signal => {
       if (sway(dt)) moving = true;
       draw(shown, raw);
       if (turnCopies(dt, snap)) moving = true;
-      renderInstrument(bass, clamp(shown / span.bass));
-      renderInstrument(guitar, 1);
+      const centre = bass.centre.x + rowX();
+      if (!narrow.matches || onScreen(centre)) renderInstrument(bass, bassAt());
+      if (!narrow.matches || onScreen(centre + reach)) renderInstrument(guitar, 1);
     }
-    if (moving) queued = requestAnimationFrame(tick);
-    else last = 0;
+    // Leaving a chapter mid-turn can already have queued the settling spring for the next frame.
+    if (moving) request();
+    else if (!queued) last = 0;
   }
   function request() { if (!queued) queued = requestAnimationFrame(tick); }
 
