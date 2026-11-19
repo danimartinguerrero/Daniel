@@ -4,7 +4,7 @@ const { id, headingId, title } = Astro.props;
 ---
 <section class="divider section--dark" id={id} aria-labelledby={headingId} data-divider>
   <div class="divider__pin">
-    <h2 class="divider__title" id={headingId}><span class="divider__light" aria-hidden="true"></span><span class="divider__label">{title}</span></h2>
+    <h2 class="divider__title" id={headingId}>{title}<span class="divider__shade" aria-hidden="true"><span class="divider__light"></span></span></h2>
   </div>
 </section>
 <style is:global>
@@ -21,24 +21,24 @@ const { id, headingId, title } = Astro.props;
     text-align: center;
   }
   .divider__title {
+    padding: 0.04em 0.06em 0.18em;
     margin-bottom: -0.14em;
     font-size: clamp(4.5rem, 17vw, 16rem); line-height: 0.95; font-weight: 600; letter-spacing: -0.05em;
     text-wrap: balance;
   }
-  .divider__label { display: block; padding: 0.04em 0.06em 0.18em; }
-  .divider__light { display: none; }
+  .divider__shade { display: none; }
 
-  /* The black-and-white label stays painted in place. Multiplying it over the
-     moving light colours the white glyphs while the black surround stays black. */
+  /* Multiply the moving colour over the stationary white glyphs. Keep the overlay
+     inside the black padding so its edges always blend against opaque pixels,
+     even when the compositor rounds each layer to a different device pixel. */
   @media (forced-colors: none) {
     html.js:not(.reduce) .divider__title {
-      position: relative; isolation: isolate; overflow: hidden;
-      background: var(--fill-dim);
-    }
-    html.js:not(.reduce) .divider__label {
-      position: relative; color: white; background: black;
-      /* Cache the glyphs separately from the scrolling light. */
+      position: relative; isolation: isolate; color: white; background: black;
       transform: translateZ(0);
+    }
+    html.js:not(.reduce) .divider__shade {
+      display: block; position: absolute; inset: 2px; overflow: hidden; pointer-events: none;
+      background: var(--fill-dim);
       mix-blend-mode: multiply;
     }
     html.js:not(.reduce) .divider__light {
