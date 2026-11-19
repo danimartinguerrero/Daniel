@@ -93,11 +93,11 @@ export function initScroll(signal: AbortSignal) {
   const dividers = [...document.querySelectorAll<HTMLElement>('[data-divider]')].map((section) => ({
     section,
     pin: section.querySelector<HTMLElement>('.divider__pin')!,
-    title: section.querySelector<HTMLElement>('.divider__title')!,
+    light: section.querySelector<HTMLElement>('.divider__light')!,
     pinH: 0,
     fill: -1,
   }));
-  const cssDividers = () => !!dividers[0]?.title.getAnimations().some((a) => (a as CSSAnimation).animationName === 'divider-fill');
+  let dividersCss = false;
 
   function writeDividers(rects: DOMRect[], vh: number, css: boolean) {
     if (reduce.matches || css) return;
@@ -107,7 +107,7 @@ export function initScroll(signal: AbortSignal) {
       const hold = held(rect, d.pinH);
       const fill = clamp(hold / 0.7);
       if (fill !== d.fill) {
-        d.title.style.backgroundPositionX = `${(1 - fill) * 100}%`;
+        d.light.style.transform = `translate3d(${(fill - 1) * 100}%, 0, 0)`;
         d.fill = fill;
       }
     });
@@ -198,6 +198,7 @@ export function initScroll(signal: AbortSignal) {
 
   // Heights the progress is measured against, read once per resize rather than every frame.
   function measure() {
+    dividersCss = !!dividers[0]?.light.getAnimations().some((a) => (a as CSSAnimation).animationName === 'divider-fill');
     for (const d of dividers) { d.pinH = d.pin.offsetHeight; d.fill = -1; }
     // Phones pin only the sheet and the steps; there the hold runs through their run, not the section.
     const pinOnly = !!scanPinEl && getComputedStyle(scanPinEl).position === 'sticky';
@@ -256,7 +257,6 @@ export function initScroll(signal: AbortSignal) {
       return s.section.getBoundingClientRect();
     });
     const scanRead = readScan(vh);
-    const dividersCss = cssDividers();
     const dividerRects = dividersCss ? [] : dividers.map((d) => d.section.getBoundingClientRect());
     const tl = readTimeline(vh);
     // ...then write.
@@ -274,7 +274,7 @@ export function initScroll(signal: AbortSignal) {
   reduce.addEventListener('change', () => {
     root.classList.toggle('reduce', reduce.matches);
     if (reduce.matches) [reveal, tex, beam].forEach((el) => { el?.style.removeProperty('transform'); el?.style.removeProperty('opacity'); });
-    if (reduce.matches) dividers.forEach((d) => d.title.style.removeProperty('background-position-x'));
+    if (reduce.matches) dividers.forEach((d) => d.light.style.removeProperty('transform'));
     if (timeline) timeline.p = -1;
     dirty = true;
     queue();

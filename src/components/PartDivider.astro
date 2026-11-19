@@ -4,7 +4,7 @@ const { id, headingId, title } = Astro.props;
 ---
 <section class="divider section--dark" id={id} aria-labelledby={headingId} data-divider>
   <div class="divider__pin">
-    <h2 class="divider__title" id={headingId}>{title}</h2>
+    <h2 class="divider__title" id={headingId}><span class="divider__light" aria-hidden="true"></span><span class="divider__label">{title}</span></h2>
   </div>
 </section>
 <style is:global>
@@ -12,7 +12,7 @@ const { id, headingId, title } = Astro.props;
      (the site's one fill: --fill-dim, --fill-edge and --fill-line in global.css). The name fills over the
      first 70% of its hold, so the hold is --fill-line / 0.7 and the page that long past the screen.
      Without the script, or with reduced motion, it is simply lit. */
-  .divider { height: calc(100vh + var(--fill-line) / 0.7); }
+  .divider { height: calc(100svh + var(--fill-line) / 0.7); }
   .divider__pin {
     position: sticky; top: var(--nav-h);
     height: calc(100svh - var(--nav-h));
@@ -21,42 +21,45 @@ const { id, headingId, title } = Astro.props;
     text-align: center;
   }
   .divider__title {
-    /* The light only shows inside the box: give descenders (the j) and the last glyph room. */
-    padding: 0.04em 0.06em 0.18em;
     margin-bottom: -0.14em;
     font-size: clamp(4.5rem, 17vw, 16rem); line-height: 0.95; font-weight: 600; letter-spacing: -0.05em;
     text-wrap: balance;
   }
-  /* One stationary set of glyphs. The gradient has a title-width of solid colour
-     on each side of the soft edge so both ends of the scroll are uniform. */
+  .divider__label { display: block; padding: 0.04em 0.06em 0.18em; }
+  .divider__light { display: none; }
+
+  /* The black-and-white label stays painted in place. Multiplying it over the
+     moving light colours the white glyphs while the black surround stays black. */
   @media (forced-colors: none) {
     html.js:not(.reduce) .divider__title {
-      --fill-band: calc(2 + var(--fill-edge));
-      background-image: linear-gradient(90deg,
-        var(--on-dark) calc(100% / var(--fill-band)),
-        var(--fill-dim) calc(100% - 100% / var(--fill-band)));
-      background-size: calc(100% * var(--fill-band)) 100%;
-      background-position: 100% 0;
-      background-repeat: no-repeat;
-      -webkit-background-clip: text;
-      background-clip: text;
-      color: transparent;
+      position: relative; isolation: isolate; overflow: hidden;
+      background: var(--fill-dim);
+    }
+    html.js:not(.reduce) .divider__label {
+      position: relative; color: white; background: black;
+      /* Cache the glyphs separately from the scrolling light. */
+      transform: translateZ(0);
+      mix-blend-mode: multiply;
+    }
+    html.js:not(.reduce) .divider__light {
+      display: block; position: absolute; inset: 0 calc(-100% * var(--fill-edge)) 0 0;
+      background: linear-gradient(90deg, var(--on-dark) calc(100% / (1 + var(--fill-edge))), var(--fill-dim));
+      transform: translate3d(-100%, 0, 0);
     }
   }
   @supports (animation-timeline: view()) {
     .divider { view-timeline-name: --divider; view-timeline-axis: block; view-timeline-inset: 0; }
-    html.js:not(.reduce) .divider__title {
+    html.js:not(.reduce) .divider__light {
       animation: divider-fill linear both;
       animation-duration: auto;
       animation-timeline: --divider;
-      animation-range: contain 0% contain 70%;
+      animation-range: contain 0px contain var(--fill-line);
     }
     @keyframes divider-fill {
-      from { background-position-x: 100%; }
-      to { background-position-x: 0%; }
+      from { transform: translate3d(-100%, 0, 0); }
+      to { transform: translate3d(0, 0, 0); }
     }
   }
   html:not(.js) .divider, html.reduce .divider { height: auto; }
   html:not(.js) .divider__pin, html.reduce .divider__pin { position: static; min-height: calc(100svh - var(--nav-h)); }
-  .divider { overflow-x: clip; }
 </style>
