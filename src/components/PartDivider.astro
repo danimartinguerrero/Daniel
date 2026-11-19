@@ -20,6 +20,12 @@ const { id, headingId, title } = Astro.props;
     padding-inline: var(--gutter);
     text-align: center;
   }
+  /* During the hold on touch screens the viewport owns the title's layer. Sticky positioning
+     handles its normal approach and release, including scrolling back up the page. */
+  html.js:not(.reduce) .divider[data-viewport-pin] > .divider__pin {
+    position: fixed;
+    inset-inline: 0;
+  }
   .divider__title {
     padding: 0.04em 0.06em 0.18em;
     margin-bottom: -0.14em;
