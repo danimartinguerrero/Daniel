@@ -1,6 +1,7 @@
 /* Music, design 4: "Listening bar". Only this page loads this file; every class is prefixed v4-.
    Spacing sits on a 4px grid. Text uses the site's three dark roles: --on-dark, --on-dark-2 and a
    muted step (--v4-muted). An open record has no accent of its own: its colour is the sleeve's. */
+@import './text-fill.css';
 
 .v4 {
   --v4-muted: #6e6e73;
@@ -192,22 +193,7 @@
 .v4-making__page.is-armed .w { color: var(--fill-dim); }
 /* As tall as the scroll a line takes to fill, everywhere on the site (--fill-line): the climb reads it. */
 .v4-climb__probe { position: absolute; top: 0; left: 0; width: 0; height: var(--fill-line); visibility: hidden; pointer-events: none; }
-/* The light along a line: a white copy of that line, exactly over it, seen through a window with a
-   soft right edge. The window slides along the line and the copy slides back the same distance, so the
-   letters never move and only the edge does: two transforms a frame, nothing painted again. It is the
-   home page's fill (.divider__lit in index.astro), line by line. */
-.v4-lit { position: absolute; inset: 0; pointer-events: none; }
-.v4-lit__win {
-  position: absolute;
-  -webkit-mask-image: linear-gradient(90deg, #000 calc(100% - var(--edge)), transparent);
-  mask-image: linear-gradient(90deg, #000 calc(100% - var(--edge)), transparent);
-  -webkit-mask-size: 100% 100%; mask-size: 100% 100%;
-  -webkit-mask-repeat: no-repeat; mask-repeat: no-repeat;
-  will-change: transform;
-}
-.v4-lit__line { position: absolute; white-space: pre; color: var(--on-dark); will-change: transform; }
 @media (forced-colors: active) {
-  .v4-lit { display: none; }
   .v4-making__page.is-armed .w, .v4-making .w { color: CanvasText; }
 }
 

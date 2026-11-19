@@ -1,9 +1,10 @@
 /* Live WebGL studio for the instruments' line-ups (LineupStory.astro). The exported models are one unit
    long, upright along +Y and facing +Z (scripts/export-instruments.py). A photographed lighting
-   environment supplies reflections at every viewing angle. The canvas is clear where the instrument is
-   not, so the flat copies of the line-up show around it. */
+   environment supplies reflections at every viewing angle, while each surrounding SVG copy acts as a
+   live coloured area light that moves, sways and dims with the row. The canvas is clear where the
+   instrument is not, so the flat copies of the line-up show around it. */
 import {
-  AgXToneMapping, DirectionalLight, EquirectangularReflectionMapping, Material, MathUtils,
+  AgXToneMapping, Color, DirectionalLight, EquirectangularReflectionMapping, Material, MathUtils,
   Mesh, MeshPhysicalMaterial, MeshStandardMaterial, Object3D, PerspectiveCamera, PCFSoftShadowMap,
   RectAreaLight, Scene, SRGBColorSpace, WebGLRenderer,
 } from 'three';
@@ -12,8 +13,21 @@ import { MeshoptDecoder } from 'three/examples/jsm/libs/meshopt_decoder.module.j
 import { RectAreaLightUniformsLib } from 'three/examples/jsm/lights/RectAreaLightUniformsLib.js';
 import { HDRLoader } from 'three/examples/jsm/loaders/HDRLoader.js';
 
+export interface SurroundLight {
+  colour: string;
+  side: number; // -1 left, +1 right
+  rank: number; // 1 nearest .. 3 farthest
+}
+
+export interface SurroundPose {
+  x: number; // horizontal offset from the instrument's centre, in model units
+  exposure: number; // 0 (hidden behind instrument/neighbour) to 1 (fully revealed)
+  lean: number; // degrees, relative clockwise tilt from the rack spring
+  yaw: number; // degrees, the copy's current turned angle
+}
+
 export interface Instrument {
-  pose(degrees: number): void; // turned about its own long axis; 0 faces you
+  pose(degrees: number, surround?: readonly SurroundPose[]): void; // turned about its own long axis; 0 faces you
   resize(size: number, ratio: number): void;
   dispose(): void;
 }
@@ -23,25 +37,30 @@ RectAreaLightUniformsLib.init();
 const FRAME_WIDTH = 1.1; // the view's width at the instrument, in instrument lengths
 const LENS = 85; // mm, on a 36 mm frame
 
-function rim(x: number, width: number, intensity: number, colour: number) {
-  const light = new RectAreaLight(colour, intensity, width, 1.5);
-  light.position.set(x, .25, -.18);
-  light.lookAt(0, 0, 0);
-  return light;
-}
+// Layered depth and height for each rank (1 nearest .. 3 farthest), mirroring the CSS stacking and
+// spreading the rainbow across body, waist and neck instead of averaging into neutral white.
+const SURROUND_RANK = [
+  { z: .10, y: -.14, aimY: -.16, width: .25, height: .90, intensity: 1.75, pad: .10, minX: .30 },
+  { z: -.12, y: .06, aimY: .02, width: .28, height: 1.00, intensity: 2.75, pad: 0, minX: .42 },
+  { z: -.32, y: .24, aimY: .16, width: .34, height: 1.08, intensity: 4.30, pad: 0, minX: .58 },
+] as const;
 
-// Keep highlights broad on the paint and preserve the source roughness on metal hardware.
+// Keep highlights restrained on paint and plastics in the dark room, preserving metal hardware.
 function satin(material: Material) {
   if (!(material instanceof MeshStandardMaterial)) return;
   if (material instanceof MeshPhysicalMaterial) {
-    material.clearcoat = .24;
-    material.clearcoatRoughness = .28;
+    material.clearcoat = .05;
+    material.clearcoatRoughness = .38;
   }
   material.onBeforeCompile = shader => {
-    shader.fragmentShader = shader.fragmentShader.replace('#include <metalnessmap_fragment>',
-      '#include <metalnessmap_fragment>\n\troughnessFactor = mix(max(roughnessFactor, .32), roughnessFactor, step(.5, metalnessFactor));');
+    shader.fragmentShader = shader.fragmentShader.replace('#include <metalnessmap_fragment>', `
+      #include <metalnessmap_fragment>
+      float nonMetal = 1.0 - step(.5, metalnessFactor);
+      diffuseColor.rgb *= mix(1.0, .9, nonMetal * smoothstep(.45, .88, max(diffuseColor.r, diffuseColor.b)));
+      roughnessFactor = mix(max(roughnessFactor, .46), roughnessFactor, step(.5, metalnessFactor));
+    `);
   };
-  material.customProgramCacheKey = () => 'satin';
+  material.customProgramCacheKey = () => 'satin-dark';
   material.needsUpdate = true;
 }
 
@@ -50,38 +69,58 @@ function hardware(material: MeshStandardMaterial) {
     shader.fragmentShader = shader.fragmentShader.replace('#include <metalnessmap_fragment>', `
       #include <metalnessmap_fragment>
       float bareMetal = metalnessFactor * smoothstep(0.065, 0.30, diffuseColor.g);
-      diffuseColor.rgb = mix(diffuseColor.rgb, min(vec3(.91), diffuseColor.rgb * 1.48), bareMetal);
-      roughnessFactor = mix(roughnessFactor, clamp(roughnessFactor, .16, .36), bareMetal);
+      float nonMetal = 1.0 - step(0.5, metalnessFactor);
+      diffuseColor.rgb = mix(diffuseColor.rgb * mix(1.0, 0.92, nonMetal * smoothstep(0.45, 0.85, max(diffuseColor.r, diffuseColor.b))), min(vec3(.74), diffuseColor.rgb * 1.1), bareMetal);
+      roughnessFactor = mix(max(roughnessFactor, .36 * nonMetal), clamp(roughnessFactor, .22, .38), bareMetal);
     `);
   };
-  material.customProgramCacheKey = () => 'nickel-hardware';
+  material.customProgramCacheKey = () => 'nickel-hardware-dark';
+  material.needsUpdate = true;
 }
 
-export async function createInstrument(canvas: HTMLCanvasElement, url: string, paint: string): Promise<Instrument> {
+export async function createInstrument(
+  canvas: HTMLCanvasElement,
+  url: string,
+  paint: string,
+  surround: readonly SurroundLight[] = [],
+): Promise<Instrument> {
   const renderer = new WebGLRenderer({ canvas, antialias: true, alpha: true, premultipliedAlpha: true, powerPreference: 'high-performance' });
   renderer.setClearColor(0x000000, 0);
   renderer.outputColorSpace = SRGBColorSpace;
   renderer.toneMapping = AgXToneMapping;
-  renderer.toneMappingExposure = 1;
+  renderer.toneMappingExposure = .92;
   renderer.shadowMap.enabled = true;
   renderer.shadowMap.type = PCFSoftShadowMap;
 
   const scene = new Scene();
-  const key = new DirectionalLight(0xfff4e7, 1.35);
-  key.position.set(-.7, .85, 1.1);
+  const key = new DirectionalLight(0xfff2e2, .72);
+  key.position.set(-.48, 1.22, 1);
   key.castShadow = true;
   // A tight frustum resolves the narrow shadows under the strings and bridge saddles.
-  Object.assign(key.shadow.camera, { left: -.57, right: .57, top: .57, bottom: -.57, near: .65, far: 2.15 });
+  Object.assign(key.shadow.camera, { left: -.57, right: .57, top: .57, bottom: -.57, near: .65, far: 2.35 });
   key.shadow.camera.updateProjectionMatrix();
   key.shadow.mapSize.set(1024, 1024);
   key.shadow.normalBias = .00022;
   key.shadow.bias = -.00012;
-  // Feather a tall strip across the top carve. Its reflection moves over the pickup covers as the instrument turns.
-  const strip = new RectAreaLight(0xfff6ed, 8.5, .28, 1.2);
-  strip.position.set(-.91, .52, .85);
-  strip.lookAt(0, -.18, 0);
+  // A quiet strip across the body contour and pickups, restrained so black finishes stay deep on #000.
+  const strip = new RectAreaLight(0xfff3e6, .95, .26, 1.15);
+  strip.position.set(-.92, .66, .74);
+  strip.lookAt(0, -.14, 0);
   strip.rotateZ(.48);
-  scene.add(key, strip, rim(-.7, .28, 4.5, 0xe6efff), rim(.85, .16, 3.8, 0xffecd2));
+  scene.add(key, strip);
+
+  const surroundLights = surround.map(({ colour, side, rank }) => {
+    const spec = SURROUND_RANK[Math.min(SURROUND_RANK.length, Math.max(1, rank)) - 1]!;
+    const color = new Color(colour);
+    // Gently compensate darker saturated hues (red, purple, blue) so both sides balance perceptually.
+    const lum = .2126 * color.r + .7152 * color.g + .0722 * color.b;
+    const balance = Math.min(1.85, (.28 / Math.max(.1, lum)) ** .55);
+    const light = new RectAreaLight(color, 0, spec.width, spec.height);
+    light.position.set(side * (spec.minX + spec.pad), spec.y, spec.z);
+    light.lookAt(0, spec.aimY, 0);
+    scene.add(light);
+    return { ...spec, side, intensity: spec.intensity * balance, light };
+  });
 
   const camera = new PerspectiveCamera(2 * MathUtils.radToDeg(Math.atan(18 / LENS)), 1, .1, 20);
   camera.position.set(0, 0, FRAME_WIDTH * LENS / 36);
@@ -94,20 +133,24 @@ export async function createInstrument(canvas: HTMLCanvasElement, url: string, p
   ]);
   environment.mapping = EquirectangularReflectionMapping;
   scene.environment = environment;
-  scene.environmentIntensity = .66;
+  scene.environmentIntensity = .14;
   scene.environmentRotation.y = 5.3;
   const model = gltf.scene;
   model.traverse(node => {
     if (!(node instanceof Mesh)) return;
     node.castShadow = node.receiveShadow = true;
     for (const material of [node.material].flat()) {
-      if (material.name === paint) satin(material);
+      if (material.name === paint || material.name === 'Ebony lacquer') satin(material);
       if (!(material instanceof MeshStandardMaterial)) continue;
       if (material.name === 'NeckMaterial' || material.name === 'SmallbitsBake') hardware(material);
-      if (material.name === 'NeckMaterial' && material instanceof MeshPhysicalMaterial) {
-        material.clearcoatRoughness = .27;
+      if ((material.name === 'NeckMaterial' || material.name === 'Black top hat') && material instanceof MeshPhysicalMaterial) {
+        material.clearcoat = .1;
+        material.clearcoatRoughness = .36;
       }
-      if (material.name === 'StringMaterial') material.roughness = .26;
+      if (material.name === 'Black top hat') material.roughness = .38;
+      if (material.name === 'StringMaterial' || material.name === 'Strings' || material.name === 'Nickel silver') {
+        material.roughness = .32;
+      }
     }
   });
   const holder = new Object3D();
@@ -117,10 +160,46 @@ export async function createInstrument(canvas: HTMLCanvasElement, url: string, p
 
   let shown = NaN;
   let size = 0;
+  const lastSurround = new Float32Array(surroundLights.length * 4).fill(NaN);
 
   return {
-    pose(degrees) {
-      if (degrees === shown || !size) return;
+    pose(degrees, states) {
+      if (!size) return;
+      let dirty = Math.abs(degrees - shown) >= 1e-4 || Number.isNaN(shown);
+      for (let i = 0; i < surroundLights.length; i++) {
+        const spec = surroundLights[i]!;
+        const state = states?.[i];
+        const exposure = state ? MathUtils.clamp(state.exposure, 0, 1) : 1;
+        const rawX = state ? state.x : spec.side * spec.minX;
+        const lean = state ? state.lean : 0;
+        const yaw = state ? state.yaw : degrees;
+        const base = i * 4;
+        const changed =
+          Number.isNaN(lastSurround[base]!) ||
+          Math.abs(rawX - lastSurround[base]!) >= 1e-4 ||
+          Math.abs(exposure - lastSurround[base + 1]!) >= 1e-4 ||
+          Math.abs(lean - lastSurround[base + 2]!) >= 1e-3 ||
+          Math.abs(yaw - lastSurround[base + 3]!) >= 1e-2;
+        if (!changed) continue;
+        dirty = true;
+        lastSurround[base] = rawX;
+        lastSurround[base + 1] = exposure;
+        lastSurround[base + 2] = lean;
+        lastSurround[base + 3] = yaw;
+        // Leaning around the copy's foot (y = -0.5) swings the coloured silhouette towards or away from the instrument.
+        const leanRad = MathUtils.degToRad(lean);
+        const arm = spec.y + .5;
+        const swungX = rawX + arm * Math.sin(leanRad);
+        const x = spec.side * Math.max(spec.minX, spec.side * swungX + spec.pad);
+        const y = -.5 + arm * Math.cos(leanRad);
+        // As a copy turns edge-on (±90°), its apparent emitting width narrows.
+        const spread = .42 + .58 * Math.abs(Math.cos(MathUtils.degToRad(yaw)));
+        spec.light.position.set(x, y, spec.z);
+        spec.light.lookAt(0, spec.aimY - Math.sin(leanRad) * spec.side * .2, 0);
+        spec.light.width = spec.width * spread;
+        spec.light.intensity = spec.intensity * exposure * (.68 + .32 * spread);
+      }
+      if (!dirty) return;
       shown = degrees;
       holder.rotation.y = MathUtils.degToRad(degrees);
       renderer.render(scene, camera);
@@ -131,6 +210,7 @@ export async function createInstrument(canvas: HTMLCanvasElement, url: string, p
       renderer.setPixelRatio(ratio);
       renderer.setSize(css, css, false);
       shown = NaN;
+      lastSurround.fill(NaN);
     },
     dispose() {
       environment.dispose();

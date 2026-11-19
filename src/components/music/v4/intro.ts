@@ -74,7 +74,8 @@ onPage((signal) => {
   const fromHistory = firstPage && (performance.getEntriesByType('navigation')[0] as PerformanceNavigationTiming | undefined)?.type === 'back_forward';
   firstPage = false;
   const root = document.querySelector<HTMLElement>('.v4[data-music-page]');
-  if (!root) return;
+  // A page that plays an intro of its own says so (data-intro-own), and this one leaves it alone.
+  if (!root || root.hasAttribute('data-intro-own')) return;
   // Not before the page is shown: what begins while the island is still opening the page, Safari
   // begins again when it has opened (scripts/page.ts). Until then the page is dark, as the CSS has it.
   void arrived().then(() => { if (!signal.aborted) start(root, signal, fromHistory); });

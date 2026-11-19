@@ -24,6 +24,7 @@
  * the scroll is still.
  */
 import { onPage } from '@/scripts/page';
+import { measureTextFill, paintTextFill, type LitLine } from './text-fill';
 import { Spring, clamp } from './physics';
 
 /** What the carousel needs to draw its records from the camera's place. Lengths are px. */
@@ -81,74 +82,13 @@ function init(root: HTMLElement, track: HTMLElement, signal: AbortSignal) {
      taking the same scroll whatever its length, a soft edge a quarter of the line wide crossing it.
      Where each passage comes in, fills, is held and goes, in px of scroll since the stage was pinned, is
      worked out in measure from how many lines the browser broke it into. */
-  interface Line { span: number; win: HTMLElement; copy: HTMLElement }
   const pages = [...track.querySelectorAll<HTMLElement>('[data-climb-page]')].map((el) => ({
     el,
-    words: [...el.querySelectorAll<HTMLElement>('[data-w]')],
-    lines: [] as Line[],
+    lines: [] as LitLine[],
     start: 0, // the first line starts filling
     held: 0, // the last line is full and held lit until here
   }));
-  // The site's fill: the soft edge, as a share of the line, and the scroll a line takes, in px (read from
-  // the stretch itself, which is sized with it).
-  const edgeShare = () => parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--fill-edge')) || 0.25;
   let LINE = 1;
-
-  /* The light along the words. Painting the fill into the letters as it moved (a gradient in each word)
-     repainted the passage on every frame, which an iPhone could not keep up with. Instead each line of
-     a passage gets a white copy of its text laid exactly over it, inside a window whose right edge
-     fades out over a quarter of the line (as the home page's part names do). Lighting a line slides the window along it and the copy back by the
-     same amount, so the letters stay where they are and only the edge travels: two transforms per line.
-     The lines are taken from where the browser broke them, and taken again whenever the page is laid
-     out anew (measure). */
-  const PAD = 0.25; // em around a line's box, for ink past it (a "y"'s tail, an accent, a slanted stroke)
-  function lightLines() {
-    for (const page of pages) {
-      page.el.querySelector('.v4-lit')?.remove();
-      for (const line of page.lines) written.delete(line.win), written.delete(line.copy);
-      page.lines = [];
-      const box = page.el.getBoundingClientRect();
-      const pad = (parseFloat(getComputedStyle(page.el).fontSize) || 16) * PAD;
-      const layer = document.createElement('span');
-      layer.className = 'v4-lit';
-      layer.setAttribute('aria-hidden', 'true');
-      const rects = page.words.map((w) => w.getBoundingClientRect());
-      const share = edgeShare();
-      let start = 0;
-      for (let k = 1; k <= page.words.length; k++) {
-        if (k < page.words.length && Math.abs(rects[k]!.top - rects[start]!.top) < 2) continue;
-        // Words start to k - 1 are one line.
-        const first = rects[start]!, last = rects[k - 1]!;
-        const width = last.right - first.left;
-        const edge = width * share;
-        const win = document.createElement('span');
-        win.className = 'v4-lit__win';
-        win.style.cssText = `left:${(first.left - box.left - pad).toFixed(2)}px;top:${(first.top - box.top - pad).toFixed(2)}px;width:${(width + 2 * pad + edge).toFixed(2)}px;height:${(first.height + 2 * pad).toFixed(2)}px;--edge:${edge.toFixed(2)}px`;
-        const copy = document.createElement('span');
-        copy.className = 'v4-lit__line';
-        copy.style.cssText = `left:${pad.toFixed(2)}px;top:${pad.toFixed(2)}px;line-height:${first.height.toFixed(2)}px`;
-        copy.textContent = page.words.slice(start, k).map((w) => w.textContent).join(' ');
-        win.append(copy);
-        layer.append(win);
-        page.lines.push({ span: width + 2 * pad + edge, win, copy });
-        start = k;
-      }
-      page.el.append(layer);
-      page.el.classList.add('is-armed');
-    }
-  }
-  /** Light a passage for `s` px of scroll since the stage was pinned. Each line fills over LINE px, one
-      after another, at an even pace (linear, as the home page's names): its window goes from all of it
-      left of the line (dark) to just past its end (lit), the soft edge crossing the letters. */
-  function lightUp(page: (typeof pages)[number], s: number) {
-    page.lines.forEach((line, j) => {
-      const k = clamp((s - page.start - j * LINE) / LINE, 0, 1);
-      const shift = (k - 1) * line.span;
-      css(line.win, 'transform', `translate3d(${shift.toFixed(2)}px,0,0)`);
-      css(line.copy, 'transform', `translate3d(${(-shift).toFixed(2)}px,0,0)`);
-    });
-  }
-
 
   // What is on screen, so that a value that hasn't changed isn't written again.
   const written = new Map<HTMLElement, Record<string, string>>([[caption, {}]]);
@@ -227,7 +167,7 @@ function init(root: HTMLElement, track: HTMLElement, signal: AbortSignal) {
     // Some twenty-seven letters to the line: a passage is five lines or so, and fits the clear floor.
     stage.style.setProperty('--words-fs', `${clamp(wordsW / 13.5, 17, 36).toFixed(1)}px`);
 
-    lightLines();
+    for (const page of pages) page.lines = measureTextFill(page.el);
     // The stretch, sized for these passages as broken into lines on this screen: the camera, then each
     // passage's lines at the site's pace and its hold, the passages handing over, and a breath.
     LINE = probe.getBoundingClientRect().height || st.height * 0.35;
@@ -322,7 +262,7 @@ function init(root: HTMLElement, track: HTMLElement, signal: AbortSignal) {
       // Faded, never hidden: a layer made visible again would be drawn anew mid-scroll.
       css(page.el, 'opacity', shown.toFixed(3));
       css(page.el, 'transform', `translate3d(0,${((1 - arrive) * 12 - leave * 12).toFixed(1)}px,0)`);
-      lightUp(page, scrolled);
+      paintTextFill(page.lines, (scrolled - page.start) / LINE);
     });
   }
   measure();

@@ -1,6 +1,6 @@
 import { onPage } from '@/scripts/page';
 import { FILL_HOLD, clearTextFill, measureFillLine, measureTextFill, paintTextFill, type LitLine } from '../v4/text-fill';
-import type { Instrument } from './instrument';
+import type { Instrument, SurroundPose } from './instrument';
 
 /* The instruments on the music page (LineupStory.astro). The intro's words fill on their own held
    screen. Then one held screen tells both instruments, on one timeline measured in the scroll a line of
@@ -40,6 +40,7 @@ import type { Instrument } from './instrument';
 const FOLLOW = 0.07; // s: the screen follows the scroll this closely
 const DECELERATION = 0.998; // Apple's normal scroll deceleration, for projecting a flick
 const THREE_QUARTER_YAW = -50; // degrees from face-on
+const FRAME_WIDTH = 1.1; // matches instrument.ts: the frame's width in instrument lengths
 const BODY = .27; // a body's width, in frame widths (the outlines in silhouettes.ts)
 const HOLD = .8; // lines of scroll the lit bass waits before the move
 const MOVE = 4.2; // lines of scroll the slide takes
@@ -120,8 +121,13 @@ onPage(signal => {
     model: element.dataset.model!,
     paint: element.dataset.paint ?? '',
     copies: [...element.querySelectorAll<SVGSVGElement>('[data-lu-copy]')].map(svg => ({
-      svg, side: Number(svg.dataset.side), rank: Number(svg.dataset.rank), slot: { x: 0, y: 0, size: 1 } as Slot,
+      svg,
+      colour: svg.style.getPropertyValue('--c').trim(),
+      side: Number(svg.dataset.side),
+      rank: Number(svg.dataset.rank),
+      slot: { x: 0, y: 0, size: 1 } as Slot,
     })),
+    lights: [...element.querySelectorAll<SVGSVGElement>('[data-lu-copy]')].map((): SurroundPose => ({ x: 0, exposure: 0, lean: 0, yaw: 0 })),
     instrument: null as Instrument | null,
     loading: false,
     centre: { x: 0, y: 0, size: 1 } as Slot,
@@ -217,7 +223,12 @@ onPage(signal => {
     scene.loading = true;
     try {
       const { createInstrument } = await import('./instrument');
-      const instrument = await createInstrument(scene.canvas, scene.model, scene.paint);
+      const instrument = await createInstrument(
+        scene.canvas,
+        scene.model,
+        scene.paint,
+        scene.copies.map(({ colour, side, rank }) => ({ colour, side, rank })),
+      );
       if (stopped) return instrument.dispose();
       scene.instrument = instrument;
       instrument.resize(scene.centre.size, Math.min(devicePixelRatio || 1, 2));
@@ -378,11 +389,31 @@ onPage(signal => {
     const swayYaw = (lean.get(scene.canvas) ?? 0) * RACK.yaw * swayShare;
     const yaw = (THREE_QUARTER_YAW + swayYaw) * threeQuarterShare + scene.angle;
     scene.yaw = yaw;
-    scene.instrument?.pose(yaw);
     const angle = Math.round(wrap(yaw)) % 360;
     scene.grab.setAttribute('aria-valuenow', String(angle));
     const side = angle === 0 ? 'Facing forward' : `${angle} degrees`;
     if (scene.grab.getAttribute('aria-valuetext') !== side) scene.grab.setAttribute('aria-valuetext', side);
+  }
+  // Drive each instrument's coloured surround lights from the live position, reveal, sway and turn of its copies.
+  function renderInstrument(scene: Scene, progress: number) {
+    if (!scene.instrument || !scene.centre.size) return;
+    const scale = FRAME_WIDTH / scene.centre.size;
+    const baseLean = lean.get(scene.canvas) ?? 0;
+    const dealtScene = scene === bass;
+    for (let i = 0; i < scene.copies.length; i++) {
+      const copy = scene.copies[i]!;
+      const offset = dealtScene ? dealt(scene, copy, progress) : 0;
+      const step = dealtScene ? stepOut(progress, copy.rank) : 1;
+      const out = scene.lights[i]!;
+      out.x = (copy.slot.x + offset - scene.centre.x) * scale;
+      out.exposure = dealtScene
+        ? (copy.rank === 1 ? smooth(clamp(step * 2.5)) : smooth(step))
+        : 1;
+      out.lean = (lean.get(copy.svg) ?? 0) - baseLean;
+      const follower = following.get(copy.svg)!;
+      out.yaw = Number.isNaN(follower.yaw) ? scene.yaw : follower.yaw;
+    }
+    scene.instrument.pose(scene.yaw, scene.lights);
   }
 
   // The rack. Every instrument on the row (the copies, the in-between ones, the two real ones) has weight:
@@ -540,6 +571,8 @@ onPage(signal => {
       if (sway(dt)) moving = true;
       draw(shown, raw);
       if (turnCopies(dt, snap)) moving = true;
+      renderInstrument(bass, clamp(shown / span.bass));
+      renderInstrument(guitar, 1);
     }
     if (moving) queued = requestAnimationFrame(tick);
     else last = 0;
