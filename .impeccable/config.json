@@ -11,6 +11,15 @@
         ],
         "createdAt": "2026-11-06T11:16:59.331Z",
         "reason": "User confirmed keeping the existing animations: replied no when asked whether to review the two pre-existing marquee findings."
+      },
+      {
+        "rule": "gradient-text",
+        "value": "*",
+        "files": [
+          "src/components/music/lineup/lineup.css"
+        ],
+        "createdAt": "2026-11-19T00:43:20.200Z",
+        "reason": "Codex: the existing scroll reveal moves a monochrome edge across the original instrument heading glyphs to avoid the doubled text shown by the user."
       }
     ]
   }

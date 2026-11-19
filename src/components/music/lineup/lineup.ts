@@ -20,9 +20,7 @@ import type { Instrument } from './instrument';
      green guitar stand STEPS more copies, each a step further from the bass and nearer the guitar, in
      outline and in colour: a flip book laid out along the row. The screen travels the row, eased in and
      out (smoothstep, the page's curve for scrubbed motion), the words travelling half as far, as if
-     nearer the glass. The in-between copies are drawn
-     once; the slide moves them with transform only. The two that would peek in at a screen's edge while
-     a line-up stands come up as the slide begins and go as it ends.
+     nearer the glass. The in-between copies keep their places on the row throughout the slide.
    - The instruments have weight. Whatever moves them across the screen (a card slid out in the deal, the
      row sliding along), they lean back against the motion, the more the faster it goes, and when it slows
      they swing past upright, rock and settle, each at its own pace (a spring each, Apple's damping ratio
@@ -48,8 +46,11 @@ const HOLD = .8; // lines of scroll the lit bass waits before the move
 const MOVE = 4.2; // lines of scroll the slide takes
 const STEPS = 5; // copies between the blue bass and the green guitar
 const BLUR = 4; // px: words crossing blur this much at most
-const POINTS = 1200; // points in an in-between outline
 const VIEW = 1600; // the outlines' frame, silhouettes.ts
+// The outlines as the instrument turns (scripts/instrument-outlines.mjs): every TURN_STEP degrees about its
+// long axis, POINTS points each, matched part to part, Uint16 coordinates times 16.
+const TURN_STEP = 10, POINTS = 720, UNITS = 16;
+const FOLLOW_TURN = [.14, .22, .3]; // s: how closely the copies follow the real one's turn, nearest first
 
 const clamp = (t: number) => Math.min(1, Math.max(0, t));
 const smooth = (t: number) => t * t * (3 - 2 * t);
@@ -77,78 +78,18 @@ function fromLab([L, A, B]: Lab) {
   return `rgb(${rgb.map(c => Math.round(255 * Math.min(1, Math.max(0, c <= .0031308 ? 12.92 * c : 1.055 * c ** (1 / 2.4) - .055)))).join(',')})`;
 }
 
-// ── Outlines, matched part to part ───────────────────────────────────────────────────────────────────
-// An outline as POINTS points: from its foot up one side to its top, then down the other. Each side is cut
-// where it first reaches a quarter, 0.42, 0.6 and 0.8 of the instrument's height, and each piece gets the
-// same share of points in every outline, so body meets body and neck meets neck.
-const HEIGHTS = [.25, .42, .6, .8];
-const SHARES = [.2, .22, .17, .17, .24]; // of a side's points, per piece, foot to top
-function outline(path: SVGPathElement): Float32Array {
-  const total = path.getTotalLength();
-  const dense = 4000;
-  let points: [number, number][] = [];
-  for (let i = 0; i < dense; i++) {
-    const p = path.getPointAtLength(total * i / dense);
-    points.push([p.x, p.y]);
-  }
-  // The same way round for every outline.
-  let area = 0;
-  for (let i = 0; i < dense; i++) {
-    const [x1, y1] = points[i]!, [x2, y2] = points[(i + 1) % dense]!;
-    area += x1 * y2 - x2 * y1;
-  }
-  if (area < 0) points.reverse();
-  const ys = points.map(p => p[1]);
-  const bottom = Math.max(...ys), top = Math.min(...ys);
-  const xs = points.map(p => p[0]);
-  const middle = (Math.max(...xs) + Math.min(...xs)) / 2;
-  // The foot: the lowest point nearest the middle; the head: the highest.
-  let foot = 0;
-  for (let i = 0; i < dense; i++) {
-    const [x, y] = points[i]!, [fx, fy] = points[foot]!;
-    if (y > fy + .5 || (Math.abs(y - fy) <= .5 && Math.abs(x - middle) < Math.abs(fx - middle))) foot = i;
-  }
-  points = [...points.slice(foot), ...points.slice(0, foot)];
-  const head = points.findIndex(p => p[1] === top);
-  const one = points.slice(0, head + 1); // foot → head
-  const other = [...points.slice(head), points[0]!].reverse(); // foot → head, the other way
-  const side = (chain: [number, number][], count: number) => {
-    const cuts = [0];
-    for (const h of HEIGHTS) {
-      const y = bottom - (bottom - top) * h;
-      const at = chain.findIndex((p, i) => i > cuts[cuts.length - 1]! && p[1] <= y);
-      cuts.push(at < 0 ? cuts[cuts.length - 1]! + 1 : at);
-    }
-    cuts.push(chain.length - 1);
-    const out: [number, number][] = [];
-    SHARES.forEach((share, k) => {
-      const piece = chain.slice(cuts[k]!, Math.max(cuts[k]! + 2, cuts[k + 1]! + 1));
-      const lengths = [0];
-      for (let i = 1; i < piece.length; i++) lengths.push(lengths[i - 1]! + Math.hypot(piece[i]![0] - piece[i - 1]![0], piece[i]![1] - piece[i - 1]![1]));
-      const length = lengths[lengths.length - 1]! || 1;
-      const n = k === SHARES.length - 1 ? count - out.length : Math.round(count * share);
-      let j = 0;
-      for (let i = 0; i < n; i++) {
-        const target = length * i / n;
-        while (j < piece.length - 2 && lengths[j + 1]! < target) j++;
-        const t = (target - lengths[j]!) / ((lengths[j + 1]! - lengths[j]!) || 1);
-        out.push([piece[j]![0] + (piece[j + 1]![0] - piece[j]![0]) * t, piece[j]![1] + (piece[j + 1]![1] - piece[j]![1]) * t]);
-      }
-    });
-    return out;
-  };
-  const half = POINTS / 2;
-  const result = new Float32Array(POINTS * 2);
-  [...side(one, half), ...side(other, half).reverse()].forEach(([x, y], i) => { result[i * 2] = x; result[i * 2 + 1] = y; });
-  return result;
+// ── Outlines as the instrument turns ─────────────────────────────────────────────────────────────────
+// The outline at `yaw` degrees, between the two nearest that were drawn, into `out`.
+function shapeAt(data: Uint16Array, yaw: number, out: Float32Array) {
+  const at = wrap(yaw) / TURN_STEP;
+  const count = data.length / (POINTS * 2);
+  const a = Math.floor(at) % count, b = (a + 1) % count, t = at - Math.floor(at);
+  for (let i = 0; i < POINTS * 2; i++) out[i] = (data[a * POINTS * 2 + i]! * (1 - t) + data[b * POINTS * 2 + i]! * t) / UNITS;
+  return out;
 }
-function between(a: Float32Array, b: Float32Array, t: number) {
+function pathOf(points: Float32Array) {
   let d = '';
-  for (let i = 0; i < POINTS; i++) {
-    const x = a[i * 2]! + (b[i * 2]! - a[i * 2]!) * t;
-    const y = a[i * 2 + 1]! + (b[i * 2 + 1]! - a[i * 2 + 1]!) * t;
-    d += `${i ? 'L' : 'M'}${x.toFixed(1)} ${y.toFixed(1)}`;
-  }
+  for (let i = 0; i < POINTS; i++) d += `${i ? 'L' : 'M'}${points[i * 2]!.toFixed(1)} ${points[i * 2 + 1]!.toFixed(1)}`;
   return `${d}Z`;
 }
 
@@ -188,6 +129,7 @@ onPage(signal => {
     standing: false,
     // The turn by hand, in degrees on top of the scroll's: where it is, how fast, where it's going.
     angle: 0, velocity: 0, rest: 0,
+    yaw: 0, // degrees: where the real one is turned, all told
     spring: null as null | { damping: number; response: number },
     drag: null as null | { id: number; x: number; y: number; from: number; decided: boolean; history: { t: number; x: number }[] },
     perPixel: .5,
@@ -198,9 +140,6 @@ onPage(signal => {
   const blue = bass.copies.find(copy => copy.side === 1 && copy.rank === 3)!;
   const green = guitar.copies.find(copy => copy.side === -1 && copy.rank === 3)!;
   const steps = (() => {
-    const defs = root.querySelector('.lu__defs')!;
-    const shape = (scene: Scene) => outline(defs.querySelector<SVGPathElement>(scene.element.querySelector('use')!.getAttribute('href')!)!);
-    const from = shape(bass), to = shape(guitar);
     const blueLab = toLab(blue.svg.style.getPropertyValue('--c').trim());
     const greenLab = toLab(green.svg.style.getPropertyValue('--c').trim());
     return Array.from({ length: STEPS }, (_, index) => {
@@ -208,14 +147,50 @@ onPage(signal => {
       const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
       svg.setAttribute('viewBox', `0 0 ${VIEW} ${VIEW}`);
       svg.setAttribute('class', 'lu__copy lu__step');
-      const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-      path.setAttribute('d', between(from, to, t));
+      const source = t < .5 ? blue : green;
+      const path = source.svg.querySelector('path')!.cloneNode(false) as SVGPathElement;
       path.setAttribute('fill', fromLab(blueLab.map((value, i) => value + (greenLab[i]! - value) * t) as Lab));
       svg.append(path);
       bass.cam.append(svg);
-      return svg;
+      return { svg, path, t, turn: { yaw: NaN, speed: 0, response: .3 + .03 * index, drawn: NaN } };
     });
   })();
+  // Every copy follows its instrument's turn: a critically damped spring each (Apple's default when nothing
+  // was thrown), the nearest the closest behind, so a turn spreads outward from the real one.
+  type Follower = { yaw: number; speed: number; response: number; drawn: number };
+  const following = new Map<SVGSVGElement, Follower & { path: SVGPathElement }>();
+  for (const scene of scenes) for (const copy of scene.copies) {
+    following.set(copy.svg, { yaw: NaN, speed: 0, response: FOLLOW_TURN[copy.rank - 1]!, drawn: NaN, path: copy.svg.querySelector('path')! });
+  }
+  const outlines = new Map<Scene, Uint16Array>();
+  const scratch = [new Float32Array(POINTS * 2), new Float32Array(POINTS * 2)] as const;
+  async function loadOutlines(scene: Scene) {
+    if (outlines.has(scene)) return;
+    outlines.set(scene, new Uint16Array(0));
+    try {
+      const data = await (await fetch(scene.model.replace(/\.glb$/, '.outlines.bin'))).arrayBuffer();
+      outlines.set(scene, new Uint16Array(data));
+      for (const follower of following.values()) follower.drawn = NaN;
+      for (const item of steps) item.turn.drawn = NaN;
+      request();
+    } catch {
+      outlines.delete(scene);
+    }
+  }
+  const ready = (scene: Scene) => (outlines.get(scene)?.length ?? 0) > 0;
+  // A follower one frame on, towards `target`; true while it still moves.
+  function follow(follower: Follower, target: number, dt: number, snap: boolean) {
+    if (snap || Number.isNaN(follower.yaw)) { follower.yaw = target; follower.speed = 0; return false; }
+    const stiffness = (2 * Math.PI / follower.response) ** 2;
+    const friction = 4 * Math.PI / follower.response; // damping ratio 1
+    for (let left = dt; left > 0; left -= 1 / 240) {
+      const h = Math.min(left, 1 / 240);
+      follower.speed += (-stiffness * (follower.yaw - target) - friction * follower.speed) * h;
+      follower.yaw += follower.speed * h;
+    }
+    if (Math.abs(follower.yaw - target) < .02 && Math.abs(follower.speed) < .5) { follower.yaw = target; follower.speed = 0; return false; }
+    return true;
+  }
   // How far the guitar's line-up waits to the right: its green copy STEPS + 1 steps after the blue bass.
   let reach = 0;
   let step = 0;
@@ -313,7 +288,7 @@ onPage(signal => {
     still();
     step = BODY * bass.centre.size * (narrow.matches ? .8 : 1.14);
     reach = blue.slot.x + (STEPS + 1) * step - green.slot.x;
-    steps.forEach((svg, index) => {
+    steps.forEach(({ svg }, index) => {
       const frame = blue.slot.size;
       svg.style.width = svg.style.height = `${frame.toFixed(1)}px`;
       svg.style.left = `${(blue.slot.x + (index + 1) * step - frame / 2).toFixed(1)}px`;
@@ -381,8 +356,12 @@ onPage(signal => {
     if (Math.abs(scene.angle - scene.rest) < .05 && Math.abs(scene.velocity) < 2) {
       scene.spring = null;
       scene.velocity = 0;
+      const before = scene.angle;
       scene.angle = wrap(scene.rest) < .001 || wrap(scene.rest) > 359.999 ? 0 : scene.rest;
       scene.rest = scene.angle;
+      // A whole turn dropped: the copies following it drop the same, so none unwinds.
+      const dropped = scene.angle - before;
+      if (dropped) for (const copy of scene.copies) following.get(copy.svg)!.yaw += dropped;
     }
     return true;
   }
@@ -391,6 +370,7 @@ onPage(signal => {
   function turn(scene: Scene, progress: number, extra = 0) {
     // It has turned to face you by the time the hand of cards is out, well before its words are all lit.
     const yaw = FROM + (REST - FROM) * smooth(clamp(progress / .6)) + extra + scene.angle;
+    scene.yaw = yaw;
     scene.instrument?.pose(yaw);
     const angle = Math.round(wrap(yaw - REST)) % 360;
     scene.grab.setAttribute('aria-valuenow', String(angle));
@@ -411,7 +391,7 @@ onPage(signal => {
   const bassAt = () => clamp(shown / span.bass);
   const sources: [Piece['element'], () => number][] = [
     ...bass.copies.map(copy => [copy.svg, () => rowX() + dealt(bass, copy, bassAt())] as [Piece['element'], () => number]),
-    ...steps.map(svg => [svg, rowX] as [Piece['element'], () => number]),
+    ...steps.map(item => [item.svg, rowX] as [Piece['element'], () => number]),
     ...guitar.copies.map(copy => [copy.svg, rowX] as [Piece['element'], () => number]),
     [bass.canvas, rowX], [guitar.canvas, rowX],
   ];
@@ -459,6 +439,37 @@ onPage(signal => {
     scene.words.style.filter = shown > .999 ? '' : `blur(${(BLUR * (1 - shown)).toFixed(2)}px)`;
   }
 
+  // The copies' outlines, turned as their instrument is (each through its follower), and the in-between
+  // copies', bass to guitar at their step. A path is rewritten only when its turn has changed.
+  function turnCopies(dt: number, snap: boolean) {
+    let moving = false;
+    for (const scene of scenes) {
+      const data = outlines.get(scene);
+      for (const copy of scene.copies) {
+        const follower = following.get(copy.svg)!;
+        if (follow(follower, scene.yaw, dt, snap)) moving = true;
+        if (!data?.length || Math.abs(follower.yaw - follower.drawn) < .05) continue;
+        follower.drawn = follower.yaw;
+        follower.path.setAttribute('d', pathOf(shapeAt(data, follower.yaw, scratch[0])));
+      }
+    }
+    if (!ready(bass) || !ready(guitar)) return moving;
+    // Between the two real ones' turns, the short way round.
+    const apart = ((guitar.yaw - bass.yaw) % 360 + 540) % 360 - 180;
+    for (const item of steps) {
+      let target = bass.yaw + apart * item.t;
+      if (!Number.isNaN(item.turn.yaw)) target = item.turn.yaw + (((target - item.turn.yaw) % 360 + 540) % 360 - 180);
+      if (follow(item.turn, target, dt, snap)) moving = true;
+      if (Math.abs(item.turn.yaw - item.turn.drawn) < .05) continue;
+      item.turn.drawn = item.turn.yaw;
+      const from = shapeAt(outlines.get(bass)!, item.turn.yaw, scratch[0]);
+      const to = shapeAt(outlines.get(guitar)!, item.turn.yaw, scratch[1]);
+      for (let i = 0; i < from.length; i++) from[i] = from[i]! + (to[i]! - from[i]!) * item.t;
+      item.path.setAttribute('d', pathOf(from));
+    }
+    return moving;
+  }
+
   function draw(at: number, raw: number) {
     // The words fill with the scroll itself, so their pace is exactly the site's.
     paintTextFill(bass.lines, raw);
@@ -471,9 +482,10 @@ onPage(signal => {
     deal(bass, bassProgress);
     for (const copy of bass.copies) copy.svg.style.transform += leaning(copy.svg);
     for (const copy of guitar.copies) copy.svg.style.transform = leaning(copy.svg);
-    for (const svg of steps) svg.style.transform = leaning(svg);
+    for (const item of steps) item.svg.style.transform = leaning(item.svg);
     for (const scene of scenes) scene.canvas.style.transform = leaning(scene.canvas);
-    bass.element.style.visibility = move >= 1 ? 'hidden' : '';
+    // The bass's line-up is off the screen's left edge after the slide, all but the in-between copies
+    // nearest the guitar, which stay; so it is never hidden.
     guitar.element.style.visibility = move <= 0 ? 'hidden' : '';
     const leave = easeOut(clamp(move / .3)); // the bass's words going
     const come = easeOut(clamp((move - .6) / .4)); // the guitar's arriving
@@ -485,13 +497,6 @@ onPage(signal => {
     guitar.cam.style.transform = `translate3d(${(reach * (1 - e)).toFixed(2)}px,0,0)`;
     bass.words.style.transform += ` translate3d(${(-reach * .5 * e).toFixed(2)}px,0,0)`;
     guitar.words.style.transform += ` translate3d(${(reach * .5 * (1 - e)).toFixed(2)}px,0,0)`;
-    // The in-between copies are off screen at either end of the slide, all but the first, peeking in at the
-    // right edge while the bass stands, and the last, at the left edge once the guitar does: those two
-    // come up as the slide begins and go as it ends, so neither line-up has strangers at its edge.
-    steps.forEach((svg, index) => {
-      const shown = (index === 0 ? clamp(move / .1) : 1) * (index === steps.length - 1 ? clamp((1 - move) / .1) : 1);
-      svg.style.opacity = shown.toFixed(3);
-    });
     // The real ones also turn on their axis as the rack sways.
     turn(bass, bassProgress, (lean.get(bass.canvas) ?? 0) * RACK.yaw);
     turn(guitar, 1, (lean.get(guitar.canvas) ?? 0) * RACK.yaw);
@@ -515,13 +520,16 @@ onPage(signal => {
     if (enabled && near) {
       for (const scene of scenes) load(scene);
       const raw = Math.max(0, stage.getBoundingClientRect().top - show.getBoundingClientRect().top) / line;
-      if (shown < 0) shown = raw;
+      const snap = shown < 0;
+      for (const scene of scenes) loadOutlines(scene);
+      if (snap) shown = raw;
       else shown += (raw - shown) * (1 - Math.exp(-dt / FOLLOW));
       if (Math.abs(raw - shown) < .0005) shown = raw;
       else moving = true;
       for (const scene of scenes) if (stepSpring(scene, dt)) moving = true;
       if (sway(dt)) moving = true;
       draw(shown, raw);
+      if (turnCopies(dt, snap)) moving = true;
     }
     if (moving) queued = requestAnimationFrame(tick);
     else last = 0;

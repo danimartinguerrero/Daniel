@@ -42,14 +42,9 @@ const copies = [
 ];
 ---
 <div class="lu" data-lu>
-  <svg class="lu__defs" aria-hidden="true" width="0" height="0">
-    <defs>
-      {Object.entries(silhouettes).map(([name, d]) => <path id={`lu-${name}`} d={d} fill-rule="evenodd" />)}
-    </defs>
-  </svg>
   <section class="lu__intro" id="instruments" aria-labelledby="part-instruments" data-fill-section>
     <div class="lu__intro-stage statement__slide" data-fill-stage>
-      <h2 class="lu__heading" id="part-instruments" data-fill-text>{heading.split(' ').map(word => <><span class="w" data-w>{word}</span>{' '}</>)}</h2>
+      <h2 class="lu__heading" id="part-instruments" data-fill-text data-fill-inline>{heading.split(' ').map(word => <><span class="w" data-w>{word}</span>{' '}</>)}</h2>
     </div>
   </section>
   <section class="lu__show" aria-label="Bass and guitar" data-lu-show>
@@ -60,7 +55,7 @@ const copies = [
           <div class="lu__cam" aria-hidden="true" data-lu-cam>
             {copies.map(({ colour, side, rank }) => (
               <svg class="lu__copy" viewBox={`0 0 ${VIEW} ${VIEW}`} style={`--c:${colour}`} data-side={side} data-rank={rank} data-lu-copy>
-                <use href={`#lu-${instrument}`} />
+                <path d={silhouettes[instrument]} fill-rule="evenodd" />
               </svg>
             ))}
             <img class="lu__still" loading="lazy" decoding="async" alt="" width="960" height="960"

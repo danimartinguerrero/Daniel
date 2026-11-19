@@ -2,7 +2,6 @@
    then each chapter's words above its instrument's still. With the script (is-scrubbed) each screen is
    held: the words at the top, centred, and under them the line-up, placed by the script. */
 .lu { position: relative; color: var(--on-dark); }
-.lu__defs { position: absolute; width: 0; height: 0; overflow: hidden; }
 
 .lu__intro-stage {
   display: grid; place-items: center;
@@ -84,4 +83,13 @@
 }
 
 .lu .is-armed .w { color: var(--fill-dim); }
+@media (forced-colors: none) {
+  .lu__heading.is-armed .w {
+    --front: calc(var(--fill-front, 0px) - var(--word-offset));
+    color: transparent;
+    background-image: linear-gradient(90deg, var(--on-dark) calc(var(--front) - var(--edge)), var(--fill-dim) var(--front));
+    -webkit-background-clip: text;
+    background-clip: text;
+  }
+}
 @media (forced-colors: active) { .lu .is-armed .w { color: CanvasText; } }
