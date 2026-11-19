@@ -14,7 +14,7 @@ export function fillOpenRecord(overlay: HTMLElement, button: HTMLButtonElement, 
   q('[data-v4-meta]').textContent = v.artist;
   q('[data-v4-edition]').textContent = [v.genre, v.year, v.format].join('  ·  ');
   q('[data-track-count]').textContent = String(v.tracks.length);
-  overlay.style.setProperty('--record-wallpaper', `url("/img/music/backgrounds/${v.id}.webp")`);
+  overlay.style.setProperty('--record-wallpaper', `url("${button.dataset.wallpaper}")`);
   q('[data-v4-about]').textContent = v.about;
   const link = q<HTMLAnchorElement>('[data-v4-source]');
   link.href = v.source.url;

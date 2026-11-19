@@ -4,9 +4,17 @@
  * sets the sleeves' size. Each record is drawn in its resting pose here, so the row is right before
  * the script runs.
  */
+import { createHash } from 'node:crypto';
+import { readFileSync } from 'node:fs';
 import { vinyls } from '@/data/music';
 import { sleeveImg, stripTone, labelColor } from './sleeve';
 import { START } from './start';
+
+function wallpaperUrl(id: string) {
+  const path = `/img/music/backgrounds/${id}.webp`;
+  const version = createHash('sha256').update(readFileSync(`public${path}`)).digest('hex').slice(0, 12);
+  return `${path}?v=${version}`;
+}
 
 // The carousel's resting pose before the script takes over (it recomputes the same pose in px). It is
 // a ring: a record more than half-way round is counted from the other side.
@@ -34,6 +42,7 @@ const pose = (i: number) => {
           class="v4-vinyl"
           type="button"
           data-vinyl={v.id}
+          data-wallpaper={wallpaperUrl(v.id)}
           data-tone={stripTone(v)}
           data-label={labelColor(v)}
           data-start={i === START ? '' : undefined}
