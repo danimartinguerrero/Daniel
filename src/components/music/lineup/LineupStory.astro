@@ -7,17 +7,16 @@
  *     reads in depth, and either side of it flat copies of its outline, all the same height, one colour
  *     each from the rainbow in "music." (the page's headline, listening-bar.css). Left to right the
  *     colours run the rainbow through the instrument: green, yellow, orange | it | red, purple, blue.
- *     As the words fill, the copies fan out from behind it like a hand of cards, and it turns three quarters on;
+ *     As the reader scrolls, the copies fan out from behind it like a hand of cards, and it turns three quarters on;
  *   - then the screen slides along the row to the guitar's line-up, past copies of the blue bass that turn,
  *     step by step, into the green guitar;
- *   - the guitar: its line-up arrives three quarters on, then turns to face the reader as its words fill.
+ *   - the guitar: its line-up arrives three quarters on, then turns to face the reader during its chapter.
  *   Everything on the row has weight and leans against its own motion (lineup.ts).
  *
  * Behaviour lives in lineup.ts. Without the script, or with reduced motion: lit text and the stills.
  */
 import './lineup.css';
 import '@/styles/statement.css';
-import '../v4/text-fill.css';
 import { VIEW, silhouettes } from './silhouettes';
 
 const heading = 'I play a few instruments, too.';
@@ -45,7 +44,7 @@ const copies = [
   <section class="lu__show" id="instruments" aria-labelledby="part-instruments" data-lu-show>
     <div class="lu__stage statement__slide" data-lu-stage>
       <div class="lu__intro-stage">
-        <h2 class="lu__heading" id="part-instruments" data-fill-text data-fill-inline>{heading.split(' ').map(word => <><span class="w" data-w>{word}</span>{' '}</>)}</h2>
+        <h2 class="lu__heading" id="part-instruments">{heading}</h2>
       </div>
       {chapters.map(({ noun, instrument, paint, title, body }) => (
         <div class="lu__scene" data-lu-scene data-model={`/music/instruments/${instrument}.glb`} data-paint={paint}
@@ -63,8 +62,8 @@ const copies = [
           <div class="lu__grab" role="slider" tabindex="-1" aria-label={`Turn the ${noun}`}
             aria-valuemin="0" aria-valuemax="359" aria-valuenow="0" aria-valuetext="Facing forward" data-lu-grab></div>
           <div class="lu__words" data-lu-words>
-            <h3 class="lu__title" data-fill-text>{title.split(' ').map(word => <><span class="w" data-w>{word}</span>{' '}</>)}</h3>
-            <p class="lu__body" data-fill-text>{body.split(' ').map(word => <><span class="w" data-w>{word}</span>{' '}</>)}</p>
+            <h3 class="lu__title">{title}</h3>
+            <p class="lu__body">{body}</p>
           </div>
         </div>
       ))}

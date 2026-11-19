@@ -1,11 +1,11 @@
 import { onPage } from '@/scripts/page';
-import { FILL_HOLD, clearTextFill, measureFillLine, measureTextFill, paintTextFill, type LitLine } from '../v4/text-fill';
+import { FILL_HOLD, measureFillLine } from '../v4/text-fill';
 import type { Instrument, SurroundPose } from './instrument';
 
 /* The instruments on the music page (LineupStory.astro). The heading and both instruments share a
    pinned stage. The timeline is measured in the scroll a line takes to fill (text-fill.ts):
 
-     heading fills ─ bass enters ─ bass words fill ─ hold ─ the slide from the bass to the guitar ─ guitar words fill ─ hold
+     heading ─ bass enters ─ bass fans out ─ hold ─ the slide from the bass to the guitar ─ guitar turns ─ hold
 
    Every frame is a function of where the scroll is (smoothed, so a wheel's steps glide), so scrolling back
    plays it all backwards exactly. Motion, by Emil Kowalski's rules:
@@ -31,7 +31,7 @@ import type { Instrument, SurroundPose } from './instrument';
    (body, waist, neck, head), and moved between; the colours through OKLab, so blue reaches green through
    clean teal, never grey.
 
-   Once a scene's words are lit and the slide is over, its instrument is the hand's (Apple, Designing
+   Once a scene's instrument has settled, its instrument is the hand's (Apple, Designing
    Fluid Interfaces): a sideways drag turns it 1:1, even mid-spin; on release the velocity goes to a
    spring that rests where the velocity projects it, a whole number of turns from its pose. */
 
@@ -97,6 +97,12 @@ function pathOf(points: Float32Array) {
   return `${d}Z`;
 }
 
+function lineCount(text: Element) {
+  const range = document.createRange();
+  range.selectNodeContents(text);
+  return Math.max(1, range.getClientRects().length);
+}
+
 interface Slot { x: number; y: number; size: number }
 
 onPage(signal => {
@@ -106,7 +112,7 @@ onPage(signal => {
   const narrow = matchMedia('(max-width: 760px)');
 
   const heading = root.querySelector<HTMLElement>('.lu__heading')!;
-  let introLines: LitLine[] = [];
+  let entranceStarts = 0;
   let bassStarts = 0;
   let lastEntrance = -1;
 
@@ -117,8 +123,6 @@ onPage(signal => {
     element,
     cam: element.querySelector<HTMLElement>('[data-lu-cam]')!,
     words: element.querySelector<HTMLElement>('[data-lu-words]')!,
-    texts: [...element.querySelectorAll<HTMLElement>('[data-fill-text]')],
-    lines: [] as LitLine[],
     canvas: element.querySelector('canvas')!,
     grab: element.querySelector<HTMLElement>('[data-lu-grab]')!,
     model: element.dataset.model!,
@@ -216,7 +220,7 @@ onPage(signal => {
   let near = false;
   let stopped = false;
   // The timeline, in lines of scroll from where the screen is first held.
-  let span = { bass: 1, guitar: 1, moveAt: 1, guitarAt: 1, end: 1 };
+  const span = { bass: 1, guitar: 1, moveAt: 1, guitarAt: 1, end: 1 };
   let shown = -1; // where the screen is on the timeline, following the scroll
 
   async function load(scene: Scene) {
@@ -298,19 +302,20 @@ onPage(signal => {
     show.classList.toggle('is-scrubbed', enabled);
     lastEntrance = -1;
     if (!enabled) {
-      for (const text of [heading, ...scenes.flatMap(scene => scene.texts)]) clearTextFill(text);
       show.style.removeProperty('height');
       heading.style.opacity = heading.style.transform = bass.words.style.opacity = '';
       for (const scene of scenes) { stand(scene, false); reset(scene); }
       return;
     }
-    introLines = measureTextFill(heading);
-    bassStarts = introLines.length + FILL_HOLD + BASS_ENTRANCE * CAPTION_IN;
-    for (const scene of scenes) scene.lines = scene.texts.flatMap(text => measureTextFill(text));
+    // Keep the reading time responsive to wrapping without changing the text during scroll.
+    entranceStarts = lineCount(heading) + FILL_HOLD;
+    bassStarts = entranceStarts + BASS_ENTRANCE * CAPTION_IN;
     const stageTop = stage.getBoundingClientRect().top;
     const wordsBottom = Math.max(...scenes.map(scene => scene.words.getBoundingClientRect().bottom - stageTop));
     for (const scene of scenes) place(scene, wordsBottom);
-    span = { bass: Math.max(1, bass.lines.length), guitar: Math.max(1, guitar.lines.length), moveAt: 0, guitarAt: 0, end: 0 };
+    const chapterLines = (scene: Scene) => Array.from(scene.words.children).reduce((sum, el) => sum + lineCount(el), 0);
+    span.bass = chapterLines(bass);
+    span.guitar = chapterLines(guitar);
     span.moveAt = span.bass + HOLD;
     span.guitarAt = span.moveAt + MOVE;
     span.end = span.guitarAt + span.guitar + FILL_HOLD;
@@ -560,14 +565,11 @@ onPage(signal => {
     bass.words.style.opacity = String(caption);
   }
 
-  function draw(at: number, raw: number) {
-    // The words fill with the scroll itself, so their pace is exactly the site's.
-    paintTextFill(bass.lines, raw);
-    paintTextFill(guitar.lines, raw - span.guitarAt);
+  function draw(at: number) {
     const move = clamp((at - span.moveAt) / MOVE); // 0 to 1
     const bassProgress = clamp(at / span.bass);
     const guitarProgress = clamp((at - span.guitarAt) / span.guitar);
-    // The bass is dealt out and turned as its words fill; the guitar's line-up is whole from the move on.
+    // The bass is dealt out and turned through its chapter; the guitar's line-up is whole from the move on.
     // Every piece of the row leans on its foot as the rack sways.
     deal(bass);
     for (const copy of guitar.copies) copy.svg.style.transform = leaning(copy.svg);
@@ -589,7 +591,7 @@ onPage(signal => {
     turn(bass, smooth(clamp((bassProgress - .02) / .58)));
     turn(guitar, 1 - smooth(guitarProgress), 1 - smooth(arrival));
 
-    // The hand: a scene's instrument is free once its words are lit and the move is over.
+    // The hand: a scene's instrument is free when its turn is complete.
     stand(bass, bassProgress > .995 && move <= 0);
     stand(guitar, guitarProgress > .995);
   }
@@ -631,8 +633,7 @@ onPage(signal => {
     if (enabled && near) {
       const scrolled = Math.max(0, stage.getBoundingClientRect().top - show.getBoundingClientRect().top) / line;
       const raw = Math.max(0, scrolled - bassStarts);
-      paintTextFill(introLines, scrolled);
-      paintEntrance(clamp((scrolled - introLines.length - FILL_HOLD) / BASS_ENTRANCE));
+      paintEntrance(clamp((scrolled - entranceStarts) / BASS_ENTRANCE));
       void load(bass);
       // Give the bass the loading budget during its entrance.
       if (raw >= span.bass * .5) void load(guitar);
@@ -645,7 +646,7 @@ onPage(signal => {
       for (const scene of scenes) if (stepSpring(scene, dt)) moving = true;
       updateDeal(bassAt());
       if (sway(dt)) moving = true;
-      draw(shown, raw);
+      draw(shown);
       if (turnCopies(dt, snap)) moving = true;
       const centre = bass.centre.x + rowX();
       const pixelRatio = renderPixelRatio(elapsed, moving);

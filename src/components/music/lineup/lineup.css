@@ -31,14 +31,12 @@
 }
 .lu__title, .lu__body { position: relative; margin: 0; }
 /* Apple's tracking at these sizes: the title tight but never touching, one line where it fits; the story
-   at a reading weight, a hair open, in the page's second grey, filling to that grey (text-fill.css reads
-   --on-dark), so the title is the bright thing over the colours. */
+   at a reading weight, a hair open, in the page's second grey, so the title is the bright thing over the colours. */
 .lu__title {
   font-size: clamp(2.1rem, min(4.6vw, 8.4svh), 4.6rem); line-height: 1.04; letter-spacing: -.026em; font-weight: 600;
   text-wrap: balance;
 }
 .lu__body {
-  --on-dark: var(--on-dark-2);
   max-width: 44ch; color: var(--on-dark-2);
   font-size: clamp(1rem, min(1.45vw, 2.6svh), 1.3rem); line-height: 1.42; letter-spacing: .004em; font-weight: 400;
   text-wrap: pretty;
@@ -76,7 +74,7 @@
 .is-scrubbed .lu__copy.is-away { visibility: hidden; }
 .lu__step { opacity: 0; }
 
-/* The hand, over the instrument only, once the words are lit (is-standing). */
+/* The hand, over the instrument only, once the instrument has settled (is-standing). */
 .is-scrubbed .lu__grab {
   display: block; position: absolute; z-index: 3;
   touch-action: pan-y; cursor: grab; outline: none; pointer-events: none; border-radius: 40px;
@@ -92,15 +90,3 @@
   .lu__title { font-size: clamp(2rem, 8.4vw, 3rem); }
   .lu__body { font-size: 1rem; }
 }
-
-.lu .is-armed .w { color: var(--fill-dim); }
-@media (forced-colors: none) {
-  .lu__heading.is-armed .w {
-    --front: calc(var(--fill-front, 0px) - var(--word-offset));
-    color: transparent;
-    background-image: linear-gradient(90deg, var(--on-dark) calc(var(--front) - var(--edge)), var(--fill-dim) var(--front));
-    -webkit-background-clip: text;
-    background-clip: text;
-  }
-}
-@media (forced-colors: active) { .lu .is-armed .w { color: CanvasText; } }
