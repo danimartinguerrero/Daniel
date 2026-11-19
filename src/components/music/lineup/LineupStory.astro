@@ -42,14 +42,12 @@ const copies = [
 ];
 ---
 <div class="lu" data-lu>
-  <section class="lu__intro" id="instruments" aria-labelledby="part-instruments" data-fill-section>
-    <div class="lu__intro-stage statement__slide" data-fill-stage>
-      <h2 class="lu__heading" id="part-instruments" data-fill-text data-fill-inline>{heading.split(' ').map(word => <><span class="w" data-w>{word}</span>{' '}</>)}</h2>
-    </div>
-  </section>
-  <section class="lu__show" aria-label="Bass and guitar" data-lu-show>
+  <section class="lu__show" id="instruments" aria-labelledby="part-instruments" data-lu-show>
     <div class="lu__stage statement__slide" data-lu-stage>
-      {chapters.map(({ noun, instrument, paint, title, body }, index) => (
+      <div class="lu__intro-stage">
+        <h2 class="lu__heading" id="part-instruments" data-fill-text data-fill-inline>{heading.split(' ').map(word => <><span class="w" data-w>{word}</span>{' '}</>)}</h2>
+      </div>
+      {chapters.map(({ noun, instrument, paint, title, body }) => (
         <div class="lu__scene" data-lu-scene data-model={`/music/instruments/${instrument}.glb`} data-paint={paint}
           data-outline={silhouettes[instrument]}>
           <div class="lu__cam" aria-hidden="true" data-lu-cam>

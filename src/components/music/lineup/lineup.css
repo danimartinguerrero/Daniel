@@ -8,7 +8,10 @@
   padding: clamp(6rem, 18svh, 12rem) var(--gutter);
   background: var(--dark);
 }
-.is-scrubbed .lu__intro-stage { padding-block: 0; }
+.is-scrubbed .lu__intro-stage {
+  position: absolute; inset: 0; z-index: 1; padding-block: 0;
+  background: transparent; pointer-events: none;
+}
 .lu__heading {
   position: relative; margin: 0; max-width: 13ch;
   font-size: clamp(2.4rem, min(11vw, 16svh), 11rem); line-height: 1; font-weight: 600;
@@ -50,9 +53,15 @@
 .is-scrubbed .lu__scene { position: absolute; inset: 0; display: block; }
 .is-scrubbed .lu__words { position: absolute; left: 50%; translate: -50% 0; top: max(5.25rem, 10svh); width: min(100% - 2 * var(--gutter), 60rem); }
 .is-scrubbed .lu__cam { position: absolute; inset: 0; height: auto; z-index: 1; transform-origin: 0 0; }
-.is-scrubbed .lu__still { display: none; }
+/* Use the front view in the live frame until WebGL has painted its first pose. */
+.is-scrubbed .lu__cam .lu__still {
+  inset: var(--frame-top) auto auto 50%; translate: -50% 0; z-index: 2;
+  width: var(--frame-size); height: var(--frame-size); max-width: none;
+  mix-blend-mode: lighten;
+}
+.is-scrubbed .has-model .lu__still { display: none; }
 .is-scrubbed .lu__frame {
-  display: block; position: absolute; top: 0; left: 50%; translate: -50% 0; z-index: 2;
+  display: block; position: absolute; top: var(--frame-top); left: 50%; translate: -50% 0; z-index: 2;
   will-change: transform, opacity;
 }
 /* The copies: flat, one colour each, behind the instrument, the farther ones further back. Their place and
