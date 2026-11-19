@@ -98,12 +98,6 @@ function pathOf(points: Float32Array) {
   return `${d}Z`;
 }
 
-function lineCount(text: Element) {
-  const range = document.createRange();
-  range.selectNodeContents(text);
-  return Math.max(1, range.getClientRects().length);
-}
-
 interface Slot { x: number; y: number; size: number }
 
 onPage(signal => {
@@ -126,6 +120,8 @@ onPage(signal => {
     element,
     cam: element.querySelector<HTMLElement>('[data-lu-cam]')!,
     words: element.querySelector<HTMLElement>('[data-lu-words]')!,
+    captions: [...element.querySelectorAll<HTMLElement>('[data-fill-text]')],
+    lines: [] as LitLine[],
     canvas: element.querySelector('canvas')!,
     still: element.querySelector('img')!,
     grab: element.querySelector<HTMLElement>('[data-lu-grab]')!,
@@ -384,6 +380,7 @@ onPage(signal => {
     if (!enabled) {
       prepareSlideStrip();
       headingRows.forEach(clearTextFill);
+      for (const scene of scenes) scene.captions.forEach(clearTextFill);
       show.style.removeProperty('height');
       show.style.removeProperty('--words-shift');
       for (const el of [upper, lower, heading, bass.words]) {
@@ -394,6 +391,10 @@ onPage(signal => {
       return;
     }
     headingFill = headingRows.flatMap(measureTextFill);
+    for (const scene of scenes) {
+      scene.lines = scene.captions.flatMap(measureTextFill);
+      paintTextFill(scene.lines, 0);
+    }
     // Measure captions at their CSS baseline before applying any tall-phone vertical centring shift.
     show.style.removeProperty('--words-shift');
     const wordsBottom = Math.max(...scenes.map(({ words }) => words.offsetTop + words.offsetHeight));
@@ -412,10 +413,9 @@ onPage(signal => {
     } else {
       span.entrance = BASS_ENTRANCE;
       introEnd = headingFill.length + span.entrance;
-      const chapterLines = (scene: Scene) => Array.from(scene.words.children).reduce((sum, el) => sum + lineCount(el), 0);
       // Allow the stagger to overlap while keeping the final guitar caption on screen.
-      const guitarHold = chapterLines(guitar) / 2;
-      span.bass = .9 * (chapterLines(bass) + guitarHold);
+      const guitarHold = guitar.lines.length / 2;
+      span.bass = .9 * (bass.lines.length + guitarHold);
       span.moveAt = introEnd + span.bass + HOLD;
       span.move = MOVE;
       span.end = span.moveAt + span.move + guitarHold + FILL_HOLD;
@@ -823,6 +823,10 @@ onPage(signal => {
   function draw(at: number) {
     const move = clamp((at - span.moveAt) / span.move); // 0 to 1
     const bassProgress = bassAt();
+    paintTextFill(bass.lines, bassProgress * bass.lines.length);
+    const guitarAt = span.moveAt + span.move;
+    const guitarProgress = clamp((at - guitarAt) / (span.end - guitarAt - FILL_HOLD));
+    paintTextFill(guitar.lines, guitarProgress * guitar.lines.length);
     // The bass is dealt out and turned through its chapter; the guitar's line-up is whole from the move on.
     // Every piece of the row leans on its foot as the rack sways.
     if (!copyLayer && !outlineLayer) {

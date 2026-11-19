@@ -63,8 +63,8 @@ const copies = [
           <div class="lu__grab" role="slider" tabindex="-1" aria-label={`Turn the ${noun}`}
             aria-valuemin="0" aria-valuemax="359" aria-valuenow="0" aria-valuetext="Facing forward" data-lu-grab></div>
           <div class="lu__words" data-lu-words>
-            <h3 class="lu__title">{title}</h3>
-            <p class="lu__body">{body}</p>
+            <h3 class="lu__title" data-fill-text>{title.split(' ').map(word => <><span data-w>{word}</span>{' '}</>)}</h3>
+            <p class="lu__body" data-fill-text>{body.split(' ').map(word => <><span data-w>{word}</span>{' '}</>)}</p>
           </div>
         </div>
       ))}

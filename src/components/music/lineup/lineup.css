@@ -15,7 +15,7 @@
 }
 .lu__heading-line { display: block; position: relative; }
 .lu__heading-line [data-w] { display: inline-block; }
-.lu__heading-line.is-armed { color: var(--fill-dim); }
+.lu__heading-line.is-armed, .lu__words .is-armed [data-w] { color: var(--fill-dim); }
 .is-scrubbed .lu__heading {
   position: absolute; inset: 0; display: grid; align-content: center;
   padding-inline: var(--gutter);
@@ -36,6 +36,7 @@
   text-wrap: balance;
 }
 .lu__body {
+  --on-dark: var(--on-dark-2);
   max-width: 44ch; color: var(--on-dark-2);
   font-size: clamp(1rem, min(1.45vw, 2.6svh), 1.3rem); line-height: 1.42; letter-spacing: .004em; font-weight: 400;
   text-wrap: pretty;
