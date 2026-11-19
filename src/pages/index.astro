@@ -1,9 +1,11 @@
 ---
 import '@/styles/global.css';
+import ScrollStatement from '@/components/ScrollStatement.astro';
 import { ClientRouter } from 'astro:transitions';
 import NotesScan from '@/components/NotesScan.astro';
 import NotesPipeline from '@/components/NotesPipeline.astro';
 import Island from '@/components/Island.astro';
+import PartDivider from '@/components/PartDivider.astro';
 import { helloStrokes, helloStrokeWidth, helloViewBox } from '@/data/hello';
 import { sources, universities } from '@/data/papertok';
 
@@ -67,7 +69,7 @@ const sparkEnd = `190 ${(38.7 - (Math.log1p(daily[daily.length - 1]!) / Math.log
     <Island />
 
     <main id="main" data-home>
-      <section class="hero section--dark" id="top" aria-labelledby="hero-title">
+      <section class="hero section--dark" id="top" data-home-intro aria-labelledby="hero-title">
         <canvas class="hero__waves" data-waves aria-hidden="true"></canvas>
         <div class="hero__copy container">
           <h1 class="hero__title" id="hero-title">
@@ -85,19 +87,9 @@ const sparkEnd = `190 ${(38.7 - (Math.log1p(daily[daily.length - 1]!) / Math.log
         </div>
       </section>
 
-      <section class="statement section--dark" aria-label="In short" data-statement>
-        <div class="statement__slide">
-          <p class="statement__text container--wide" data-words>
-            {statement.split(' ').map((word) => <><span class="w">{word}</span>{' '}</>)}
-          </p>
-        </div>
-      </section>
+      <ScrollStatement label="In short" text={statement} />
 
-      <section class="divider section--dark" id="projects" aria-labelledby="part-projects" data-divider>
-        <div class="divider__pin">
-          <h2 class="divider__title" id="part-projects">Projects.<span class="divider__lit" aria-hidden="true"><span>Projects.</span></span></h2>
-        </div>
-      </section>
+      <PartDivider id="projects" headingId="part-projects" title="Projects." />
 
       <section class="section section--alt" aria-labelledby="pt-title">
         <header class="intro container--wide">
@@ -281,11 +273,7 @@ const sparkEnd = `190 ${(38.7 - (Math.log1p(daily[daily.length - 1]!) / Math.log
       <NotesScan />
       <NotesPipeline />
 
-      <section class="divider section--dark" id="studies" aria-labelledby="part-studies" data-divider>
-        <div class="divider__pin">
-          <h2 class="divider__title" id="part-studies">Studies.<span class="divider__lit" aria-hidden="true"><span>Studies.</span></span></h2>
-        </div>
-      </section>
+      <PartDivider id="studies" headingId="part-studies" title="Studies." />
 
       <section class="section section--alt" aria-labelledby="studies-title">
         <header class="intro container--wide">
@@ -377,11 +365,7 @@ const sparkEnd = `190 ${(38.7 - (Math.log1p(daily[daily.length - 1]!) / Math.log
         </div>
       </section>
 
-      <section class="divider section--dark" id="how-i-work" aria-labelledby="part-how" data-divider>
-        <div class="divider__pin">
-          <h2 class="divider__title" id="part-how">How I work.<span class="divider__lit" aria-hidden="true"><span>How I work.</span></span></h2>
-        </div>
-      </section>
+      <PartDivider id="how-i-work" headingId="part-how" title="How I work." />
 
       <section class="section section--alt" aria-labelledby="how-title">
         <header class="intro container--wide">
@@ -450,11 +434,7 @@ const sparkEnd = `190 ${(38.7 - (Math.log1p(daily[daily.length - 1]!) / Math.log
         </div>
       </section>
 
-      <section class="divider section--dark" aria-labelledby="part-contact" data-divider>
-        <div class="divider__pin">
-          <h2 class="divider__title" id="part-contact">Contact.<span class="divider__lit" aria-hidden="true"><span>Contact.</span></span></h2>
-        </div>
-      </section>
+      <PartDivider headingId="part-contact" title="Contact." />
 
       <section class="section contact" id="contact" aria-labelledby="contact-title" data-contact>
         <div class="container contact__inner">
@@ -508,7 +488,7 @@ const sparkEnd = `190 ${(38.7 - (Math.log1p(daily[daily.length - 1]!) / Math.log
     </footer>
 
     <script>
-      import { onPage } from '@/scripts/page';
+      import { arrived, onPage } from '@/scripts/page';
       import { initScroll } from '@/scripts/scroll';
       import { initGoto } from '@/scripts/goto';
       import { initWaves } from '@/scripts/waves';
@@ -519,10 +499,12 @@ const sparkEnd = `190 ${(38.7 - (Math.log1p(daily[daily.length - 1]!) / Math.log
         if (!document.querySelector('[data-home]')) return;
         initScroll(signal);
         initGoto(signal);
-        const hello = document.querySelector<SVGSVGElement>('[data-hello]');
+        const hello = document.querySelector<SVGSVGElement>('[data-home-intro] [data-hello]');
         if (hello) playHello(hello, [...document.querySelectorAll<HTMLElement>('.hero [data-after]')]);
         const waves = document.querySelector<HTMLCanvasElement>('[data-waves]');
-        if (waves) initWaves(waves, signal);
+        if (waves) void arrived().then(() => {
+          if (!signal.aborted) initWaves(waves, signal);
+        });
         const contact = document.querySelector<HTMLElement>('[data-contact]');
         if (contact) initContact(contact, signal);
         // The contact section and the footer share the last screen (see .contact): keep the footer's height current.
@@ -546,8 +528,13 @@ const sparkEnd = `190 ${(38.7 - (Math.log1p(daily[daily.length - 1]!) / Math.log
     min-height: calc(100svh - var(--nav-h)); display: grid; place-items: center;
     padding-block: clamp(4rem, 10vw, 8rem); overflow: hidden;
   }
-  /* Without WebGL the hero keeps a still glow where the sources would be. */
-  .hero:not(.has-waves) { background: radial-gradient(60% 45% at 50% 100%, rgba(245, 245, 247, 0.12), transparent 70%), var(--dark); }
+  /* Keep the still glow visible until the first rendered wave takes its place. */
+  .hero::before {
+    content: ''; position: absolute; inset: 0; z-index: -1; pointer-events: none;
+    background: radial-gradient(60% 45% at 50% 100%, rgba(245, 245, 247, 0.12), transparent 70%);
+    transition: opacity 1600ms ease;
+  }
+  .hero.has-waves::before { opacity: 0; }
   .hero__waves {
     position: absolute; inset: 0; z-index: -1;
     width: 100%; height: 100%;
@@ -589,81 +576,12 @@ const sparkEnd = `190 ${(38.7 - (Math.log1p(daily[daily.length - 1]!) / Math.log
 
   /* Entrance, once, on load: "hello" is written stroke by stroke, then the rest arrives (scripts/hello.ts).
      Until the script takes over they wait hidden; if it never runs, a failsafe shows them anyway. */
-  :global(html.js) .hello path { stroke-dasharray: 1 1; stroke-dashoffset: 1; animation: hello-failsafe-stroke 0s 5s forwards; }
-  :global(html.js) [data-after] { opacity: 0; animation: hello-failsafe-after 0s 5s forwards; }
+  :global(html.js) [data-home-intro] .hello path { stroke-dasharray: 1 1; stroke-dashoffset: 1; animation: hello-failsafe-stroke 0s 5s forwards; }
+  :global(html.js) [data-home-intro] [data-after] { opacity: 0; animation: hello-failsafe-after 0s 5s forwards; }
   @keyframes hello-failsafe-stroke { to { stroke-dashoffset: 0; } }
   @keyframes hello-failsafe-after { to { opacity: 1; } }
 
-  /* Statement */
-  /* Statement: one full-screen slide, held in place while its words light up. */
-  .statement { height: 240vh; }
-  .statement__slide {
-    position: sticky; top: var(--nav-h);
-    height: calc(100svh - var(--nav-h));
-    display: grid; align-items: center;
-  }
-  .statement__text {
-    font-size: clamp(2.25rem, 6vw, 5.5rem);
-    line-height: 1.08;
-    font-weight: 600;
-    letter-spacing: -0.02em;
-    text-wrap: pretty;
-  }
-  :global(html:not(.js)) .statement, :global(html.reduce) .statement { height: auto; }
-  :global(html:not(.js)) .statement__slide, :global(html.reduce) .statement__slide { position: static; min-height: calc(100svh - var(--nav-h)); }
-  .statement__text.is-armed .w { color: #3a3a3c; transition: color 400ms ease; }
-  .statement__text.is-armed .w.on { color: var(--on-dark); }
 
-  /* Separation pages: the part's name holds the screen and fills with light, left to right, as it scrolls past
-     (the site's one fill: --fill-dim, --fill-edge and --fill-line in global.css). The name fills over the
-     first 70% of its hold, so the hold is --fill-line / 0.7 and the page that long past the screen.
-     Without the script, or with reduced motion, it is simply lit. */
-  .divider { height: calc(100vh + var(--fill-line) / 0.7); }
-  .divider__pin {
-    position: sticky; top: var(--nav-h);
-    height: calc(100svh - var(--nav-h));
-    display: grid; place-content: center; justify-items: center; gap: 1.5rem;
-    padding-inline: var(--gutter);
-    text-align: center;
-  }
-  .divider__title {
-    /* The light only shows inside the box: give descenders (the j) and the last glyph room. */
-    position: relative;
-    padding: 0.04em 0.06em 0.18em;
-    margin-bottom: -0.14em;
-    font-size: clamp(4.5rem, 17vw, 16rem); line-height: 0.95; font-weight: 600; letter-spacing: -0.05em;
-    text-wrap: balance;
-  }
-  /* The name is set twice: dim, and lit on top, inside a window wider than the name by the soft edge,
-     whose right edge fades out over it. The window slides in from the left while the lit name inside slides back by as much,
-     so the words stand still and the soft edge of light crosses them. Transforms only: the browser runs
-     it on the scrolling thread (a background repainted from the script every frame lagged behind the
-     scroll, and the page could leave before its name had filled). */
-  .divider__lit { display: none; }
-  :global(html.js:not(.reduce)) .divider__title { color: var(--fill-dim); }
-  :global(html.js:not(.reduce)) .divider__lit {
-    display: block; position: absolute; inset: 0 calc(var(--fill-edge) * -100%) 0 0;
-    overflow: hidden; pointer-events: none;
-    -webkit-mask-image: linear-gradient(90deg, #000 calc(100% / (1 + var(--fill-edge))), transparent); mask-image: linear-gradient(90deg, #000 calc(100% / (1 + var(--fill-edge))), transparent);
-    transform: translateX(-100%);
-  }
-  :global(html.js:not(.reduce)) .divider__lit > span {
-    display: block; width: calc(100% / (1 + var(--fill-edge))); padding: 0.04em 0.06em 0.18em;
-    color: var(--on-dark);
-    transform: translateX(calc((1 + var(--fill-edge)) * 100%));
-  }
-  @supports (animation-timeline: view()) {
-    .divider { view-timeline-name: --divider; view-timeline-axis: block; view-timeline-inset: 0; }
-    :global(html.js:not(.reduce)) .divider__lit { animation: divider-window linear both; }
-    :global(html.js:not(.reduce)) .divider__lit > span { animation: divider-words linear both; }
-    /* The timelines in rules of their own (see .tl__fill): the first 70% of the hold fills the name. */
-    :global(html.js:not(.reduce)) .divider__title > .divider__lit,
-    :global(html.js:not(.reduce)) .divider__title > .divider__lit > span { animation-duration: auto; animation-timeline: --divider; animation-range: contain 0% contain 70%; }
-    @keyframes divider-window { from { transform: translateX(-100%); } to { transform: none; } }
-    @keyframes divider-words { from { transform: translateX(calc((1 + var(--fill-edge)) * 100%)); } to { transform: none; } }
-  }
-  :global(html:not(.js)) .divider, :global(html.reduce) .divider { height: auto; }
-  :global(html:not(.js)) .divider__pin, :global(html.reduce) .divider__pin { position: static; min-height: calc(100svh - var(--nav-h)); }
 
   /* Section intros: left-aligned. */
   .intro { display: grid; gap: 1rem; margin-bottom: clamp(3rem, 6vw, 5rem); }

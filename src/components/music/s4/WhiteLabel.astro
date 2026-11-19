@@ -1,0 +1,76 @@
+---
+/**
+ * s4/a, "White label": one more record under the shelf, his own. A plain white sleeve with a die-cut
+ * hole that shows the label, sealed in the same film as the records above, under its own lamp. The
+ * tear tape, the disc and the turn are driven by white-label.ts.
+ */
+import { musicCopy } from '@/data/music';
+import { s4Copy } from './copy';
+
+const c = s4Copy.whiteLabel;
+const sides = [c.sideA, c.sideB] as const;
+---
+<section class="s4w" aria-labelledby="s4w-title" data-intro-rest data-s4w>
+  <div class="s4w-room">
+    <div class="s4w-wall" aria-hidden="true"></div>
+    <header class="container s4w-head">
+      <p class="eyebrow v4-eyebrow">{c.eyebrow}</p>
+      <h2 class="v4-shelf__title" id="s4w-title">{c.headline}</h2>
+      <p class="lede v4-shelf__lede">{c.lede}</p>
+    </header>
+
+    <div class="s4w-stage" data-s4w-stage>
+      <div class="s4w-pair" data-s4w-pair>
+        <!-- The disc, inside the sleeve until it is taken out. Two faces, one on each side. -->
+        <div class="s4w-disc" data-s4w-disc aria-hidden="true">
+          <div class="s4w-disc__shadow" data-s4w-disc-shadow></div>
+          <div class="s4w-disc__spin" data-s4w-spin>
+            {sides.map((s, k) => (
+              <div class={`s4w-face s4w-face--${k ? 'b' : 'a'}`}>
+                <div class="s4w-grooves"></div>
+                <div class="s4w-sheen"></div>
+                <svg class="s4w-label" viewBox="0 0 100 100">
+                  <defs><path id={`s4w-arc-${k}`} d="M 14 50 A 36 36 0 0 1 86 50" /></defs>
+                  <circle cx="50" cy="50" r="49.5" class="s4w-label__paper" />
+                  <circle cx="50" cy="50" r="45" class="s4w-label__ring" />
+                  <text class="s4w-label__arc"><textPath href={`#s4w-arc-${k}`} startOffset="50%" text-anchor="middle">{s4Copy.name}</textPath></text>
+                  <text class="s4w-label__side" x="22" y="56">{s.side}</text>
+                  <text class="s4w-label__title" x="50" y="72" text-anchor="middle">{s.title}</text>
+                  <circle cx="50" cy="50" r="3.2" class="s4w-label__hole" />
+                </svg>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div class="s4w-sleeve" data-s4w-sleeve role="button" tabindex="0" aria-label="Take the record out">
+          <div class="s4w-sleeve__shadow"></div>
+          <div class="s4w-sleeve__paper"></div>
+          <div class="s4w-sleeve__lamp"></div>
+          <div class="s4w-plastic" data-s4w-plastic aria-hidden="true">
+            <div class="s4w-film s4w-film--top" data-s4w-film="top"><div class="s4w-film__sheet"></div></div>
+            <div class="s4w-film s4w-film--bottom" data-s4w-film="bottom"><div class="s4w-film__sheet"></div></div>
+          </div>
+          <div class="s4w-strip" data-s4w-strip aria-hidden="true">
+            <div class="s4w-strip__win" data-s4w-strip-win>
+              <div class="s4w-strip__band" data-s4w-strip-band><span class="s4w-strip__label">{musicCopy.record.unwrap}</span></div>
+            </div>
+          </div>
+          <button class="s4w-tab" type="button" data-s4w-tab aria-label={musicCopy.record.unwrap}>
+            <span class="s4w-tab__knob"><span class="s4w-tab__dot"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M6 3.5 10.5 8 6 12.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" /></svg></span></span>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <div class="s4w-caption" aria-live="polite">
+      {sides.map((s, k) => (
+        <p class={`s4w-caption__side s4w-caption__side--${k ? 'b' : 'a'}`} data-s4w-cap={k}>
+          <span class="s4w-caption__title">Side {s.side}. {s.title}.</span>
+          <span class="s4w-caption__line">{s.line}</span>
+        </p>
+      ))}
+      <p class="s4w-hint" data-s4w-hint>{c.hintSealed}</p>
+    </div>
+  </div>
+</section>

@@ -1,0 +1,78 @@
+---
+/**
+ * Music, way "Discoteca": the music page as it stands (the intro, the carousel, the climb over the
+ * records lying in a ring), and then the records are sorted on the floor the way a collection is at
+ * home. The ring opens and they lie down in a line by the year they came out, oldest at the back; the
+ * scroll walks along it. Then they gather by the people on them, each person a glass name joined to
+ * their records by threads of the lamp's light: tap a name to see which records and songs.
+ *
+ * The records are the carousel's own sleeves the whole way (components/music/discoteca/engine.ts, a
+ * copy of v4's listening-bar.ts that can lay them on the floor), and the scroll drives everything
+ * (discoteca/climb.ts, v4's climb carried on). The page's root is marked data-discoteca instead of
+ * data-music-page, so none of the other music pages' scripts take it over when the visit comes here
+ * from one of them.
+ */
+import MusicShell from '@/components/music/MusicShell.astro';
+import { musicCopy } from '@/data/music';
+import Headline from '@/components/music/v4/Headline.astro';
+import Carousel from '@/components/music/v4/Carousel.astro';
+import Caption from '@/components/music/v4/Caption.astro';
+import OpenRecord from '@/components/music/v4/OpenRecord.astro';
+import FloorUnder from '@/components/music/discoteca/FloorUnder.astro';
+import FloorOver from '@/components/music/discoteca/FloorOver.astro';
+import Still from '@/components/music/discoteca/Still.astro';
+import '@/components/music/v4/listening-bar.css';
+import '@/components/music/discoteca/discoteca.css';
+---
+<MusicShell title="Music">
+  <main id="main" class="v4 dsc" data-discoteca data-intro>
+    <div class="v4-page" data-v4-page>
+      <section class="v4-intro" aria-labelledby="v4-title">
+        <div class="container v4-intro__inner">
+          <Headline />
+          <p class="lede" data-intro-rest>{musicCopy.lede}</p>
+        </div>
+      </section>
+
+      <!-- The shelf, the climb, and the floor: the stage stays on screen for the whole stretch (climb.ts
+           sets how long). What lies on the floor under the records (their shadows, the years, the
+           threads) is drawn below the row; the names stand above it. -->
+      <section class="v4-shelf" aria-labelledby="v4-shelf-title" data-intro-rest data-climb>
+        <div class="v4-climb__stage" data-climb-stage>
+          <div class="v4-floor" aria-hidden="true" data-climb-floor></div>
+          <FloorUnder />
+          <div class="v4-bar">
+            <div class="v4-bar__wall" aria-hidden="true" data-climb-wall></div>
+            <header class="container v4-shelf__head" data-climb-head>
+              <p class="eyebrow v4-eyebrow">{musicCopy.shelf.eyebrow}</p>
+              <h2 class="v4-shelf__title" id="v4-shelf-title">{musicCopy.shelf.headline}</h2>
+              <p class="lede v4-shelf__lede">{musicCopy.shelf.lede}</p>
+            </header>
+            <Carousel />
+          </div>
+          <FloorOver />
+
+          <Caption />
+
+          <div class="v4-making" data-climb-words>
+            {musicCopy.collection.map((passage) => (
+              <p class="v4-making__page" data-climb-page>
+                {passage.split(' ').map((word) => <><span class="w" data-w>{word}</span>{' '}</>)}
+              </p>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      <Still />
+    </div>
+
+    <OpenRecord />
+  </main>
+</MusicShell>
+
+<script>
+  import '@/components/music/discoteca/engine';
+  import '@/components/music/discoteca/climb';
+  import '@/components/music/discoteca/intro';
+</script>

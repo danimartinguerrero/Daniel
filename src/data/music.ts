@@ -194,4 +194,16 @@ export const vinyls: readonly Vinyl[] = [
     about: "The Queensbridge rapper was about 20 when he made his first album, ten tracks of dense rhymes about the streets he grew up on. The beats come from DJ Premier, Pete Rock, Large Professor, Q-Tip and L.E.S., and many of them are built on dark jazz samples.",
     source: apple('https://music.apple.com/us/album/illmatic/662324135'),
   },
+  {
+    id: 'nation-of-millions',
+    title: 'It Takes a Nation of Millions to Hold Us Back',
+    artist: 'Public Enemy',
+    year: 1988,
+    label: 'Def Jam',
+    genre: 'Hip-hop',
+    format: 'LP',
+    tracks: ['Countdown to Armageddon', 'Bring the Noise', 'Don’t Believe the Hype', 'Cold Lampin’ with Flavor', 'Terminator X to the Edge of Panic', 'Mind Terrorist', 'Louder Than a Bomb', 'Caught, Can We Get a Witness?', 'Show ’Em Whatcha Got', 'She Watch Channel Zero?!', 'Night of the Living Baseheads', 'Black Steel in the Hour of Chaos', 'Security of the First World', 'Rebel Without a Pause', 'Prophets of Rage', 'Party for Your Right to Fight'],
+    about: 'On Public Enemy’s second album, Chuck D and Flavor Flav trade lines over the Bomb Squad’s layers of samples. The turntables get a lead of their own on “Terminator X to the Edge of Panic,” where the scratch cuts in and out like a switch.',
+    source: apple('https://music.apple.com/us/album/it-takes-a-nation-of-millions-to-hold-us-back/1440837788'),
+  },
 ];

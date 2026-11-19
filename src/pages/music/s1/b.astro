@@ -1,0 +1,52 @@
+---
+/**
+ * s1, sketch B: "Out of tune, off the grid". Today's music page (index.astro) with two sentences about me
+ * under the shelf, set as type a little off that a hand puts right: tuned, and quantized.
+ * Behaviour in components/music/s1/tune.ts.
+ */
+import MusicShell from '@/components/music/MusicShell.astro';
+import { musicCopy } from '@/data/music';
+import Headline from '@/components/music/v4/Headline.astro';
+import Carousel from '@/components/music/v4/Carousel.astro';
+import Caption from '@/components/music/v4/Caption.astro';
+import OpenRecord from '@/components/music/v4/OpenRecord.astro';
+import Tune from '@/components/music/s1/Tune.astro';
+import '@/components/music/v4/listening-bar.css';
+import '@/components/music/s1/tune.css';
+---
+<MusicShell title="Music">
+  <main id="main" class="v4 s1 s1-b" data-music-page data-intro>
+    <div class="v4-page" data-v4-page>
+      <section class="v4-intro" aria-labelledby="v4-title">
+        <div class="container v4-intro__inner">
+          <Headline />
+          <p class="lede" data-intro-rest>{musicCopy.lede}</p>
+        </div>
+      </section>
+
+      <section class="v4-shelf" aria-labelledby="v4-shelf-title" data-intro-rest>
+        <div class="v4-bar">
+          <div class="v4-bar__wall" aria-hidden="true"></div>
+          <header class="container v4-shelf__head">
+            <p class="eyebrow v4-eyebrow">{musicCopy.shelf.eyebrow}</p>
+            <h2 class="v4-shelf__title" id="v4-shelf-title">{musicCopy.shelf.headline}</h2>
+            <p class="lede v4-shelf__lede">{musicCopy.shelf.lede}</p>
+          </header>
+          <Carousel />
+        </div>
+
+        <Caption />
+      </section>
+
+      <Tune />
+    </div>
+
+    <OpenRecord />
+  </main>
+</MusicShell>
+
+<script>
+  import '@/components/music/v4/listening-bar';
+  import '@/components/music/v4/intro';
+  import '@/components/music/s1/tune';
+</script>

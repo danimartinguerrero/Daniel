@@ -1,0 +1,14 @@
+---
+/**
+ * The sash: the six bands of "music" (green, yellow, orange, red, purple, blue, low to high, the order
+ * of the island's meter too), slanted as they are in the word, run out across the page. Six flat
+ * stripes, each one element, so the song can move each on its own (r4.ts). The ink inside each is
+ * what the entrance lays down along it.
+ */
+const bands = ['green', 'yellow', 'orange', 'red', 'purple', 'blue'];
+---
+<div class="r4-sash" aria-hidden="true" data-r4-sash>
+  <div class="r4-sash__band">
+    {bands.map((name, i) => <i class={`r4-sash__stripe r4-sash__stripe--${name}`} style={`--i: ${i}`} data-r4-stripe><i class="r4-sash__ink" data-r4-ink></i></i>)}
+  </div>
+</div>

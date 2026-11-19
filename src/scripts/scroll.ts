@@ -12,6 +12,7 @@
  * when the page is swapped out.
  */
 import type { Replay } from './goto';
+import { statementProgress } from './statement-progress';
 
 const root = document.documentElement;
 const reduce = matchMedia('(prefers-reduced-motion: reduce)');
@@ -28,7 +29,7 @@ export function initScroll(signal: AbortSignal) {
   const statements = [...document.querySelectorAll<HTMLElement>('[data-statement]')].map((section) => {
     const el = section.querySelector<HTMLElement>('[data-words]')!;
     if (!reduce.matches) el.classList.add('is-armed');
-    return { section, el, pin: el.parentElement!, words: [...el.querySelectorAll<HTMLElement>('.w')], pinH: 0, lit: -1 };
+    return { section, el, pin: section.querySelector<HTMLElement>('.statement__slide')!, words: [...el.querySelectorAll<HTMLElement>('.w')], pinH: 0, lit: -1 };
   });
 
   function writeStatements(rects: DOMRect[]) {
@@ -36,7 +37,8 @@ export function initScroll(signal: AbortSignal) {
       s.el.classList.toggle('is-armed', !reduce.matches);
       if (reduce.matches) return;
       // Nothing is lit when the slide arrives; the last word lights before it leaves.
-      const lit = Math.round(clamp(held(rects[i]!, s.pinH) / 0.8) * s.words.length);
+      const rect = rects[i]!;
+      const lit = Math.round(statementProgress(rect.top, rect.height - s.pinH) * s.words.length);
       if (lit === s.lit) return;
       s.words.forEach((w, j) => w.classList.toggle('on', j < lit));
       s.lit = lit;
@@ -206,7 +208,6 @@ export function initScroll(signal: AbortSignal) {
 
   // Heights the progress is measured against, read once per resize rather than every frame.
   function measure() {
-    for (const s of statements) { s.pinH = s.pin.offsetHeight; s.lit = -1; }
     for (const d of dividers) { d.pinH = d.pin.offsetHeight; d.fill = -1; }
     // Phones pin only the sheet and the steps; there the hold runs through their run, not the section.
     const pinOnly = !!scanPinEl && getComputedStyle(scanPinEl).position === 'sticky';
@@ -260,7 +261,10 @@ export function initScroll(signal: AbortSignal) {
     if (dirty) { measure(); dirty = false; }
     const vh = innerHeight;
     // Read...
-    const statementRects = statements.map((s) => s.section.getBoundingClientRect());
+    const statementRects = statements.map((s) => {
+      s.pinH = s.pin.offsetHeight;
+      return s.section.getBoundingClientRect();
+    });
     const scanRead = readScan(vh);
     const dividersCss = cssDividers();
     const dividerRects = dividersCss ? [] : dividers.map((d) => d.section.getBoundingClientRect());

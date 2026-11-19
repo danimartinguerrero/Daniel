@@ -1,0 +1,27 @@
+---
+import '@/styles/statement.css';
+
+interface Props { text: string; id?: string; heading?: boolean; label?: string }
+const { text, id, heading = false, label } = Astro.props;
+const Tag = heading ? 'h2' : 'p';
+const headingId = heading && id ? `part-${id}` : undefined;
+---
+<section class:list={['statement', 'section--dark', { 'statement--heading': heading }]} id={id} aria-label={label} aria-labelledby={headingId} data-statement>
+  <div class="statement__slide">
+    <Tag class="statement__text container--wide" id={headingId} data-words>
+      {text.split(' ').map(word => <><span class="w">{word}</span>{' '}</>)}
+    </Tag>
+  </div>
+</section>
+
+<style>
+  .statement__slide { display: grid; align-items: center; }
+  .statement__text {
+    font-size: clamp(2.25rem, 6vw, 5.5rem); line-height: 1.08; font-weight: 600;
+    letter-spacing: -.02em; text-wrap: pretty;
+  }
+  .statement--heading .statement__text {
+    max-width: 13ch; font-size: clamp(2.4rem, min(12vw, 17svh), 12rem); line-height: .98;
+    letter-spacing: -.05em; text-align: center; text-wrap: balance;
+  }
+</style>

@@ -1,0 +1,94 @@
+/* Direction "Macro" (MacroStory.astro, macro.ts). Laid out plainly first: the heading, then each
+   chapter's sentences beside the upright still. With the script (is-flying), each chapter holds one
+   screen while the camera travels along the instrument, and its sentences come one at a time. */
+.mc { position: relative; color: var(--on-dark); }
+
+.mc__intro-stage {
+  display: grid; place-items: center;
+  padding: clamp(6rem, 18svh, 12rem) var(--gutter);
+  background: var(--dark);
+}
+.is-flying .mc__intro-stage { padding-block: 0; }
+.mc__heading {
+  position: relative; margin: 0; max-width: 13ch;
+  font-size: clamp(2.4rem, min(11vw, 16svh), 11rem); line-height: 1; font-weight: 600;
+  letter-spacing: -.028em; text-align: center; text-wrap: balance;
+}
+
+/* Plain: the still at the right, the sentences at the left as one passage. */
+.mc__stage {
+  position: relative; isolation: isolate; overflow: clip; background: var(--dark);
+  display: grid; align-items: center; padding-block: clamp(3rem, 7vw, 7rem);
+}
+.mc__still { grid-area: 1 / 1; justify-self: end; width: min(56%, 78svh); height: auto; margin-right: var(--gutter); }
+.mc__canvas, .mc__shade { display: none; }
+.mc__beats { grid-area: 1 / 1; position: relative; z-index: 2; display: grid; gap: .9rem; align-content: center; }
+.mc__beat { margin: 0; max-width: 22ch; }
+.mc__beats > .mc__beat:not(.mc__title) { max-width: 30ch; }
+@media (max-width: 760px) {
+  .mc__stage { align-items: start; }
+  .mc__still { width: 100%; margin: 14rem 0 0; }
+}
+
+/* Type, set the way Apple sets it at these sizes. The title: tight but never touching, its leading
+   close, white, the one bright thing. The sentences after it: large enough to carry a whole screen of
+   instrument, at a reading weight, tracked a hair open, in the page's second grey; they fill to that
+   grey, not to white (text-fill.css reads --on-dark). */
+.mc__title {
+  font-size: clamp(2.5rem, 5.4vw, 5.25rem); line-height: 1.03; letter-spacing: -.024em; font-weight: 600;
+  text-wrap: balance;
+}
+.mc__line {
+  --on-dark: var(--on-dark-2);
+  color: var(--on-dark-2);
+  font-size: clamp(1.5rem, 2.9vw, 2.75rem); line-height: 1.16; letter-spacing: -.012em; font-weight: 500;
+  text-wrap: balance;
+}
+
+/* Flying: one held screen, all of it picture. The words of each beat sit where its framing leaves
+   room, and the place changes from beat to beat (data-place, data-place-narrow: t/m/b and l/r), at the
+   page's margins. Behind them, a soft pool of shade that darkens the picture there without an edge; it
+   comes and goes with its words. One beat at a time. */
+.is-flying .mc__stage { display: block; padding: 0; }
+.is-flying .mc__still { display: none; }
+.is-flying .mc__canvas { display: block; position: absolute; inset: 0; width: 100%; height: 100%; }
+/* The island above and the dock below float over the picture: a little darker at the top and bottom. */
+.is-flying .mc__shade {
+  display: block; position: absolute; inset: 0; z-index: 1; pointer-events: none;
+  background: linear-gradient(180deg, rgb(0 0 0 / .45) 0%, rgb(0 0 0 / 0) 16%, rgb(0 0 0 / 0) 84%, rgb(0 0 0 / .5) 100%);
+}
+.is-flying .mc__beats {
+  --edge: max(var(--gutter), calc((100vw - var(--wide)) / 2));
+  position: absolute; inset: 0; z-index: 2; width: auto; margin: 0;
+}
+.is-flying .mc__beat {
+  position: absolute; isolation: isolate;
+  opacity: 0; will-change: transform, opacity, filter;
+}
+.is-flying .mc__beat::before {
+  content: ''; position: absolute; inset: -55% -38%; z-index: -1; pointer-events: none;
+  background: radial-gradient(closest-side, rgb(0 0 0 / .8), rgb(0 0 0 / .62) 45%, rgb(0 0 0 / .25) 75%, rgb(0 0 0 / 0));
+}
+@media (min-width: 761px) {
+  .is-flying .mc__beat[data-place^='t'] { top: max(6.5rem, 15svh); }
+  .is-flying .mc__beat[data-place^='m'] { top: 50%; translate: 0 -50%; }
+  .is-flying .mc__beat[data-place^='b'] { bottom: max(6.5rem, 13svh); }
+  .is-flying .mc__beat[data-place$='l'] { left: var(--edge); }
+  .is-flying .mc__beat[data-place$='r'] { right: var(--edge); }
+}
+.is-flying .mc__title { max-width: 8.4em; font-size: clamp(3rem, 7.6vw, 8.5rem); line-height: .98; letter-spacing: -.03em; }
+.is-flying .mc__beats > .mc__line { max-width: 11.5em; font-size: clamp(2rem, 4.4vw, 4.6rem); line-height: 1.06; letter-spacing: -.022em; font-weight: 600; }
+
+@media (max-width: 760px) {
+  .is-flying .mc__beat { left: var(--gutter); right: var(--gutter); }
+  .is-flying .mc__beat[data-place-narrow='t'] { top: max(5.25rem, 12svh); }
+  .is-flying .mc__beat[data-place-narrow='b'] { bottom: max(6rem, 14svh); }
+  .is-flying .mc__beat::before { inset: -40% -20%; }
+  .is-flying .mc__title { font-size: clamp(2.6rem, 12.5vw, 3.6rem); }
+  .is-flying .mc__line { font-size: clamp(1.6rem, 7.4vw, 2.1rem); }
+}
+
+/* Lit, as plain text, until the script takes the words over (is-armed): then they wait in the site's
+   dim grey and the light comes along each line (text-fill.ts, text-fill.css). */
+.mc .is-armed .w { color: var(--fill-dim); }
+@media (forced-colors: active) { .mc .is-armed .w { color: CanvasText; } }

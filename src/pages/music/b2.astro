@@ -1,0 +1,51 @@
+---
+/**
+ * Music, version b2: today's page with more below the records. The top (headline, records, the record
+ * taken out) is the live page's; what this version adds is in components/music/b2/.
+ */
+import MusicShell from '@/components/music/MusicShell.astro';
+import { musicCopy } from '@/data/music';
+import Headline from '@/components/music/v4/Headline.astro';
+import Carousel from '@/components/music/v4/Carousel.astro';
+import Caption from '@/components/music/v4/Caption.astro';
+import OpenRecord from '@/components/music/v4/OpenRecord.astro';
+import Below from '@/components/music/b2/Below.astro';
+import '@/components/music/v4/listening-bar.css';
+import '@/components/music/b2/b2.css';
+---
+<MusicShell title="Music">
+  <main id="main" class="v4 b2" data-music-page data-intro>
+    <div class="v4-page" data-v4-page>
+      <section class="v4-intro" aria-labelledby="v4-title">
+        <div class="container v4-intro__inner">
+          <Headline />
+          <p class="lede" data-intro-rest>{musicCopy.lede}</p>
+        </div>
+      </section>
+
+      <section class="v4-shelf" aria-labelledby="v4-shelf-title" data-intro-rest>
+        <div class="v4-bar">
+          <div class="v4-bar__wall" aria-hidden="true"></div>
+          <header class="container v4-shelf__head">
+            <p class="eyebrow v4-eyebrow">{musicCopy.shelf.eyebrow}</p>
+            <h2 class="v4-shelf__title" id="v4-shelf-title">{musicCopy.shelf.headline}</h2>
+            <p class="lede v4-shelf__lede">{musicCopy.shelf.lede}</p>
+          </header>
+          <Carousel />
+        </div>
+
+        <Caption />
+      </section>
+
+      <Below />
+    </div>
+
+    <OpenRecord />
+  </main>
+</MusicShell>
+
+<script>
+  import '@/components/music/v4/listening-bar';
+  import '@/components/music/v4/intro';
+  import '@/components/music/b2/b2';
+</script>

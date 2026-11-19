@@ -1,0 +1,79 @@
+---
+/**
+ * /music/cuaderno: the listening notebook that lies on the floor in the middle of the ring of records.
+ * A spiral notebook open flat: on the right, the page of the record at the front of the ring (a printed
+ * log form filled in by hand, with the cover printed small and held by photo corners); on the left, the
+ * back of the page before it, with that record's printed note pasted in. Printed is what comes from a
+ * source; blue ink is the owner's hand.
+ *
+ * The page turns with the ring (notebook.ts): one record round is one leaf over. The cover is opened by
+ * the scroll (climb.ts). Every page is kept here once, as a template, and put into the leaf and the two
+ * pages as the ring needs it. The two pages start on the record the ring starts on, so the notebook is
+ * right without its script.
+ *
+ * It says nothing the page does not already say (the caption and the record taken out carry the same
+ * facts), so it is hidden from assistive technology.
+ */
+import '@fontsource/caveat/latin-500.css';
+import { vinyls } from '@/data/music';
+import { START } from '@/components/music/v4/start';
+import FormPage from './FormPage.astro';
+import ClipPage from './ClipPage.astro';
+import { notebookCopy } from './copy';
+
+const first = vinyls[START]!;
+const loops = 20; // one wire loop for each line of the page
+---
+<div class="cn" data-cn aria-hidden="true">
+  <div class="cn-pool"></div>
+
+  <div class="cn-page cn-page--left">
+    <div class="cn-slot" data-cn-left data-shown={`c${START}`}><ClipPage v={first} i={START} /></div>
+    <i class="cn-cast cn-cast--left" data-cn-cast-left></i>
+  </div>
+  <div class="cn-page cn-page--right">
+    <div class="cn-slot" data-cn-right data-shown={`f${START}`}><FormPage v={first} i={START} /></div>
+    <i class="cn-cast cn-cast--right" data-cn-cast-right></i>
+  </div>
+
+  <!-- The leaf being turned: two strips hinged on each other, so the paper can bend as it goes. Each
+       strip has the page's front and back, each showing its own part of the page. -->
+  <div class="cn-leaf" data-cn-leaf>
+    <div class="cn-strip cn-strip--a" data-cn-strip-a>
+      <div class="cn-face cn-face--a"><div class="cn-slot" data-cn-fa></div><i class="cn-shade" data-cn-shade-fa></i></div>
+      <div class="cn-face cn-face--a cn-face--back"><div class="cn-slot" data-cn-ba></div><i class="cn-shade" data-cn-shade-ba></i></div>
+      <div class="cn-strip cn-strip--b" data-cn-strip-b>
+        <div class="cn-face cn-face--b"><div class="cn-slot" data-cn-fb></div><i class="cn-shade" data-cn-shade-fb></i></div>
+        <div class="cn-face cn-face--b cn-face--back"><div class="cn-slot" data-cn-bb></div><i class="cn-shade" data-cn-shade-bb></i></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- The cover, and the pages already written under it: it opens as one block, onto the record at
+       the front of the ring. -->
+  <div class="cn-cover" data-cn-cover>
+    <div class="cn-face cn-board">
+      <span class="cn-board__label"><span class="cn-hand">{notebookCopy.cover}</span></span>
+      <i class="cn-shade" data-cn-shade-cf></i>
+    </div>
+    <div class="cn-face cn-face--back"><div class="cn-slot" data-cn-cb></div><i class="cn-shade" data-cn-shade-cb></i></div>
+  </div>
+
+  <svg class="cn-spiral" viewBox={`0 0 16 ${loops * 10}`} preserveAspectRatio="none" aria-hidden="true">
+    {Array.from({ length: loops }, (_, i) => (
+      <g transform={`translate(0 ${i * 10 + 5})`}>
+        <path class="cn-wire" d="M0 1.2 C 3 -2.6, 13 -2.8, 16 0.8" />
+        <path class="cn-wire__hi" d="M2.6 -0.5 C 5.5 -2.1, 10.5 -2.2, 13.4 -0.7" />
+      </g>
+    ))}
+  </svg>
+</div>
+
+<!-- How the pages turn, under the notebook once it is open, until the first page has been turned. -->
+<p class="cn-hint" data-cn-hint aria-hidden="true"><span>{notebookCopy.hint}</span></p>
+
+<!-- Every record's two pages, put where the ring needs them (notebook.ts). -->
+<div hidden>
+  {vinyls.map((v, i) => <template data-cn-form={i}><FormPage v={v} i={i} /></template>)}
+  {vinyls.map((v, i) => <template data-cn-clip={i}><ClipPage v={v} i={i} /></template>)}
+</div>

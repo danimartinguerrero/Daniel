@@ -1,0 +1,118 @@
+---
+/**
+ * Everything version b4 adds under the records: the same records laid out on the years they came out,
+ * and at the end of the line, now, what I play and make myself. Words live in ./copy.ts; every
+ * position comes from ./layout.ts, worked out from the data at build time.
+ *
+ * One list, two drawings. On a wide screen the line runs across the page with the covers in a row above
+ * it and a row under it; at Now it turns down into my two entries. On a phone (anything under 64rem) it
+ * runs down the left with each record's name beside its cover, and ends in the same two entries.
+ */
+import { vinyls } from '@/data/music';
+import { START } from '@/components/music/v4/start';
+import { copy } from './copy';
+import { layout, D } from './layout';
+
+const { placed, runs, decades, first, nowY, height } = layout();
+const startId = vinyls[START]?.id;
+
+/* Desktop drawing, in % of the chart's width (1 unit = 1cqw in the CSS, which repeats these numbers as
+   --b4-c, --b4-ax, --b4-lo and --b4-h). */
+const C = D.cover;
+const AX = C + 3.6; // the line
+const LO = AX + 3.2; // the top of the row under it
+const H = LO + C; // the bottom of the drawing
+const f = (v: number) => v.toFixed(3);
+
+// Phone drawing, px: the line 44px in, covers from 76px.
+const LX = 44;
+const CX = 76;
+---
+<section class="b4-time" aria-labelledby="b4-title" data-intro-rest data-b4>
+  <header class="container b4-time__head">
+    <h2 class="b4-time__title" id="b4-title">{copy.headline(first)}</h2>
+  </header>
+
+  <div class="b4-chart" role="group" aria-label={copy.label}>
+    <div class="b4-axis" style={`--b4-phone-h:${height}px`} data-b4-axis>
+      <svg class="b4-draw b4-draw--wide" viewBox={`0 0 100 ${H}`} aria-hidden="true">
+        <line class="b4-line" x1="0" y1={AX} x2="100" y2={AX} vector-effect="non-scaling-stroke" />
+        <line class="b4-line b4-line--turn" x1="100" y1={AX} x2="100" y2={H} vector-effect="non-scaling-stroke" />
+        {decades.map((d) => (
+          <g class="b4-mark" style={`--u:${f(d.x / 100)}`}>
+            <line class="b4-dec" x1={f(d.x)} y1={AX} x2={f(d.x)} y2={f(AX + 0.7)} vector-effect="non-scaling-stroke" />
+          </g>
+        ))}
+        {placed.map((r) => (
+          <g class="b4-mark" data-b4-mark={r.v.id} data-current={r.v.id === startId ? '' : undefined} style={`--u:${f(r.x / 100)}`}>
+            {r.tier === 0
+              ? <line class="b4-leader" x1={f(r.x)} y1={f(AX - 0.4)} x2={f(r.p)} y2={f(C + 0.5)} vector-effect="non-scaling-stroke" />
+              : <line class="b4-leader" x1={f(r.x)} y1={f(AX + 0.4)} x2={f(r.p)} y2={f(LO - 0.5)} vector-effect="non-scaling-stroke" />}
+            <circle class="b4-tick" cx={f(r.x)} cy={AX} r="0.3" />
+          </g>
+        ))}
+        <circle class="b4-end" cx="100" cy={AX} r="0.5" />
+      </svg>
+
+      <svg class="b4-draw b4-draw--tall" width={CX} height={height} viewBox={`0 0 ${CX} ${height}`} aria-hidden="true">
+        {decades.map((d) => <line class="b4-dec" x1={LX - 6} y1={f(d.y)} x2={LX + 6} y2={f(d.y)} />)}
+        <line class="b4-line" x1={LX} y1="0" x2={LX} y2={nowY} />
+        {placed.map((r) => (
+          <g class="b4-mark" data-b4-mark={r.v.id} data-current={r.v.id === startId ? '' : undefined}>
+            <path class="b4-leader" d={`M${LX + 3} ${f(r.ty)} C ${LX + 18} ${f(r.ty)}, ${LX + 18} ${f(r.cy)}, ${CX - 3} ${f(r.cy)}`} />
+            <circle class="b4-tick" cx={LX} cy={f(r.ty)} r="3" />
+          </g>
+        ))}
+        <circle class="b4-end" cx={LX} cy={nowY} r="5" />
+      </svg>
+
+      <ol class="b4-recs">
+        {placed.map((r) => (
+          <li
+            class="b4-rec"
+            data-b4-rec={r.v.id}
+            data-tier={r.tier}
+            data-current={r.v.id === startId ? '' : undefined}
+            style={`--x:${f(r.x)};--p:${f(r.p)};--u:${f(r.x / 100)};--cy:${f(r.cy)}px`}
+          >
+            <button class="b4-rec__cover" type="button" data-b4-pick={r.v.id} aria-label={copy.pick(r.v.title, r.v.artist, r.v.year)}>
+              <span class="b4-rec__art">
+                <img src={`/img/music/${r.v.id}.webp`} width="800" height="800" alt="" loading="lazy" decoding="async" draggable="false" />
+              </span>
+            </button>
+            <span class="b4-rec__text" aria-hidden="true">
+              <span class="b4-rec__title">{r.v.title}</span>
+              <span class="b4-rec__meta">{r.v.artist}, {r.v.year}</span>
+            </span>
+          </li>
+        ))}
+      </ol>
+
+      <ul class="b4-decades" aria-hidden="true">
+        {decades.map((d) => <li style={`--x:${f(d.x)};--u:${f(d.x / 100)};--y:${f(d.y)}px`}>{d.year}</li>)}
+        <li class="b4-decades__now" style="--x:100;--u:1">{copy.now}</li>
+      </ul>
+
+      <ul class="b4-runs">
+        {runs.map((r) => (
+          <li class="b4-run" data-single={r.from === r.to ? '' : undefined} style={`--a:${f(r.a)};--b:${f(r.b)};--u:${f(r.b / 100)};--hy:${f(r.hy)}px`}>
+            <span>{copy.run(r.count, r.from, r.to)}</span>
+          </li>
+        ))}
+      </ul>
+
+      <p class="b4-now" style={`--hy:${nowY}px`} aria-hidden="true">{copy.now}</p>
+    </div>
+
+    <div class="b4-me">
+      <h3 class="sr-only">{copy.now}</h3>
+      {copy.me.map((m) => (
+        <p class="b4-me__entry">
+          <span class="b4-me__tick" aria-hidden="true"></span>
+          <span class="b4-me__title">{m.title}</span>
+          <span class="b4-me__line">{m.line}</span>
+        </p>
+      ))}
+    </div>
+  </div>
+</section>

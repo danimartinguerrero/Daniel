@@ -1,0 +1,122 @@
+---
+/**
+ * Music, Design 3: "Wall". The records hang face-out on picture ledges, lit from above. A tap lifts
+ * that sleeve off its ledge to the top of the screen while the wall dims and falls back, and a sheet
+ * materialises beneath it; the shrink-wrap comes off with a slider, and the sheet then holds the
+ * record's story. Putting it back flies it home to the same spot. Motion: components/music/v3/wall.ts.
+ */
+import MusicShell from '@/components/music/MusicShell.astro';
+import { musicCopy, vinyls } from '@/data/music-sleeves';
+import { sleeveArt, crinkleArt, stickerInk } from '@/components/music/v3/sleeve-art';
+import '@/components/music/v3/wall.css';
+
+const copy = musicCopy;
+---
+<MusicShell>
+  <main id="main" class="v3" data-music-page>
+    <div class="v3-room" data-room>
+      <header class="v3-hero container--wide">
+        <p class="eyebrow">{copy.eyebrow}</p>
+        <h1 class="headline">{copy.headline}</h1>
+        <p class="lede">{copy.lede}</p>
+      </header>
+
+      <section class="v3-wall" aria-labelledby="v3-wall-title">
+        <header class="v3-wall__intro container--wide">
+          <p class="eyebrow">{copy.shelf.eyebrow}</p>
+          <h2 class="headline" id="v3-wall-title">{copy.shelf.headline}</h2>
+          <p class="lede">{copy.shelf.lede}</p>
+        </header>
+
+        <ul class="v3-wall__grid container--wide" role="list">
+          {vinyls.map((v) => (
+            <li class="v3-spot">
+              <button class="v3-spot__btn" type="button" data-vinyl={v.id} aria-label={`${v.title} by ${v.artist}`} aria-haspopup="dialog">
+                <span class="v3-slot" data-slot>
+                  <span class="v3-sleeve" data-sleeve>
+                    <span class="v3-art" set:html={sleeveArt(v)} />
+                    <span class="v3-light" />
+                    <span class="v3-wrap" data-wrap>
+                      <span class="v3-wrap__film" />
+                      <span class="v3-wrap__sheen" data-sheen />
+                      <Fragment set:html={crinkleArt(v.id)} />
+                      <span class="v3-sticker" style={`--accent:${v.palette[3]};--ink:${stickerInk(v.palette[3])}`}>{v.format}</span>
+                    </span>
+                  </span>
+                  <span class="v3-ledge" aria-hidden="true" />
+                </span>
+                <span class="v3-spot__cap" aria-hidden="true">
+                  <span class="v3-spot__title">{v.title}</span>
+                  <span class="v3-spot__artist">{v.artist}, {v.year}</span>
+                </span>
+              </button>
+            </li>
+          ))}
+        </ul>
+      </section>
+    </div>
+
+    <div class="v3-stage" data-stage hidden>
+      <div class="v3-stage__scrim" data-scrim></div>
+      <div class="v3-stage__glow" data-glow></div>
+      <div class="v3-stage__scroller" data-scroller role="dialog" aria-modal="true" aria-labelledby="v3-title">
+        <div class="v3-stage__col" data-col>
+          <div class="v3-flyer" data-flyer>
+            <div class="v3-flyer__shadow" data-flyer-shadow></div>
+            <div class="v3-flyer__body" data-flyer-body></div>
+            <div class="v3-tear" data-unwrap>
+              <div class="v3-tear__keep" data-tear-keep>
+                <div class="v3-tear__band" data-tear-band>
+                  <span class="v3-tear__label" aria-hidden="true">{copy.record.unwrap}</span>
+                </div>
+              </div>
+              <span class="v3-tear__tab" data-unwrap-handle role="slider" tabindex="0" aria-label={copy.record.unwrap} aria-describedby="v3-tear-hint" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" aria-orientation="horizontal">
+                <span class="v3-tear__grip"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M3.5 8h8.5M8.5 4.5 12 8l-3.5 3.5" /></svg></span>
+              </span>
+              <span class="sr-only" id="v3-tear-hint">{copy.record.unwrapHint}</span>
+            </div>
+          </div>
+
+          <section class="v3-sheet" data-sheet>
+            <div class="v3-sheet__bg" data-sheet-bg></div>
+            <div class="v3-sheet__inner" data-sheet-inner>
+              <span class="v3-sheet__grabber" data-grab aria-hidden="true"></span>
+              <div class="v3-sheet__head" data-grab>
+                <div class="v3-sheet__names">
+                  <h2 class="v3-sheet__title" id="v3-title" tabindex="-1" data-title></h2>
+                  <p class="v3-sheet__artist" data-artist></p>
+                </div>
+                <button class="pill pill--glass v3-put" type="button" data-record-close>{copy.record.close}</button>
+              </div>
+              <div class="v3-details" data-details hidden>
+                <section class="v3-block v3-why" data-record-why aria-labelledby="v3-why-h">
+                  <h3 id="v3-why-h">{copy.record.about}</h3>
+                  <p data-why-text></p>
+                </section>
+                <section class="v3-block" aria-labelledby="v3-tracks-h">
+                  <h3 id="v3-tracks-h">{copy.record.tracklist}</h3>
+                  <ol class="v3-tracks" data-tracklist role="list"></ol>
+                </section>
+                <section class="v3-block" data-record-info aria-labelledby="v3-info-h">
+                  <h3 id="v3-info-h">{copy.record.info}</h3>
+                  <dl class="v3-facts" data-info>
+                    <div class="v3-fact v3-fact--wide"><dt>{copy.record.fields.label}</dt><dd data-fact="label"></dd></div>
+                    <div class="v3-fact v3-fact--wide"><dt>{copy.record.fields.genre}</dt><dd data-fact="genre"></dd></div>
+                    <div class="v3-fact"><dt>{copy.record.fields.year}</dt><dd data-fact="year"></dd></div>
+                    <div class="v3-fact"><dt>{copy.record.fields.format}</dt><dd data-fact="format"></dd></div>
+                    <div class="v3-fact"><dt>{copy.record.fields.tracks}</dt><dd data-fact="tracks"></dd></div>
+                  </dl>
+                </section>
+              </div>
+            </div>
+          </section>
+        </div>
+      </div>
+    </div>
+  </main>
+</MusicShell>
+
+<script>
+  import { initWall } from '@/components/music/v3/wall';
+  initWall();
+</script>

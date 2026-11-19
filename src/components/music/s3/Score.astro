@@ -1,0 +1,35 @@
+---
+/**
+ * Sketch s3/a, "Quantise": his words as notes. Each bar is four beats of sixteenths; each word starts
+ * on the sixteenth a note would (`on`), and how hard it is hit (`vel`) is its weight. score.ts moves
+ * them; without it they sit where they belong.
+ *
+ * The rhythm is a stand-in, written for the sketch. With a MIDI export of one of his beats the words
+ * would sit on its real hits, at their real velocities.
+ */
+type W = { w: string; on: number; vel: number };
+type Bar = { words: W[]; late?: boolean };
+const bars: Bar[] = [
+  { words: [{ w: 'I', on: 0, vel: 0.7 }, { w: 'make', on: 1, vel: 0.5 }, { w: 'beats', on: 4, vel: 1 }, { w: 'in', on: 7, vel: 0.4 }, { w: 'my', on: 8, vel: 0.6 }, { w: 'spare', on: 9, vel: 0.45 }, { w: 'time,', on: 12, vel: 1 }] },
+  { words: [{ w: 'in', on: 0, vel: 0.6 }, { w: 'FL', on: 1, vel: 0.45 }, { w: 'Studio,', on: 2, vel: 0.8 }, { w: 'with', on: 5, vel: 0.4 }, { w: 'an', on: 7, vel: 0.4 }, { w: 'Akai', on: 8, vel: 0.8 }, { w: 'MPK', on: 10, vel: 0.5 }, { w: 'Mini.', on: 12, vel: 1 }] },
+  { words: [{ w: 'I', on: 0, vel: 0.7 }, { w: 'play', on: 2, vel: 0.5 }, { w: 'guitar', on: 4, vel: 1 }, { w: 'and', on: 8, vel: 0.45 }, { w: 'bass,', on: 10, vel: 1 }] },
+  // Played by him. It never quite lands on the beat.
+  { late: true, words: [{ w: 'though', on: 0, vel: 0.35 }, { w: 'not', on: 4, vel: 0.3 }, { w: 'very', on: 7, vel: 0.35 }, { w: 'well.', on: 10, vel: 0.3 }] },
+];
+const weight = (vel: number) => Math.round(280 + vel * 440);
+---
+<section class="s3a" aria-label="Making music" data-s3a data-intro-rest>
+  <div class="container--wide s3a-score" data-s3a-score>
+    {bars.map((bar, b) => (
+      <div class={bar.late ? 's3a-bar is-late' : 's3a-bar'} data-s3a-bar data-late={bar.late ? '' : undefined}>
+        <span class="s3a-beats" aria-hidden="true">{[1, 2, 3, 4].map((n) => <span style={`--beat:${n - 1}`}>{b === 0 ? n : ''}</span>)}</span>
+        <p class="s3a-line">
+          {bar.words.map((x) => (
+            <><span class="s3a-w" data-s3a-w data-on={x.on} data-vel={x.vel} style={`--on:${x.on};--row:${x.on >= 8 ? 1 : 0};--weight:${weight(x.vel)}`}>{x.w}</span>{' '}</>
+          ))}
+        </p>
+      </div>
+    ))}
+    <p class="s3a-note">Sketch note: the rhythm is a stand-in. With a MIDI export of one of his beats from FL Studio, each word would sit on a real hit, and its weight would be that hit’s velocity.</p>
+  </div>
+</section>

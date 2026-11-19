@@ -1,0 +1,206 @@
+/* Music, direction 2: "Listening room". Every rule is under .r2 (or prefixed r2-). Loaded after
+   v4/listening-bar.css.
+
+   The first screen is a room with one light in it: a lamp in the ceiling, just above the top of the
+   screen, washing the wall behind the records. Everything in the room is drawn as light falling on a
+   black space; where the lamp does not reach, the room is the page's own black, so no edge of it ever
+   shows. The lamp's colour is the one the sleeves are already lit with (rgba(255, 240, 224), v4's lit
+   top edge), and each surface is that light times the surface.
+
+   The records' row already reads as a line of records going back along a surface seen from a little
+   above (the far ones are smaller and higher; eye level is the sleeves' middle). So, in the row, with
+   sleeve size --s: the sleeves stand from --lift to --lift + s; the wall meets the counter at
+   --lift + 0.94s, just above the back of the farthest sleeves; the counter's front edge is at
+   --lift + 1.13s, far enough in front of the middle record for its reflection to fit on the top. */
+
+.r2 {
+  --r2-lamp: 255, 240, 224;     /* the lamp, as on the sleeves */
+  --r2-wood: 228, 204, 178;     /* the slats: the lamp's light off oiled oak */
+}
+
+/* ---------------------------------------------------------------- the room
+   It fills the first screen: the headline high on the wall, the records low, the counter's face down to
+   the bottom of the screen. It clips what it draws, so the counter's face can run long. */
+.r2-room {
+  display: flex; flex-direction: column; min-height: 100svh;
+  overflow: clip;
+  /* Larger sleeves where the screen is tall enough to hold the whole room. */
+  --s: clamp(196px, min(56vw, 33svh), 400px);
+  --foot: calc(var(--s) * 0.16);
+  --r2-line: calc(var(--lift) + var(--s) * 0.94);   /* wall meets counter, in the row */
+  --r2-top: calc(var(--s) * 0.19);                  /* the counter's top, wall to front edge */
+  /* The cone's half-width at its widest. On a phone a narrow beam, so its edges are on the screen. */
+  --r2-rx: min(39vw, 820px);
+  /* The slats: 30px of oak and a 6px gap at desk sizes, a little finer on a phone. */
+  --r2-t: 36px; --r2-g: 6px;
+}
+@media (max-width: 600px) { .r2-room { --r2-t: 28px; --r2-g: 5px; } }
+.r2-room > .r2-shelf { flex: 1; display: flex; flex-direction: column; justify-content: flex-end; }
+.r2-stage { position: relative; }
+
+/* The wall: vertical oak slats on black felt, the usual finish of a room built for listening. It is
+   never drawn on its own: each light is a layer that holds the slats and is masked by that light's
+   shape, so the slats are as bright as the light on them and gone where it does not reach. */
+.r2-wall, .r2-light { position: absolute; inset: 0; z-index: -1; pointer-events: none; }
+.r2-slats { position: absolute; inset: 0; }
+/* The face of each slat, and the felt between them, a little lit in the gaps only where the lamp
+   looks straight in. Both chamfers catch less than the face. Whole pixels, so it stays crisp. */
+.r2-slats {
+  background:
+    linear-gradient(90deg,
+      rgba(var(--r2-wood), 0.04) 0 var(--r2-g),
+      rgba(var(--r2-wood), 0.1) var(--r2-g) calc(var(--r2-g) + 2px),
+      rgba(var(--r2-wood), 0.18) calc(var(--r2-g) + 2px),
+      rgba(var(--r2-wood), 0.2) calc(50% + var(--r2-g) / 2),
+      rgba(var(--r2-wood), 0.18) calc(100% - 2px),
+      rgba(var(--r2-wood), 0.08) calc(100% - 2px) 100%)
+    50% 0 / var(--r2-t) 100% repeat-x;
+}
+/* The lamp is in the middle, so a slat to its left shows the lamp its right-hand chamfer, and a slat to
+   its right its left-hand one, more squarely the further out it is. */
+.r2-slats--l, .r2-slats--r { background-size: var(--r2-t) 100%; background-position: 50% 0; background-repeat: repeat-x; }
+.r2-slats--l {
+  background-image: linear-gradient(90deg, transparent calc(100% - 2px), rgba(var(--r2-lamp), 0.34) calc(100% - 2px));
+  -webkit-mask-image: linear-gradient(90deg, #000, rgba(0, 0, 0, 0.3) 38%, transparent 50%);
+  mask-image: linear-gradient(90deg, #000, rgba(0, 0, 0, 0.3) 38%, transparent 50%);
+}
+.r2-slats--r {
+  background-image: linear-gradient(90deg, transparent var(--r2-g), rgba(var(--r2-lamp), 0.34) var(--r2-g) calc(var(--r2-g) + 2px), transparent calc(var(--r2-g) + 2px));
+  -webkit-mask-image: linear-gradient(270deg, #000, rgba(0, 0, 0, 0.3) 38%, transparent 50%);
+  mask-image: linear-gradient(270deg, #000, rgba(0, 0, 0, 0.3) 38%, transparent 50%);
+}
+/* The cone. The lamp hangs just above the top of the screen, so the curved top of its light (the
+   scallop a downlight throws on a wall close behind it) crosses the upper third, and the cone opens
+   down the whole wall to the counter. Brightest high up near the lamp, falling off down the wall and
+   out to the sides. Two masks multiplied: the cone's edge, and the fall-off. */
+.r2-light--cone {
+  /* The fall-off: brightest a little way down the wall, behind the records' row, so the copy at the
+     top left sits in the softer part of the pool. Then the cone's edge: a wide penumbra (about a sixth
+     of the cone's width from lit to dark), so the eye sees a pool of light rather than an outline, with
+     the soft upper curve of the scallop where the two meet near the top. */
+  --r2-mask:
+    radial-gradient(calc(var(--r2-rx) * 1.25) 115% at 50% 40%, #000, rgba(0, 0, 0, 0.74) 34%, rgba(0, 0, 0, 0.44) 64%, rgba(0, 0, 0, 0.18) 88%, transparent 100%),
+    radial-gradient(calc(var(--r2-rx) * 1.12) 150% at 50% 142%, #000 76%, rgba(0, 0, 0, 0.55) 88%, transparent 100%);
+  -webkit-mask-image: var(--r2-mask);
+  -webkit-mask-composite: source-in;
+  mask-image: var(--r2-mask);
+  mask-composite: intersect;
+}
+/* The light the pool throws back into the room: the slats are still there either side of it, at about
+   a third of its level, and only go to black towards the window's edges. */
+.r2-light--spill {
+  -webkit-mask-image: radial-gradient(calc(var(--r2-rx) * 1.65) 125% at 50% 34%, rgba(0, 0, 0, 0.36), rgba(0, 0, 0, 0.3) 40%, rgba(0, 0, 0, 0.14) 72%, transparent 100%);
+  mask-image: radial-gradient(calc(var(--r2-rx) * 1.65) 125% at 50% 34%, rgba(0, 0, 0, 0.36), rgba(0, 0, 0, 0.3) 40%, rgba(0, 0, 0, 0.14) 72%, transparent 100%);
+}
+
+/* The counter the records stand on: a dark lacquered top seen from a little above, its front edge
+   catching the lamp, and its face going down into the dark. It is solid black, so the wall stops at it;
+   the caption sits on its face. */
+.r2-counter {
+  position: absolute; z-index: -1; left: 0; right: 0;
+  top: var(--r2-line); height: calc(var(--r2-top) + 100svh);
+  background: #000;
+  pointer-events: none;
+}
+.r2-counter__lit {
+  position: absolute; inset: 0;
+  background:
+    /* the front edge: a hairline of lamp light along the arris */
+    linear-gradient(rgba(var(--r2-lamp), 0.32), rgba(var(--r2-lamp), 0.32)) 0 var(--r2-top) / 100% 1px no-repeat,
+    /* the face, lit only near the top by light grazing down it */
+    linear-gradient(180deg, rgba(var(--r2-lamp), 0.06), rgba(var(--r2-lamp), 0) calc(var(--s) * 0.5)) 0 calc(var(--r2-top) + 1px) / 100% 100% no-repeat,
+    /* the lamp's own reflection in the lacquer, a soft long highlight behind the records */
+    radial-gradient(calc(var(--s) * 1.3) calc(var(--r2-top) * 0.6) at 50% 36%, rgba(var(--r2-lamp), 0.1), rgba(var(--r2-lamp), 0) 100%) 0 0 / 100% var(--r2-top) no-repeat,
+    /* the top itself */
+    linear-gradient(180deg, rgba(var(--r2-lamp), 0.07), rgba(var(--r2-lamp), 0.035)) 0 0 / 100% var(--r2-top) no-repeat;
+  /* Lit where the cone reaches it, dark towards the ends. */
+  -webkit-mask-image: radial-gradient(calc(var(--r2-rx) * 1.1) calc(var(--s) * 1.4) at 50% 0, #000 30%, rgba(0, 0, 0, 0.4) 64%, transparent 100%);
+  mask-image: radial-gradient(calc(var(--r2-rx) * 1.1) calc(var(--s) * 1.4) at 50% 0, #000 30%, rgba(0, 0, 0, 0.4) 64%, transparent 100%);
+}
+/* The wall's slats in the lacquer, at the back of the top where it meets them, fading forward: the
+   corner of the room is one corner. */
+.r2-counter__lit::before {
+  content: ''; position: absolute; left: 0; right: 0; top: 0; height: var(--r2-top);
+  background:
+    linear-gradient(90deg, transparent var(--r2-g), rgba(var(--r2-wood), 0.09) var(--r2-g) calc(100% - 2px), transparent calc(100% - 2px))
+    50% 0 / var(--r2-t) 100% repeat-x;
+  -webkit-mask-image: linear-gradient(180deg, #000, transparent 70%);
+  mask-image: linear-gradient(180deg, #000, transparent 70%);
+}
+
+/* Each sleeve stands in its own reflection on the lacquer: the bottom of its cover, flipped and a
+   little soft, inside the sleeve's face (r2/Carousel.astro), so it turns, shades and is pressed with
+   the sleeve. It fades out over the depth of the counter's top in front of the middle record. */
+.r2 .r2-mirror {
+  inset: 100% 0 auto 0; height: 16%; border-radius: 0;
+  background-size: 100% 100%; background-repeat: no-repeat;
+  -webkit-mask-image: linear-gradient(180deg, rgba(0, 0, 0, 0.24), rgba(0, 0, 0, 0.09) 40%, transparent 80%);
+  mask-image: linear-gradient(180deg, rgba(0, 0, 0, 0.24), rgba(0, 0, 0, 0.09) 40%, transparent 80%);
+  pointer-events: none;
+}
+/* The sleeve's shade reaches down over its reflection, so a sleeve turned away or gone into the pile
+   is dark in the lacquer too. */
+.r2 .v4-vinyl__shade {
+  bottom: -16%;
+  -webkit-mask-image: linear-gradient(180deg, #000 86.2%, transparent 100%);
+  mask-image: linear-gradient(180deg, #000 86.2%, transparent 100%);
+}
+/* Where it stands: a thin dark line of contact and a short shadow on the lacquer, under the lamp. It
+   turns with the sleeve, and seats it where the browser draws no reflection. */
+.r2 .v4-vinyl::after {
+  content: ''; position: absolute; left: 1%; right: 1%; top: 100%; height: calc(var(--s) * 0.03);
+  background: linear-gradient(180deg, rgba(0, 0, 0, 0.75), rgba(0, 0, 0, 0));
+  pointer-events: none;
+}
+
+/* ---------------------------------------------------------------- the headline on the wall
+   "music" is drawn as a rainbow on a black box (the bands are blended with `darken`, v4). On the lit
+   wall the box would show, so the word is laid on the wall with `lighten`: black leaves the wall as it
+   is, and the bright letters keep their colour. */
+.r2 .v4-word { mix-blend-mode: lighten; }
+
+/* ---------------------------------------------------------------- composition */
+.r2 .v4-intro { padding: calc(4.5rem + env(safe-area-inset-top, 0px)) 0 0; }
+.r2 .r2-shelf { padding-bottom: clamp(2rem, 5vw, 4rem); }
+.r2 .r2-shelf__head { padding-top: clamp(2rem, 4vw, 3.5rem); padding-bottom: clamp(0.25rem, 1vw, 0.75rem); }
+.r2 .v4-caption { margin-top: 0.5rem; }
+/* Text on the lit wall takes the lighter of Apple's two greys for secondary text on dark (apple.com's
+   #a1a1a6): the site's #86868b is drawn for black, and on the slats under the lamp it measured 3.2 to
+   3.7:1 at every size, with the pool kept soft and its hot part behind the records.
+   The caption's meta stays #86868b: it sits on the counter's dark face. */
+.r2 .v4-intro .lede, .r2 .v4-shelf__lede { color: #a1a1a6; }
+/* On a phone the room is tighter, so the caption, both lines of it, is on the first screen. */
+@media (max-width: 600px) {
+  .r2 .v4-intro { padding-top: calc(4rem + env(safe-area-inset-top, 0px)); }
+  .r2 .r2-shelf__head { padding-top: 1.5rem; gap: 0.5rem; }
+  .r2 .v4-caption { margin-top: 0.25rem; }
+}
+/* The room ends in the floor's black, and the footer stands on that floor, without a rule above it. */
+.r2 ~ .music-footer .music-footer__inner { border-top-color: transparent; }
+
+/* ---------------------------------------------------------------- a record taken out
+   It is lifted out in the same room: the backdrop lets a little of the room through, one step darker. */
+.r2 .v4-open__scrim { background: rgba(11, 11, 12, 0.88); }
+/* The page's words leave the room while the record is out (r2.ts), so only the room shows behind the
+   record's own words; they come back as it goes home. Each part fades on its own: a fading parent
+   would cut "music" off from the wall it is blended with, and its black box would show. */
+.r2 :is(.v4-love, .v4-word, .v4-intro .lede, .r2-shelf__head, .r2-caption) { transition: opacity 320ms ease; }
+.r2[data-r2-out] :is(.v4-love, .v4-word, .v4-intro .lede, .r2-shelf__head, .r2-caption) { opacity: 0; transition-duration: 160ms; }
+
+/* ---------------------------------------------------------------- the lamp comes on (r2/intro.ts)
+   The intro plays in the dark. Until it has run, the room's light is off; if its script never comes,
+   the light comes on after a few seconds anyway. */
+@media (prefers-reduced-motion: no-preference) {
+  html.js .r2[data-intro] [data-r2-light] { opacity: 0; animation: v4-intro-failsafe 1ms 6s both; }
+}
+
+/* ---------------------------------------------------------------- preferences
+   More contrast: the room's light is turned down, so text sits on near-black. Less transparency: the
+   record out of the row has a solid backdrop again. */
+@media (prefers-contrast: more) {
+  .r2-wall { opacity: 0.45; }
+  .r2 .v4-open__scrim { background: var(--v4-stage); }
+}
+@media (prefers-reduced-transparency: reduce) {
+  .r2 .v4-open__scrim { background: var(--v4-stage); }
+}

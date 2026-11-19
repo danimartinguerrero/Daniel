@@ -1,8 +1,8 @@
 /**
- * The song in the island opens its page, as a Live Activity opens its app from the Dynamic Island:
- * the music page grows out of the island card that was pressed and fills the screen, and the page
- * that was there dims behind it. Leaving the music page plays it backwards, faster: the page shrinks
- * back into the island, where the song goes on playing. Every other change of page still cuts.
+ * The music bubble in the island opens its page, as a Live Activity opens its app from the Dynamic
+ * Island: the music page grows out of the music bubble that was pressed and fills the screen, and
+ * the page that was there dims behind it. Leaving the music page plays it backwards, faster: the
+ * page shrinks back into the island. Every other change of page still cuts.
  *
  * The router already runs each change of page inside a view transition, with no animation of its own
  * (transition:animate="none" on <html>); this only animates that transition's snapshots, with the
@@ -13,8 +13,7 @@
 import type { TransitionBeforePreparationEvent, TransitionBeforeSwapEvent } from 'astro:transitions/client';
 
 const MUSIC = '/music';
-/** The island's corners: the open card and the resting pill (lib/island/metrics.ts, Island.astro). */
-const CARD_RADIUS = 47.9;
+/** The island's corners: the resting pill and detached music bubble (lib/island/metrics.ts, Island.astro). */
 const PILL_RADIUS = 18.42;
 /** How far the pages scale about the island while the clip opens or closes. */
 const DEPTH = 0.94;
@@ -30,16 +29,16 @@ const supported = 'startViewTransition' in document;
 
 const path = (url: URL) => url.pathname.replace(/\/+$/, '') || '/';
 const island = () => document.querySelector<HTMLElement>('[data-island-nav] [data-islandcn] > div');
-const shape = () => document.querySelector('[data-island-nav] [data-islandcn] svg g path')?.getBoundingClientRect();
+const bubble = () => document.querySelector('.island-nav__music')?.getBoundingClientRect();
 const pill = () => document.querySelector('.island-nav__hit')?.getBoundingClientRect();
 
-/** The island card as it was under the press, before it starts to close. */
+/** The music bubble as it was under the press. */
 let pressed: DOMRect | undefined;
 let mode: 'open' | 'close' | null = null;
 let oldName = '';
 
 document.addEventListener('click', (event) => {
-  if (event.target instanceof Element && event.target.closest('.island-nav__song')) pressed = shape();
+  if (event.target instanceof Element && event.target.closest('.island-nav__music')) pressed = bubble();
 }, { capture: true });
 
 document.addEventListener('astro:before-preparation', (event) => {
@@ -48,7 +47,7 @@ document.addEventListener('astro:before-preparation', (event) => {
   mode = null;
   island()?.style.removeProperty('view-transition-name');
   if (!supported || reduce.matches || leaving === arriving) return;
-  if (arriving && sourceElement?.closest('.island-nav__song')) mode = 'open';
+  if (arriving && sourceElement?.closest('.island-nav__music')) mode = 'open';
   // A phone's back swipe has already slid the page away; don't play a second motion after it.
   else if (leaving && !(navigationType === 'traverse' && coarse.matches)) mode = 'close';
   if (mode) oldName = getComputedStyle(document.documentElement).viewTransitionName;
@@ -80,10 +79,10 @@ function play(kind: 'open' | 'close', from: DOMRect | undefined) {
   const newName = getComputedStyle(root).viewTransitionName;
   const W = innerWidth, H = innerHeight;
   const open = kind === 'open';
-  // Where the page starts (opening) or ends (closing): the island as it is now, already on its
-  // way to the pill (or the card that was pressed, if it can't be read), or the pill itself.
-  const r = (open ? shape() ?? from : pill()) ?? new DOMRect(W / 2 - 77.5, 13.91, 155, 36.84);
-  const radius = Math.min(open ? CARD_RADIUS : PILL_RADIUS, r.height / 2);
+  // Where the page starts (opening) or ends (closing): the detached music bubble on the way in,
+  // or the resting pill on the way back out.
+  const r = (open ? from ?? bubble() : pill()) ?? new DOMRect(W / 2 - 47.425, 13.91, 94.85, 36.84);
+  const radius = Math.min(PILL_RADIUS, r.height / 2);
   // The page scales about the island; the clip is drawn before that scale, so it is placed where
   // the scale will carry it onto the island.
   const ox = r.x + r.width / 2, oy = r.y + r.height / 2;

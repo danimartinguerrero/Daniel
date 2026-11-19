@@ -1,0 +1,84 @@
+---
+/**
+ * The instruments, prototype "Stage" (/music/instruments-stage), next to the live one in ../strings.
+ * Each chapter is a dark stage held on screen, the whole screen: the instrument stands at its centre,
+ * its title hangs above it in the spot's light, and the story is told around it, the first sentence
+ * under the title, then one either side of the neck (home and school, for the bass). As the words fill
+ * with light (text-fill.ts, the site's one pace) the stage answers them like a lighting desk:
+ *   1. the title: the room is dark, the instrument small at the back, only its outline lit;
+ *   2. the first sentence: the spot comes on and the camera comes in to it;
+ *   3. the left sentence: the light swings to the left and the instrument turns to it;
+ *   4. the right sentence: the light swings across and the instrument turns with it;
+ *   5. held: it faces you, fully lit, its reflection in the pool on the floor.
+ * The bass stands on the school band's stage, in cool white light; the guitar in a room at home, in a
+ * warm lamp's light.
+ *
+ * Once it is lit, a sideways drag turns it, and it settles facing you again (stage.ts). Without the
+ * script, or with reduced motion, the stage is lit and still.
+ */
+import './stage.css';
+import '@/styles/statement.css';
+import '../v4/text-fill.css';
+
+const heading = 'I play a few instruments, too.';
+// `light`: the colour of the chapter's light, for the spot, the pool, the haze and the key and right
+// rim on the instrument. `paint`: the model's material that gets the satin finish (instrument.ts).
+const chapters = [
+  {
+    noun: 'bass', instrument: 'pj-bass', paint: 'BodyMaterial', light: '#dfe8ff', mood: 'stage',
+    title: 'My dad taught me to play bass.',
+    // The story as written, a sentence at a time: under the title, then left of the neck, then right.
+    body: ['I used to play bass in my school band.', 'At home I could stop and ask my dad to show me a part again.', 'At school I had to keep an ear on the drums and stay with everyone else.'],
+  },
+  {
+    noun: 'guitar', instrument: 'les-paul', paint: 'MainBake', light: '#ffd9ae', mood: 'home',
+    title: 'Acoustic came next.',
+    body: ['My dad taught me acoustic guitar, too.', 'When I switched to electric, I learned on my own.', 'I still love putting on a song and working out where those notes are on the fretboard.'],
+  },
+];
+---
+<div class="st" data-st>
+  <section class="st__intro" id="instruments" aria-labelledby="part-instruments" data-fill-section>
+    <div class="st__intro-stage statement__slide" data-fill-stage>
+      <h2 class="st__heading" id="part-instruments" data-fill-text>{heading.split(' ').map(word => <><span class="w" data-w>{word}</span>{' '}</>)}</h2>
+    </div>
+  </section>
+  {chapters.map(({ noun, instrument, paint, light, mood, title, body }, index) => (
+    <section class={`st__chapter st--${mood}`} aria-labelledby={`st-${index}`} data-fill-section
+      data-model={`/music/instruments/${instrument}.glb`} data-paint={paint} data-light={light}
+      style={`--light:${light}`}>
+      <div class="st__stage statement__slide" data-fill-stage>
+        <div class="st__art" data-st-art>
+          <div class="st__room" aria-hidden="true">
+            <div class="st__haze" data-st-layer="haze"></div>
+            <div class="st__beam" data-st-layer="beam"><i></i></div>
+            <div class="st__wash st__wash--left" data-st-layer="left"></div>
+            <div class="st__wash st__wash--right" data-st-layer="right"></div>
+            <div class="st__floor" data-st-layer="floor"></div>
+            <div class="st__pool" data-st-layer="pool"></div>
+          </div>
+          <img class="st__still" loading="lazy" decoding="async" alt="" width="960" height="960"
+            src={`/music/instruments/${instrument}/rest.webp`} />
+          <canvas class="st__mirror" width="1" height="1" aria-hidden="true"></canvas>
+          <canvas class="st__frame" width="1" height="1" aria-hidden="true"></canvas>
+          <div class="st__grab" role="slider" tabindex="-1" aria-label={`Turn the ${noun}`}
+            aria-valuemin="0" aria-valuemax="359" aria-valuenow="0" aria-valuetext="Facing you"
+            data-st-grab></div>
+          <div class="st__grain" aria-hidden="true"></div>
+        </div>
+        <div class="st__content">
+          <div class="st__head">
+            <h3 id={`st-${index}`} class="st__title" data-fill-text>{title.split(' ').map(word => <><span class="w" data-w>{word}</span>{' '}</>)}</h3>
+            <p class="st__lede" data-fill-text>{body[0].split(' ').map(word => <><span class="w" data-w>{word}</span>{' '}</>)}</p>
+          </div>
+          <p class="st__side st__side--left" data-fill-text data-st-side="left">{body[1].split(' ').map(word => <><span class="w" data-w>{word}</span>{' '}</>)}</p>
+          <p class="st__side st__side--right" data-fill-text data-st-side="right">{body[2].split(' ').map(word => <><span class="w" data-w>{word}</span>{' '}</>)}</p>
+        </div>
+      </div>
+    </section>
+  ))}
+</div>
+
+<script>
+  import './stage';
+</script>

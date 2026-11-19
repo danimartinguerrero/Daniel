@@ -1,0 +1,14 @@
+---
+/**
+ * Way c2, on the climb's stage: the passage about the beats and the canvas the controller and its
+ * loop are drawn on (film.ts, moved by the scroll from climb.ts). Without the film (no script, or
+ * reduced motion) the passage is the page's next paragraph and the controller a still picture under it.
+ */
+import { c2Copy } from './copy';
+---
+<p class="c2-line" data-c2-line>
+  {c2Copy.beats.split(' ').map((word) => <><span class="w" data-w>{word}</span>{' '}</>)}
+</p>
+<div class="c2-film" data-c2-film aria-hidden="true">
+  <canvas class="c2-film__canvas"></canvas>
+</div>

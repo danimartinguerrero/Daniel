@@ -1,0 +1,19 @@
+---
+/**
+ * Way c1: the wall behind the shelf, with the guitar and the bass hanging on it, and what is said
+ * there. The canvas is drawn by scene.ts (three.js) once the page has climbed; the lines are the
+ * page's own text, lit a letter at a time like the passages in the ring (wall.ts).
+ */
+import { c1Copy } from './copy';
+---
+<div class="c1-wall" data-c1-wall>
+  <canvas class="c1-wall__canvas" data-c1-canvas aria-hidden="true"></canvas>
+  <div class="c1-wall__edge" aria-hidden="true"></div>
+  <div class="c1-says" data-c1-says>
+    {c1Copy.wall.map((line) => (
+      <p class="c1-says__line" data-c1-line>
+        {line.split(' ').map((word) => <><span class="w" data-w>{word}</span>{' '}</>)}
+      </p>
+    ))}
+  </div>
+</div>

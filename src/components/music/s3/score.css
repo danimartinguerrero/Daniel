@@ -1,0 +1,87 @@
+/* Sketch s3/a, "Quantise". Every rule under .s3 / s3a-. */
+
+.s3 .v4-shelf { padding-bottom: clamp(3rem, 6vw, 5rem); }
+
+.s3 .s3a { padding-block: clamp(3rem, 8vw, 7rem) clamp(6rem, 12vw, 10rem); }
+.s3 .s3a-score {
+  --f: clamp(1.75rem, 4.2vw, 3.5rem); /* the script fits it to the bar */
+  --track: -0.02em;
+  --steps: 16;
+  --tick: 1.5rem; /* the ruler over each bar */
+  --lh: calc(var(--f) * 1.3);
+}
+
+/* A bar: a ruler of sixteenths, the beats marked longer, and a line of words hung from it. */
+.s3 .s3a-bar { position: relative; padding-top: var(--tick); margin-bottom: calc(var(--f) * 0.55); }
+.s3 .s3a-ticks {
+  position: absolute; left: 0; right: 0; top: 0.5rem; height: 0.625rem;
+  background:
+    repeating-linear-gradient(90deg, rgba(245, 245, 247, 0.5) 0 1px, transparent 1px calc(100% / var(--steps) * 4)) 0 0 / 100% 100% no-repeat,
+    repeating-linear-gradient(90deg, rgba(245, 245, 247, 0.22) 0 1px, transparent 1px calc(100% / var(--steps))) 0 100% / 100% 45% no-repeat;
+  opacity: 0.35;
+}
+.s3 .s3a-beats { position: absolute; left: 0; right: 0; top: -0.875rem; height: 1rem; pointer-events: none; }
+.s3 .s3a-beats > span {
+  position: absolute; left: calc(var(--beat) * 25%); transform: translateX(-0.1em);
+  font-size: 0.8125rem; font-weight: 500; letter-spacing: 0.01em; color: var(--on-dark-2);
+  font-variant-numeric: tabular-nums;
+}
+
+.s3 .s3a-line { position: relative; margin: 0; height: var(--lh); }
+.s3 .s3a-w {
+  position: absolute; top: 0; left: calc(100% * var(--on) / var(--steps));
+  font-size: var(--f); line-height: 1.2; font-weight: var(--weight, 600); letter-spacing: var(--track);
+  white-space: nowrap; color: var(--on-dark);
+  touch-action: pan-y; cursor: grab; -webkit-user-select: none; user-select: none;
+  transform-origin: 30% 70%;
+}
+.s3 .s3a-w.is-held { cursor: grabbing; z-index: 1; }
+/* His bar: soft, as it was played. */
+.s3 .s3a-bar.is-late .s3a-w { color: #d2d2d7; }
+
+.s3 .s3a-note {
+  max-width: 34rem; margin-top: 3rem; padding: 0.75rem 1rem;
+  border: 1px dashed rgba(245, 245, 247, 0.25); border-radius: 10px;
+  font-size: 0.8125rem; line-height: 1.45; color: var(--on-dark-2);
+}
+
+/* On a phone a bar is two lines of eight sixteenths. */
+@media (max-width: 640px) {
+  .s3 .s3a-score { --steps: 8; --lh: calc(var(--f) * 1.3); }
+  .s3 .s3a-line { height: calc(var(--lh) * 2 + var(--tick)); }
+  .s3 .s3a-w { left: calc(100% * (var(--on) - var(--row) * 8) / 8); top: calc(var(--row) * (var(--lh) + var(--tick))); }
+  .s3 .s3a-bar::after {
+    content: ''; position: absolute; left: 0; right: 0; top: calc(var(--tick) + var(--lh) + 0.5rem); height: 0.625rem;
+    background:
+      repeating-linear-gradient(90deg, rgba(245, 245, 247, 0.5) 0 1px, transparent 1px 50%) 0 0 / 100% 100% no-repeat,
+      repeating-linear-gradient(90deg, rgba(245, 245, 247, 0.22) 0 1px, transparent 1px 12.5%) 0 100% / 100% 45% no-repeat;
+    opacity: 0.35;
+  }
+  .s3 .s3a-beats > span { left: calc(var(--beat) * 50%); }
+  .s3 .s3a-beats > span:nth-child(n + 3) { display: none; }
+}
+
+/* The beats run down through every bar, so a word on the third beat sits under the others on it. */
+.s3 .s3a-score { position: relative; }
+.s3 .s3a-score::before {
+  content: ''; position: absolute; left: 0; right: 0; top: 0; bottom: 5.5rem; pointer-events: none;
+  background: repeating-linear-gradient(90deg, rgba(245, 245, 247, 0.07) 0 1px, transparent 1px calc(100% / var(--steps) * 4));
+}
+/* Where each word starts, marked on the ruler; its height is how hard the note is hit. */
+.s3 .s3a-notch {
+  position: absolute; top: calc(var(--tick) * -1 + 0.5rem); left: calc(100% * var(--on) / var(--steps));
+  width: 3px; height: calc(0.25rem + var(--vel) * 0.75rem); margin-left: -1px; border-radius: 1.5px;
+  background: var(--on-dark); transform-origin: 50% 0; will-change: transform;
+}
+.s3 .s3a-bar.is-late .s3a-notch { background: #d2d2d7; }
+@media (max-width: 640px) {
+  .s3 .s3a-score::before { background: repeating-linear-gradient(90deg, rgba(245, 245, 247, 0.07) 0 1px, transparent 1px 50%); }
+  .s3 .s3a-notch { left: calc(100% * (var(--on) - var(--row) * 8) / 8); top: calc(var(--row) * (var(--lh) + var(--tick)) - var(--tick) + 0.5rem); }
+}
+/* The notch stands on the ruler, clear of the word under it. */
+.s3 .s3a-notch { top: calc(var(--tick) * -1 + 0.4rem); height: calc(0.2rem + var(--vel) * 0.45rem); width: 2px; margin-left: 0; }
+@media (max-width: 640px) {
+  .s3 .s3a-score::before { display: none; }
+  .s3 .s3a-notch { top: calc(var(--row) * (var(--lh) + var(--tick)) - var(--tick) + 0.4rem); opacity: 0.8; }
+  .s3 .s3a-bar { margin-bottom: calc(var(--f) * 0.9); }
+}

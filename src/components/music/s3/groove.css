@@ -1,0 +1,71 @@
+/* Sketch s3/b, "Groove". Every rule under .s3 / s3b-. */
+
+.s3 .v4-shelf { padding-bottom: clamp(2rem, 5vw, 4rem); }
+
+/* The section is the disc's stage held on screen while the page scrolls under it: the scroll plays it. */
+.s3 .s3b { position: relative; height: 260svh; }
+.s3 .s3b-stage {
+  position: sticky; top: 0; height: 100svh; overflow: hidden;
+  display: grid; place-items: center;
+}
+.s3 .s3b-disc {
+  --d: min(100svh - 5rem, 58rem, 100vw - 2 * var(--gutter));
+  position: relative; width: var(--d); aspect-ratio: 1; border-radius: 50%;
+  touch-action: pan-y pinch-zoom; cursor: grab;
+  -webkit-user-select: none; user-select: none;
+}
+.s3 .s3b-disc.is-held { cursor: grabbing; }
+.s3 .s3b-spin { position: absolute; inset: 0; will-change: transform; }
+.s3 .s3b-svg { display: block; width: 100%; height: 100%; overflow: visible; }
+
+/* The vinyl. Black with the faintest warmth, its rim lit from above (the lamp over the records). */
+.s3 .s3b-vinyl { fill: #0a0a0b; stroke: rgba(255, 255, 255, 0.07); stroke-width: 2; }
+.s3 .s3b-deadwax { fill: #101012; }
+.s3 .s3b-groove { fill: none; stroke: rgba(255, 255, 255, 0.055); stroke-width: 1.1; }
+.s3 .s3b-leadout { stroke: rgba(255, 255, 255, 0.07); }
+
+.s3 .s3b-groove-text { font-family: var(--font); font-weight: 500; }
+.s3 .s3b-n { fill: #8e8e93; font-weight: 400; font-variant-numeric: tabular-nums; }
+.s3 .s3b-t { fill: #ececf0; }
+.s3 .s3b-f { fill: #8e8e93; font-weight: 400; }
+
+/* The run-out note: scratched by hand into the matte wax, in the mono face. */
+.s3 .s3b-etch { font-family: var(--mono); fill: #a9a9ae; letter-spacing: 0.04em; }
+
+.s3 .s3b-label-shade { fill: url(#none); fill: rgba(0, 0, 0, 0); }
+.s3 .s3b-label text { font-family: var(--font); fill: #f5f5f7; }
+.s3 .s3b-label.is-light text { fill: #1d1d1f; }
+.s3 .s3b-label-title { font-size: 30px; font-weight: 700; letter-spacing: -0.02em; }
+.s3 .s3b-label-artist { font-size: 19px; font-weight: 500; letter-spacing: -0.005em; }
+.s3 .s3b-label-meta { font-size: 13.5px; font-weight: 500; letter-spacing: 0.03em; opacity: 0.8; }
+.s3 .s3b-hole { fill: #000; }
+
+/* The light on it does not turn with it: two soft wedges along the line to the lamp, brighter on top,
+   and a warm wash from above. It is what makes a turning record look like it turns. */
+.s3 .s3b-sheen {
+  position: absolute; inset: 0; border-radius: 50%; pointer-events: none;
+  background:
+    radial-gradient(70% 55% at 50% 0%, rgba(255, 240, 224, 0.09), transparent 70%),
+    conic-gradient(from 0deg,
+      rgba(255, 255, 255, 0.13) 0deg, rgba(255, 255, 255, 0.04) 9deg, transparent 22deg,
+      transparent 158deg, rgba(255, 255, 255, 0.025) 171deg, rgba(255, 255, 255, 0.06) 180deg, rgba(255, 255, 255, 0.025) 189deg, transparent 202deg,
+      transparent 338deg, rgba(255, 255, 255, 0.04) 351deg, rgba(255, 255, 255, 0.13) 360deg);
+  -webkit-mask-image: radial-gradient(circle, transparent 0 32.5%, #000 33.5%, #000 98.6%, transparent 99.2%);
+  mask-image: radial-gradient(circle, transparent 0 32.5%, #000 33.5%, #000 98.6%, transparent 99.2%);
+  mix-blend-mode: screen;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.16);
+}
+
+/* On a phone the record is far bigger than the screen and rises from below it: the top of the side,
+   where the words read upright, fills the screen. */
+@media (max-width: 640px) {
+  .s3 .s3b { height: 240svh; }
+  .s3 .s3b-stage { place-items: start center; }
+  .s3 .s3b-disc { --d: 205vw; margin-top: 5.5rem; }
+}
+.s3 .s3b-silent { stroke: rgba(255, 255, 255, 0.04); stroke-width: 0.8; }
+.s3 .s3b-disc { left: auto; }
+@media (max-width: 640px) {
+  .s3 .s3b-stage { display: block; }
+  .s3 .s3b-disc { position: absolute; left: 50%; margin-left: calc(var(--d) / -2); top: 0; }
+}

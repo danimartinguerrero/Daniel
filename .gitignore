@@ -7,7 +7,13 @@ test-results/
 playwright-report/
 .lighthouseci/
 .venv/
+__pycache__/
 .worktrees/
 .private-exclusions.json
 .claude/skills/
 .agents/
+
+# Local performance plans and agent reviews (do not publish)
+/docs/plan-rendimiento.md
+/docs/fable-performance-plan.md
+/docs/fable-performance-consensus.md

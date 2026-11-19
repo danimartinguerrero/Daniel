@@ -1,0 +1,24 @@
+---
+/**
+ * The page's last part, before the footer: the owner playing. Laid out like the credits on the back of
+ * a sleeve, an instrument to a line and a sentence on how it goes with it. The words are his own
+ * (copy.ts), nothing added.
+ */
+import { scroll4Copy } from './copy';
+
+const copy = scroll4Copy.playing;
+---
+<section class="sc4-play" aria-labelledby="sc4-play-title">
+  <header class="container sc4-head" data-sc4-reveal>
+    <p class="eyebrow sc4-eyebrow">{copy.eyebrow}</p>
+    <h2 class="headline" id="sc4-play-title">{copy.headline}</h2>
+  </header>
+  <ul class="container sc4-credits" role="list">
+    {copy.rows.map((row) => (
+      <li class="sc4-credit" data-sc4-reveal>
+        <h3 class="sc4-credit__name">{row.name}</h3>
+        <p class="sc4-credit__text">{row.text}</p>
+      </li>
+    ))}
+  </ul>
+</section>

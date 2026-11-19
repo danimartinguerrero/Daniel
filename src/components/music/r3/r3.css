@@ -1,0 +1,146 @@
+/* Music, direction 3: "Liner notes". Every rule is under .r3 (or prefixed r3-). Loaded after
+   v4/listening-bar.css, whose rules it rearranges rather than repaints.
+
+   The page is laid out on the site's wide container (1200px) in two columns, like the back of a
+   sleeve: a wide one for the headline and the records face on, and a narrow one, the notes, for the
+   lede and the records from the side. The carousel runs off the page on the left and the stack of
+   spines on the right, so the two halves lean on each other and the width is used, not stretched. */
+
+.r3 {
+  --r3-notes: 26rem;
+  --r3-gap: 3.5rem;
+  --r3-unit: 2.5rem; /* one disc's spine in the stack: on a phone the name takes two lines */
+  /* The vertical rhythm opens up on a tall window, so the first screen is composed at 1130px as at 900. */
+  --r3-v: clamp(2rem, 9svh - 2.5rem, 5.5rem);
+}
+.r3-intro, .r3-shelf { container-type: inline-size; }
+/* What lies between the frame and the edge of the page, either side. */
+.r3-intro, .r3-shelf { --r3-edge: max(var(--gutter), (100cqw - var(--wide)) / 2); }
+.r3-frame { width: min(100% - 2 * var(--gutter), var(--wide)); margin-inline: auto; }
+
+/* ---------------------------------------------------------------- the first line: headline and lede */
+.r3-intro__inner { display: grid; justify-items: start; gap: 0.75rem; }
+.r3-intro__lede { max-width: 30rem; }
+
+/* ---------------------------------------------------------------- the records, two ways */
+.r3-shelf { padding-bottom: clamp(4rem, 8vw, 6rem); }
+.r3-shelf__grid { display: grid; grid-template-columns: minmax(0, 1fr); }
+.r3-shelf__head { padding-top: clamp(1rem, 4vw, 4rem); }
+@media (max-width: 1099px) {
+  /* On a phone the records come up into the first screen: the intro keeps only a section's gap. */
+  .r3-intro { padding-bottom: 1.5rem; }
+}
+/* The carousel spans the page, as it always has. */
+.r3-bar { margin-inline: calc(-1 * var(--r3-edge)); }
+.r3-caption { position: relative; z-index: 1; }
+.r3-notes { position: relative; z-index: 1; margin-top: 2rem; }
+
+/* ---------------------------------------------------------------- the pile
+   One spine per record, a double album's 1.4 times a single's (true to which is thicker, not to the
+   millimetre, so the pile stays one object). It runs off the right edge of the page; the names and
+   years stay on the grid. Seams between records are their own edges: each spine's top catches the
+   lamp, its underside is in shade. */
+.r3-stack {
+  --r3-lp: 2.25rem;
+  --r3-pull: 1.25rem; /* how far the lit spine comes out */
+  position: relative;
+  list-style: none; margin: 0 calc(-1 * var(--r3-edge)) 0 0; padding: 0;
+  display: flex; flex-direction: column;
+}
+.r3-spine { position: relative; min-width: 0; height: var(--r3-lp); }
+.r3-spine[data-discs='2'] { height: calc(var(--r3-lp) * 1.4); }
+/* The pulled spine's shadow on its neighbours where it overhangs them (its opacity is the pull). */
+.r3-spine__shadow {
+  position: absolute; inset: 0; pointer-events: none; opacity: 0;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.55), 0 6px 16px rgba(0, 0, 0, 0.4);
+}
+.r3-spine__body {
+  position: relative; display: block;
+  /* Longer than its place by as far as it is ever pulled out, so its far end never shows. */
+  width: calc(100% + var(--r3-pull)); height: 100%; margin: 0; padding: 0; border: 0;
+  background: none; text-align: left; cursor: pointer;
+  font-size: 0.9375rem; line-height: 1.2;
+  transition: transform 120ms var(--ease-out);
+}
+.r3-spine__body:active { transform: scale(0.985); }
+/* The focused spine comes in front of its neighbours, so its ring is whole. */
+.r3-spine:has(:focus-visible) { z-index: 2 !important; }
+.r3-spine__body:focus-visible { outline: 2px solid var(--blue); outline-offset: 2px; border-radius: 2px; z-index: 2; }
+.r3-spine__face {
+  position: absolute; inset: 0;
+  display: flex; align-items: center; gap: 0.75rem;
+  padding: 0 calc(var(--r3-edge) + var(--r3-pull) + 0.75rem) 0 0.75rem;
+  border-radius: 2px 0 0 2px;
+}
+.r3-spine__face--rest {
+  background: var(--deep); color: #d2d2d7;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.09), inset 0 -1px 0 rgba(0, 0, 0, 0.5);
+}
+.r3-spine__face--lit {
+  background: var(--spine); opacity: 0;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.34), inset 0 -1px 0 rgba(0, 0, 0, 0.32);
+  will-change: opacity;
+}
+.r3-spine__face--lit[data-ink='dark'] { color: #1d1d1f; }
+.r3-spine__face--lit[data-ink='light'] { color: #f5f5f7; }
+/* One line: the title, then the artist only where it fits whole (a second line, cut off, if not). */
+.r3-spine__name { display: flex; flex-wrap: wrap; column-gap: 0.5rem; min-width: 0; height: 1.2em; overflow: hidden; }
+.r3-spine__title { font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
+.r3-spine__artist { white-space: nowrap; color: #aeaeb2; }
+.r3-spine__year { margin-left: auto; font-variant-numeric: tabular-nums; color: #aeaeb2; flex: none; }
+/* Lit, the name is the one on screen: the title a step stronger, the rest in the spine's own ink. */
+.r3-spine__face--lit .r3-spine__title { font-weight: 600; }
+.r3-spine__face--lit :is(.r3-spine__artist, .r3-spine__year) { color: inherit; }
+
+/* What the pile stands on: a line of the lamp's light on the surface under the last record. */
+.r3-stack::after {
+  content: ''; position: absolute; left: 0; right: 0; bottom: -1px; height: 1px; pointer-events: none;
+  background: linear-gradient(90deg, rgba(255, 244, 232, 0.22), rgba(255, 244, 232, 0.08) 60%, transparent);
+}
+
+/* Before the script, the record the carousel opens on is the lit one, pulled out. */
+.r3-spine[aria-current] { transform: translate3d(calc(-1 * var(--r3-pull)), 0, 0); z-index: 1; }
+.r3-spine[aria-current] .r3-spine__face--lit { opacity: 1; }
+.r3-spine[aria-current] .r3-spine__shadow { opacity: 1; }
+
+/* ---------------------------------------------------------------- two columns */
+@media (min-width: 1100px) {
+  .r3 .v4-bar { --s: clamp(196px, 33svh, 340px); }
+  .r3-intro { padding-top: calc(4.5rem + var(--r3-v)); padding-bottom: var(--r3-v); }
+  .r3-intro__inner {
+    grid-template-columns: minmax(0, 1fr) var(--r3-notes); column-gap: var(--r3-gap);
+    align-items: end;
+  }
+  .r3-intro__lede { max-width: none; padding-bottom: 0.5rem; }
+
+  .r3-shelf__grid {
+    grid-template-columns: minmax(0, 1fr) var(--r3-notes); column-gap: var(--r3-gap);
+    grid-template-areas: 'head notes' 'bar notes';
+    grid-template-rows: auto auto;
+    border-top: 1px solid var(--v4-hair);
+  }
+  .r3-shelf__head { grid-area: head; padding-top: var(--r3-v); padding-bottom: 1rem; }
+  .r3-bar {
+    grid-area: bar;
+    /* Centred on its column, so it reaches as far under the pile as it does off the page. */
+    margin-inline: calc(-1 * var(--r3-edge));
+  }
+  /* The stack names the record in the middle, so the caption under the carousel steps aside. */
+  .r3-caption { display: none; }
+  /* The pile stands from the top of the heading to the foot of the sleeve (the bar keeps 32px under
+     it for the turn in perspective). Its spines share that height, a double 1.4 times a single. */
+  .r3-notes { grid-area: notes; margin: var(--r3-v) 0 32px; display: flex; }
+  .r3-stack { flex: 1; }
+  .r3-spine { height: auto; flex: 1 1 0; }
+  .r3-spine[data-discs='2'] { height: auto; flex-grow: 1.4; }
+  /* The pile is in front of the carousel: the far records slide in behind it, into its shadow. */
+  .r3-stack::before {
+    content: ''; position: absolute; top: 0; bottom: 0; right: 100%; width: 3rem; pointer-events: none;
+    background: linear-gradient(90deg, transparent, rgba(0, 0, 0, 0.75));
+  }
+}
+
+@media (prefers-contrast: more) {
+  .r3-spine__face--rest { color: #f5f5f7; }
+  .r3-spine__face--rest :is(.r3-spine__artist, .r3-spine__year) { color: #d2d2d7; }
+}

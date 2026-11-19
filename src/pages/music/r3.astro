@@ -1,0 +1,58 @@
+---
+/**
+ * Music, direction 3 of four: "Liner notes". The page is set out like the back of a sleeve: the
+ * headline and its lede share one line of columns, and below them the records are seen two ways at
+ * once, face on in the carousel and from the side in a stack of spines, which is also their index.
+ * The intro and the records are the site's own (v4); this page only arranges them.
+ */
+import MusicShell from '@/components/music/MusicShell.astro';
+import Headline from '@/components/music/v4/Headline.astro';
+import Carousel from '@/components/music/v4/Carousel.astro';
+import Caption from '@/components/music/v4/Caption.astro';
+import OpenRecord from '@/components/music/v4/OpenRecord.astro';
+import Stack from '@/components/music/r3/Stack.astro';
+import { r3Copy } from '@/components/music/r3/copy';
+import '@/components/music/v4/listening-bar.css';
+import '@/components/music/r3/r3.css';
+---
+<MusicShell title="Music">
+  <main id="main" class="v4 r3" data-music-page data-intro>
+    <div class="v4-page" data-v4-page>
+      <section class="v4-intro r3-intro" aria-labelledby="v4-title">
+        <div class="r3-frame r3-intro__inner">
+          <Headline />
+          <p class="lede r3-intro__lede" data-intro-rest>{r3Copy.lede}</p>
+        </div>
+      </section>
+
+      <section class="v4-shelf r3-shelf" aria-labelledby="v4-shelf-title" data-intro-rest>
+        <div class="r3-frame r3-shelf__grid">
+          <header class="v4-shelf__head r3-shelf__head">
+            <p class="eyebrow v4-eyebrow">{r3Copy.shelf.eyebrow}</p>
+            <h2 class="v4-shelf__title" id="v4-shelf-title">{r3Copy.shelf.headline}</h2>
+            <p class="lede v4-shelf__lede">{r3Copy.shelf.lede}</p>
+          </header>
+
+          <div class="v4-bar r3-bar">
+            <div class="v4-bar__wall" aria-hidden="true"></div>
+            <Carousel />
+          </div>
+
+          <div class="r3-caption"><Caption /></div>
+
+          <div class="r3-notes">
+            <Stack />
+          </div>
+        </div>
+      </section>
+    </div>
+
+    <OpenRecord />
+  </main>
+</MusicShell>
+
+<script>
+  import '@/components/music/v4/listening-bar';
+  import '@/components/music/v4/intro';
+  import '@/components/music/r3/r3';
+</script>

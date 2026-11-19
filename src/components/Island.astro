@@ -5,80 +5,128 @@
  * opens and what it holds. Without JavaScript the links show as a plain bar instead.
  *
  * The site changes page with Astro's client router, and the island is the one thing that stays:
- * `transition:persist` carries the same island, mounted and with its song playing, into every page.
- * Its props are not persisted: each page renders it with its own `home`, and the router hands those
+ * `transition:persist` carries the same island, mounted, into every page. Its props are not
+ * persisted: each page renders it with its own `home` and `current`, and the router hands those
  * to the island already there, which re-renders its links and keeps its state.
  */
 import { IslandNav } from './IslandNav';
 
 // The links point at sections of the home page: bare anchors there, "/#..." from any other page.
-const home = Astro.url.pathname === '/' ? '' : '/';
+const current = Astro.url.pathname;
+const home = current === '/' ? '' : '/';
 ---
-<IslandNav client:load home={home} transition:persist="island" />
+<IslandNav client:load home={home} current={current} transition:persist="island" />
 <noscript>
   <nav class="island-fallback" aria-label="Primary">
+    <a href={home || '#top'}>Home</a>
     <a href={`${home}#projects`}>Projects</a>
     <a href={`${home}#studies`}>Studies</a>
     <a href={`${home}#how-i-work`}>How I work</a>
     <a href={`${home}#contact`}>Contact</a>
+    <a href="/music">Music</a>
   </nav>
 </noscript>
 
 <style is:global>
-  /* The hit area sits over the resting compact pill (13.91 from the top, as tall as idle). On dark
-     pages the engine draws its own keyline around it. */
+  /* The hit area sits strictly over the resting pill (islandMetrics.idle, 13.91 from the top).
+     On dark pages the engine draws its own keyline around it. */
   .island-nav__hit {
     position: fixed; top: 13.91px; left: 50%; z-index: 51;
     translate: -50% 0;
-    width: 155px; height: 36.84px; border-radius: 18.42px; /* the compact player measures 154.98 */
+    width: 94.85px; height: 36.84px; border-radius: 18.42px;
     border: 0; padding: 0; background: none; cursor: pointer;
     -webkit-tap-highlight-color: transparent;
   }
   .island-nav__hit:focus-visible { outline-offset: 3px; }
-  /* The bubble the island buds to invite a press (IslandNudge.tsx) is part of it: the hit area
-     reaches over it on the right (its far edge is 92.1 px right of the centre, the area's 95.5)
-     and stays where it was on the left. */
-  .island-nav[data-nudge] .island-nav__hit { width: 173px; translate: calc(-50% + 9px) 0; }
 
-  /* The song in the open island is a link to the music page: the cover and the title each press. */
-  .island-nav__song {
-    display: block; color: inherit; text-decoration: none; border-radius: 16px;
+  /* The detached music bubble sits 7.82 px right of the idle pill (47.425 + 7.82 = 55.245 from
+     centre), as a 36.85 px circle. Pressing or clicking it goes straight to /music; hovering it
+     never opens the main pill. An expanded pseudo-element keeps touch targets above 44 px while
+     leaving a clear gap from the pill. */
+  .island-nav__music {
+    position: fixed; top: 13.91px; left: calc(50% + 55.245px); z-index: 51;
+    width: 36.85px; height: 36.85px; border-radius: 50%;
+    display: block; text-decoration: none; cursor: pointer;
     -webkit-tap-highlight-color: transparent;
-    transition: transform 160ms cubic-bezier(0.23, 1, 0.32, 1), opacity 160ms ease-out;
+    pointer-events: none;
   }
-  .island-nav__song:active { transform: scale(0.97); opacity: 0.8; }
-  @media (prefers-reduced-motion: reduce) { .island-nav__song { transition: none; } .island-nav__song:active { transform: none; } }
+  .island-nav__music::after {
+    content: ''; position: absolute; inset: -4px; border-radius: 50%;
+  }
+  .island-nav[data-nudge]:not([data-open]) .island-nav__music { pointer-events: auto; }
+  .island-nav__music:focus-visible { outline-offset: 3px; }
 
-  .island-nav__bottom { display: grid; gap: 10px; min-width: 0; }
+  .island-nav__music-icon {
+    display: grid; place-items: center;
+    width: 22px; height: 22px; flex: none;
+    transform: scale(1);
+    transform-origin: center;
+    transition: transform 190ms ease-in-out;
+  }
+  @media (hover: hover) and (pointer: fine) and (prefers-reduced-motion: no-preference) {
+    .island-nav[data-nudge]:has(.island-nav__music:hover) .island-nav__music-icon {
+      transform: scale(1.08);
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .island-nav__music-icon { transform: none; transition: none; }
+  }
+
+  /* This menu only uses the bottom slot. Collapse the empty sensor row above it. */
+  .island-nav [data-layer="expanded"] [data-slot="expanded"] > div { grid-template-rows: 0 auto; }
+  .island-nav [data-presentation="expanded"] [data-islandcn-sensor] { visibility: hidden; }
+  /* Keep the original hover target underneath the incoming links while the painted
+     outline and its content clip are still moving. */
+  @media (hover: hover) and (pointer: fine) {
+    .island-nav[data-open] .island-nav__hit { z-index: 49; }
+  }
+  @media (hover: none), (pointer: coarse) {
+    .island-nav[data-open] .island-nav__hit { height: 18px; }
+  }
+
   .island-nav__links {
     display: flex; align-items: center; justify-content: center; gap: 2px;
     white-space: nowrap;
   }
   .island-nav__link {
-    display: block; padding: 8px 11px; border-radius: 20px;
-    font: 500 15px/20px -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+    display: block; padding: 8px 9.5px; border-radius: 20px;
+    font: 500 14px/20px -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
     letter-spacing: -0.01em; color: var(--on-dark); text-decoration: none;
     transition: background-color 150ms ease;
   }
-  .island-nav__link:last-child { background: var(--on-dark); color: #000; margin-left: 4px; }
+  .island-nav__link:last-child { background: var(--on-dark); color: #000; margin-left: 4px; padding-inline: 13px; }
   @media (hover: hover) and (pointer: fine) {
     .island-nav__link:not(:last-child):hover { background: rgba(255, 255, 255, 0.14); }
   }
   .island-nav__link:not(:last-child):active { background: rgba(255, 255, 255, 0.14); transition-duration: 0ms; }
   .island-nav__link:last-child:active { background: #d2d2d7; transition-duration: 0ms; }
 
-  /* Narrow phones: still one row, a size down, so the card stays short (the engine's springs were
-     fitted to cards up to 180 pt; a taller one reads heavy as it opens and closes). Taller pads keep
-     a 40 px touch target. */
-  @media (max-width: 400px) {
-    .island-nav__links { gap: 0; }
-    .island-nav__link { padding: 10px 8px; font-size: 14px; }
-    .island-nav__link:last-child { margin-left: 2px; padding-inline: 11px; }
+  /* Phones: five links split symmetrically across two rows (3 above, 2 pills below) so every label
+     stays readable, touch targets clear 40 px, and nothing crowds the island's corners. */
+  @media (max-width: 451px) {
+    .island-nav__links {
+      display: grid; grid-template-columns: repeat(6, minmax(0, 1fr));
+      gap: 6px; padding-top: 4px;
+    }
+    .island-nav__link {
+      grid-column: span 2;
+      text-align: center; padding: 10px 6px; font-size: 15px;
+    }
+    .island-nav__link:nth-child(4) {
+      grid-column: span 3;
+      background: rgba(255, 255, 255, 0.11);
+    }
+    .island-nav__link:last-child {
+      grid-column: span 3;
+      margin-left: 0; padding-inline: 12px;
+    }
   }
 
   .island-fallback {
     position: fixed; top: 11px; left: 50%; z-index: 10; translate: -50% 0;
-    display: flex; gap: 2px; padding: 8px; border-radius: 28px; background: #000;
+    display: flex; flex-wrap: wrap; justify-content: center; gap: 2px;
+    padding: 8px; border-radius: 28px; background: #000;
   }
   .island-fallback a { padding: 8px 14px; color: #fff; text-decoration: none; font-size: 15px; font-weight: 500; }
 </style>

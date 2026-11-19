@@ -1,0 +1,51 @@
+---
+/**
+ * The instruments: a heading, then a chapter for each instrument. Every passage fills with light as
+ * text fills everywhere on the site (v4/text-fill.ts): line after line, at --fill-line of scroll a
+ * line, while its screen is held. In the chapters, the instrument turns at the same time: from lying
+ * under the words, large and dim, to standing upright at the right, drawn live with WebGL
+ * (strings/instrument.ts). Without the script, or with reduced motion, the
+ * passages are lit paragraphs and the instrument is its upright still.
+ */
+import './strings.css';
+import '@/styles/statement.css';
+import '../v4/text-fill.css';
+
+const heading = 'I play a few instruments, too.';
+// `paint`: the model's material that gets the satin finish (instrument.ts).
+const chapters = [
+  { title: 'My dad taught me to play bass.', body: 'I used to play bass in my school band. At home I could stop and ask my dad to show me a part again. At school I had to keep an ear on the drums and stay with everyone else.', instrument: 'pj-bass', paint: 'BodyMaterial' },
+  { title: 'Acoustic came next.', body: 'My dad taught me acoustic guitar, too. When I switched to electric, I learned on my own. I still love putting on a song and working out where those notes are on the fretboard.', instrument: 'les-paul', paint: 'Ebony lacquer' },
+];
+---
+<div class="strings" data-strings>
+  <section class="strings__intro" id="instruments" aria-labelledby="part-instruments" data-fill-section>
+    <div class="strings__intro-stage statement__slide" data-fill-stage>
+      <h2 class="strings__heading" id="part-instruments" data-fill-text>{heading.split(' ').map(word => <><span class="w" data-w>{word}</span>{' '}</>)}</h2>
+    </div>
+  </section>
+  {chapters.map(({ title, body, instrument, paint }, index) => (
+    <section class="strings__chapter" aria-labelledby={`strings-${index}`} data-fill-section
+      data-model={`/music/instruments/${instrument}.glb`} data-paint={paint}>
+      <div class="strings__stage statement__slide" data-fill-stage>
+        <div class="strings__art" aria-hidden="true">
+          <div class="strings__mover">
+            <img class="strings__still" loading="lazy" decoding="async" alt="" width="960" height="960"
+              src={`/music/instruments/${instrument}/rest.webp`} />
+            <canvas class="strings__frame" width="1" height="1"></canvas>
+          </div>
+        </div>
+        <div class="container strings__content">
+          <div class="strings__copy">
+            <h3 id={`strings-${index}`} class="strings__title" data-fill-text>{title.split(' ').map(word => <><span class="w" data-w>{word}</span>{' '}</>)}</h3>
+            <p class="strings__body" data-fill-text>{body.split(' ').map(word => <><span class="w" data-w>{word}</span>{' '}</>)}</p>
+          </div>
+        </div>
+      </div>
+    </section>
+  ))}
+</div>
+
+<script>
+  import './strings';
+</script>

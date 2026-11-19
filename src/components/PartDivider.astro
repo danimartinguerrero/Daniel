@@ -1,0 +1,62 @@
+---
+interface Props { id?: string; headingId: string; title: string }
+const { id, headingId, title } = Astro.props;
+---
+<section class="divider section--dark" id={id} aria-labelledby={headingId} data-divider>
+  <div class="divider__pin">
+    <h2 class="divider__title" id={headingId}>{title}<span class="divider__lit" aria-hidden="true"><span>{title}</span></span></h2>
+  </div>
+</section>
+<style is:global>
+  /* Separation pages: the part's name holds the screen and fills with light, left to right, as it scrolls past
+     (the site's one fill: --fill-dim, --fill-edge and --fill-line in global.css). The name fills over the
+     first 70% of its hold, so the hold is --fill-line / 0.7 and the page that long past the screen.
+     Without the script, or with reduced motion, it is simply lit. */
+  .divider { height: calc(100vh + var(--fill-line) / 0.7); }
+  .divider__pin {
+    position: sticky; top: var(--nav-h);
+    height: calc(100svh - var(--nav-h));
+    display: grid; place-content: center; justify-items: center; gap: 1.5rem;
+    padding-inline: var(--gutter);
+    text-align: center;
+  }
+  .divider__title {
+    /* The light only shows inside the box: give descenders (the j) and the last glyph room. */
+    position: relative;
+    padding: 0.04em 0.06em 0.18em;
+    margin-bottom: -0.14em;
+    font-size: clamp(4.5rem, 17vw, 16rem); line-height: 0.95; font-weight: 600; letter-spacing: -0.05em;
+    text-wrap: balance;
+  }
+  /* The name is set twice: dim, and lit on top, inside a window wider than the name by the soft edge,
+     whose right edge fades out over it. The window slides in from the left while the lit name inside slides back by as much,
+     so the words stand still and the soft edge of light crosses them. Transforms only: the browser runs
+     it on the scrolling thread (a background repainted from the script every frame lagged behind the
+     scroll, and the page could leave before its name had filled). */
+  .divider__lit { display: none; }
+  html.js:not(.reduce) .divider__title { color: var(--fill-dim); }
+  html.js:not(.reduce) .divider__lit {
+    display: block; position: absolute; inset: 0 calc(var(--fill-edge) * -100%) 0 0;
+    overflow: hidden; pointer-events: none;
+    -webkit-mask-image: linear-gradient(90deg, #000 calc(100% / (1 + var(--fill-edge))), transparent); mask-image: linear-gradient(90deg, #000 calc(100% / (1 + var(--fill-edge))), transparent);
+    transform: translateX(-100%);
+  }
+  html.js:not(.reduce) .divider__lit > span {
+    display: block; width: calc(100% / (1 + var(--fill-edge))); padding: 0.04em 0.06em 0.18em;
+    color: var(--on-dark);
+    transform: translateX(calc((1 + var(--fill-edge)) * 100%));
+  }
+  @supports (animation-timeline: view()) {
+    .divider { view-timeline-name: --divider; view-timeline-axis: block; view-timeline-inset: 0; }
+    html.js:not(.reduce) .divider__lit { animation: divider-window linear both; }
+    html.js:not(.reduce) .divider__lit > span { animation: divider-words linear both; }
+    /* The timelines in rules of their own (see .tl__fill): the first 70% of the hold fills the name. */
+    html.js:not(.reduce) .divider__title > .divider__lit,
+    html.js:not(.reduce) .divider__title > .divider__lit > span { animation-duration: auto; animation-timeline: --divider; animation-range: contain 0% contain 70%; }
+    @keyframes divider-window { from { transform: translateX(-100%); } to { transform: none; } }
+    @keyframes divider-words { from { transform: translateX(calc((1 + var(--fill-edge)) * 100%)); } to { transform: none; } }
+  }
+  html:not(.js) .divider, html.reduce .divider { height: auto; }
+  html:not(.js) .divider__pin, html.reduce .divider__pin { position: static; min-height: calc(100svh - var(--nav-h)); }
+  .divider { overflow-x: clip; }
+</style>

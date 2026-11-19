@@ -1,0 +1,88 @@
+/* Sketch s2/a, "Vellum": clear film sheets printed in white, stacked under the same lamp as the records.
+   Every rule is under .s2. */
+
+.s2 .v4-shelf { padding-bottom: clamp(3rem, 6vw, 5rem); }
+
+.s2 .s2v { padding-bottom: clamp(5rem, 10vw, 8rem); overflow-x: clip; }
+.s2 .s2v__head { display: grid; justify-items: start; gap: 0.75rem; margin-bottom: clamp(2rem, 4vw, 3rem); }
+.s2 .s2v__title { font-size: clamp(2.25rem, 6vw, 4rem); line-height: 1.05; font-weight: 600; letter-spacing: -0.025em; }
+.s2 .s2v__lede { max-width: 34rem; }
+.s2 .s2v__hint { margin-top: 1.25rem; font-size: 0.9375rem; line-height: 1.3; color: var(--on-dark-2); }
+
+/* The stage is the room: full width so a sheet slid off can travel to the screen's edge, and lit from
+   above, so the light falls off down the stack (the same falloff as the sleeves). */
+.s2 .s2v__stage {
+  position: relative;
+  -webkit-mask-image: linear-gradient(180deg, #000 30%, rgba(0, 0, 0, 0.62));
+  mask-image: linear-gradient(180deg, #000 30%, rgba(0, 0, 0, 0.62));
+}
+.s2 .s2v__frame { perspective: 1800px; }
+/* Leaning back a little, as a pile of film on a desk is seen from a chair. */
+.s2 .s2v-stack {
+  position: relative; display: grid;
+  transform: rotateX(9deg); transform-origin: 50% 100%;
+  touch-action: pan-y pinch-zoom;
+  -webkit-user-select: none; user-select: none;
+}
+.s2 .s2v-sheet {
+  grid-area: 1 / 1;
+  position: relative; border-radius: 10px;
+  /* Clear film: a breath of light in it, a lit top edge, a fainter rim all round. */
+  background: rgba(255, 255, 255, 0.008);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.035);
+  will-change: transform;
+  cursor: grab;
+}
+.s2 .s2v-sheet.is-held { cursor: grabbing; }
+/* The film's top edge, where the lamp catches it. The pile is seen a little from above, so each sheet
+   lies a hair higher than the one on it and the edges step up into a bright stack of hairlines. */
+.s2 .s2v-sheet__edge {
+  position: absolute; left: 0; right: 0; top: 0; height: 1px; border-radius: 10px 10px 0 0;
+  background: linear-gradient(90deg, rgba(255, 255, 255, 0.05), rgba(255, 244, 232, 0.55) 30%, rgba(255, 244, 232, 0.55) 70%, rgba(255, 255, 255, 0.05));
+  will-change: transform, opacity;
+}
+/* Light on the film: the same photograph of real plastic as the shrink-wrap above, on the top sheet
+   only (vellum.ts fades it with depth). */
+.s2 .s2v-sheet__glint {
+  position: absolute; inset: 0; border-radius: inherit; pointer-events: none;
+  background:
+    linear-gradient(112deg, transparent 18%, rgba(255, 255, 255, 0.055) 30%, rgba(255, 255, 255, 0.012) 44%, transparent 56%),
+    linear-gradient(180deg, rgba(255, 244, 232, 0.05), transparent 35%);
+  opacity: 0; will-change: opacity;
+}
+.s2 .s2v-sheet__glint::after {
+  content: ''; position: absolute; inset: 0; border-radius: inherit; opacity: 0.13;
+  background: url('../v4/film-taut.webp') center / cover no-repeat;
+}
+/* The print. Each sheet's ink adds its light to the sheets' under it, so a name printed on four sheets
+   is four times as bright where it overprints. */
+.s2 .s2v-sheet__ink {
+  display: grid; grid-template-columns: minmax(15rem, 18rem) 1fr; column-gap: clamp(2rem, 4vw, 3.5rem);
+  padding: clamp(1.75rem, 3.5vw, 2.75rem);
+  mix-blend-mode: plus-lighter;
+  will-change: opacity, filter;
+}
+.s2 .s2v-index { list-style: none; margin: 0; padding: 0; display: grid; align-content: start; gap: 0.125rem; }
+.s2 .s2v-index__row {
+  display: grid; padding-block: 0.4375rem; border-radius: 6px;
+  color: transparent; cursor: pointer;
+}
+.s2 .s2v-index__title { font-size: 1.0625rem; line-height: 1.25; font-weight: 600; letter-spacing: -0.005em; }
+.s2 .s2v-index__meta { font-size: 0.8125rem; line-height: 1.35; font-variant-numeric: tabular-nums; }
+.s2 .s2v-index__row.is-on .s2v-index__title { color: #f5f5f7; }
+.s2 .s2v-index__row.is-on .s2v-index__meta { color: rgba(245, 245, 247, 0.62); }
+
+.s2 .s2v-names { margin: 0; font-size: clamp(1.125rem, 1.7vw, 1.4375rem); line-height: 1.42; color: transparent; text-wrap: pretty; }
+.s2 .s2v-name { display: inline-block; margin-right: 0.72em; white-space: nowrap; }
+.s2 .s2v-name--artist { font-weight: 650; letter-spacing: -0.012em; }
+.s2 .s2v-name--guest { font-weight: 420; }
+.s2 .s2v-name--label { font-family: var(--serif); font-style: italic; font-weight: 400; }
+.s2 .s2v-name.is-on { color: #f5f5f7; }
+
+@media (max-width: 760px) {
+  .s2 .s2v-sheet__ink { grid-template-columns: 1fr; row-gap: 1.5rem; padding: 1.25rem 1.125rem 1.5rem; }
+  .s2 .s2v-index { grid-template-columns: 1fr 1fr; column-gap: 0.75rem; }
+  .s2 .s2v-index__title { font-size: 0.875rem; }
+  .s2 .s2v-index__meta { display: none; }
+  .s2 .s2v-names { font-size: 1.0625rem; line-height: 1.45; }
+}

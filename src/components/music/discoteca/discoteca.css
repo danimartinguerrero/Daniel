@@ -1,0 +1,125 @@
+/* Discoteca: only /music/discoteca loads this file, after listening-bar.css; every class is prefixed
+   dsc-. No accent of its own: the light on the floor is the lamp's (rgba(255, 240, 224)), the colour
+   is the sleeves'. */
+
+/* ---------------------------------------------------------------- the floor's layers
+   Both cover the stage. Their pieces are placed by engine.ts relative to the middle of a sleeve's slot
+   in the row (left 50%, --dsc-line down the stage), exactly as the sleeves are, so a year or a thread
+   lands where its record lies. Until the scene reaches them they are not drawn at all. */
+.dsc-under, .dsc-over { display: none; }
+
+@media (prefers-reduced-motion: no-preference) {
+  html.js .dsc-under, html.js .dsc-over {
+    display: block; position: absolute; inset: 0; overflow: hidden; pointer-events: none;
+  }
+  /* Under the row, above the floor's pool of light. */
+  html.js .dsc-under { z-index: 0; }
+
+  .dsc-shadow, .dsc-year, .dsc-thread, .dsc-pin {
+    position: absolute; left: 50%; top: var(--dsc-line, 50%);
+    opacity: 0; visibility: hidden; will-change: transform, opacity;
+  }
+
+  /* A sleeve's footprint, soft at the edge, drawn once and then only moved, sized and faded. */
+  .dsc-shadow {
+    width: var(--dsc-s, 240px); height: var(--dsc-s, 240px);
+    margin: calc(var(--dsc-s, 240px) / -2) 0 0 calc(var(--dsc-s, 240px) / -2);
+    border-radius: 6px; background: rgba(0, 0, 0, 0.8);
+    box-shadow: 0 0 calc(var(--dsc-s, 240px) * 0.12) calc(var(--dsc-s, 240px) * 0.04) rgba(0, 0, 0, 0.8);
+  }
+
+  /* The year, printed on the floor beside its record: it lies flat and is foreshortened with the floor.
+     Lit by the lamp as the walk passes it (its opacity), never moved on its own. */
+  .dsc-year {
+    width: var(--dsc-s, 240px); height: calc(var(--dsc-s, 240px) * 0.5);
+    margin: calc(var(--dsc-s, 240px) / -4) 0 0 calc(var(--dsc-s, 240px) / -2);
+    display: grid; place-items: center;
+  }
+  .dsc-year__n {
+    font-size: calc(var(--dsc-s, 240px) * 0.24); line-height: 1; font-weight: 500;
+    letter-spacing: -0.02em; font-variant-numeric: tabular-nums;
+    color: var(--on-dark);
+  }
+
+  /* A thread of the lamp's light on the floor: a bright core under a pixel and a soft halo, as one
+     gradient (no filter). It is a fixed 100px long and is stretched to its length; stretching along it
+     leaves the core and the halo as they are. */
+  .dsc-thread {
+    width: 100px; height: 7px; margin-top: -3.5px; transform-origin: 0 50%;
+    background: linear-gradient(180deg, transparent, rgba(255, 240, 224, 0.07) 24%, rgba(255, 240, 224, 0.62) 45%, rgba(255, 240, 224, 0.62) 55%, rgba(255, 240, 224, 0.07) 76%, transparent);
+  }
+
+  /* Above the row: the names, and the edge under the record's name. The caption stays above both. */
+  html.js .dsc-over { z-index: 0; }
+
+  /* Where the floor meets the record's name: it fades into the dark, so a sleeve passing under the name
+     never sits behind its letters. Only while the records lie in their line. */
+  .dsc-edge {
+    position: absolute; left: 0; right: 0; bottom: 0; top: var(--dsc-edge-top, 72%);
+    background: linear-gradient(180deg, rgba(0, 0, 0, 0), #000 58%);
+    opacity: 0; will-change: opacity;
+  }
+
+  /* A name, standing where its threads meet. The pin is a point; the pill is centred on it. */
+  .dsc-pin { width: 0; height: 0; }
+  .dsc-pill {
+    position: absolute; left: 0; top: 0;
+    transform: translate(-50%, -50%);
+    display: block; white-space: nowrap;
+    padding: 0.4375rem 0.875rem; min-height: 2rem;
+    border: 0; border-radius: 999px;
+    font-size: 0.875rem; line-height: 1.25; font-weight: 600; letter-spacing: 0.01em;
+    color: var(--on-dark);
+    background: rgba(255, 255, 255, 0.12);
+    -webkit-backdrop-filter: blur(18px) saturate(180%); backdrop-filter: blur(18px) saturate(180%);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.3), inset 0 0 0 1px rgba(255, 255, 255, 0.12), 0 6px 18px rgba(0, 0, 0, 0.45);
+    cursor: pointer; pointer-events: auto;
+    -webkit-tap-highlight-color: transparent; touch-action: manipulation;
+    transition: transform 140ms var(--ease-out), background-color 200ms var(--ease-out), color 200ms var(--ease-out);
+  }
+  /* A finger is larger than the pill is tall: the press reaches a little past it. */
+  .dsc-pill::before { content: ''; position: absolute; inset: -8px -4px; }
+  .dsc-pill:active { transform: translate(-50%, -50%) scale(0.97); }
+  /* Chosen: the lamp is on it. */
+  .dsc-pill[aria-pressed='true'] { background: rgba(255, 240, 224, 0.92); color: #1d1d1f; }
+  .dsc-pin[data-off] .dsc-pill { pointer-events: none; }
+
+  /* While a name is chosen the record's name below lists what they are on, a line each. */
+  .dsc .v4-caption__meta { white-space: pre-line; }
+}
+
+@media (prefers-reduced-motion: no-preference) and (prefers-reduced-transparency: reduce) {
+  .dsc-pill { background: #2c2c2e; -webkit-backdrop-filter: none; backdrop-filter: none; }
+  .dsc-thread { background: linear-gradient(180deg, transparent 40%, rgba(255, 240, 224, 0.7) 40% 60%, transparent 60%); }
+}
+@media (prefers-reduced-motion: no-preference) and (prefers-contrast: more) {
+  .dsc-pill { background: #1d1d1f; box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.7); }
+}
+
+/* ---------------------------------------------------------------- the same, as page content
+   With reduced motion or without the script there is no floor: its two arrangements follow the
+   passages as a list and a few groups. With the floor, they are there for screen readers only. */
+.dsc-still { padding-block: clamp(3rem, 8vw, 5rem) clamp(4rem, 9vw, 6rem); }
+@media (prefers-reduced-motion: no-preference) {
+  html.js .dsc-still {
+    position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+    overflow: hidden; clip-path: inset(50%); white-space: nowrap;
+  }
+}
+.dsc-still__inner { display: grid; gap: 1.25rem; }
+.dsc-still__title { font-size: clamp(1.5rem, 4vw, 2rem); line-height: 1.1; font-weight: 600; letter-spacing: -0.02em; }
+.dsc-still__title:not(:first-child) { margin-top: 2rem; }
+.dsc-still__years { list-style: none; padding: 0; margin: 0; display: grid; gap: 0.75rem; }
+.dsc-still__rec {
+  display: grid; grid-template-columns: 3.5rem 3rem 1fr; grid-template-rows: auto auto;
+  column-gap: 0.875rem; align-items: center;
+}
+.dsc-still__rec img { grid-row: 1 / 3; width: 3.5rem; height: 3.5rem; border-radius: 3px; }
+.dsc-still__year { grid-row: 1 / 3; font-weight: 600; font-variant-numeric: tabular-nums; color: var(--on-dark-2); }
+.dsc-still__name { font-weight: 600; line-height: 1.25; }
+.dsc-still__by { grid-column: 3; color: var(--on-dark-2); font-size: 0.9375rem; line-height: 1.25; }
+.dsc-still__people { list-style: none; padding: 0; margin: 0; display: grid; gap: 1.75rem; }
+.dsc-still__who { font-weight: 600; font-size: 1.125rem; }
+.dsc-still__covers { display: flex; gap: 0.5rem; margin-block: 0.625rem; }
+.dsc-still__covers img { width: 3.5rem; height: 3.5rem; border-radius: 3px; }
+.dsc-still__lines { list-style: none; padding: 0; margin: 0; color: var(--on-dark-2); font-size: 0.9375rem; line-height: 1.4; }

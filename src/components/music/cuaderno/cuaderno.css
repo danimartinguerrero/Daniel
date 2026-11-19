@@ -1,0 +1,255 @@
+/* /music/cuaderno: the passages in the ring (this page's own copy of v4's, so the live page's styles
+   can change without this one) and the listening notebook in the middle of the ring.
+   Every class here starts cn-. The page's other styles are v4's (listening-bar.css). */
+
+/* ---------------------------------------------------------------- the passages
+   As on /music: lit, as the page's next paragraphs, until the climb's script takes them over
+   (is-armed); then the words wait in grey and a white copy of each line is uncovered over them. */
+.cn-making {
+  display: grid; gap: 1.25em;
+  width: min(100% - 2 * var(--gutter), 34rem); margin: clamp(3.5rem, 8vw, 6rem) auto 0;
+  font-size: clamp(1.25rem, 3vw, 1.75rem); line-height: 1.16; font-weight: 600; letter-spacing: -0.02em;
+  text-align: center; text-wrap: balance;
+}
+.cn-making .w { color: var(--on-dark); }
+.cn-making__page.is-armed .w { color: #3a3a3c; }
+.cn-lit { position: absolute; inset: 0; pointer-events: none; }
+.cn-lit__win {
+  position: absolute;
+  -webkit-mask-image: linear-gradient(90deg, #000 calc(100% - var(--edge)), transparent);
+  mask-image: linear-gradient(90deg, #000 calc(100% - var(--edge)), transparent);
+  -webkit-mask-size: 100% 100%; mask-size: 100% 100%;
+  -webkit-mask-repeat: no-repeat; mask-repeat: no-repeat;
+  will-change: transform;
+}
+.cn-lit__line { position: absolute; white-space: pre; color: var(--on-dark); will-change: transform; }
+@media (forced-colors: active) {
+  .cn-lit { display: none; }
+  .cn-making__page.is-armed .w, .cn-making .w { color: CanvasText; }
+}
+
+/* ---------------------------------------------------------------- the notebook
+   Without the climb (no script, or reduced motion) it lies open after the passages: the spread on a
+   wide screen, the record's page alone on a phone. With the climb, climb.ts sizes it in px and lays it
+   on the floor in the middle of the ring. */
+.cn {
+  --pw: min(30rem, 42vw);
+  --ph: calc(var(--pw) * 1.414);
+  --gap: calc(var(--pw) * 0.045);
+  --hole: calc(var(--pw) * 0.03); /* from the spine edge to the middle of a punched hole */
+  position: relative;
+  width: calc(var(--pw) * 2 + var(--gap)); height: var(--ph);
+  margin: clamp(3rem, 7vw, 5rem) auto clamp(4rem, 9vw, 7rem);
+  pointer-events: none;
+  -webkit-user-select: none; user-select: none;
+}
+
+/* The lamp's light on the floor round it. Each page carries its own shadow on the floor, so a page
+   that isn't there yet (the left one, before the cover is open) throws none. */
+.cn-pool {
+  position: absolute; inset: -40% -45%;
+  background: radial-gradient(closest-side, rgba(255, 240, 224, 0.085), rgba(255, 240, 224, 0.03) 55%, transparent);
+}
+
+.cn-page { position: absolute; top: 0; width: var(--pw); height: var(--ph); }
+.cn-page--left { left: 0; }
+.cn-page--right { left: calc(var(--pw) + var(--gap)); }
+/* The pages under the top one, seen at its edges. */
+.cn-page--right { box-shadow: 1px 1.5px 0 #d4d0c4, 2px 3px 0 #b6b2a7, 3px 4.5px 0 #96938a, 4px 6px 0 #6f6c65, 2px 1.4vmin 3.2vmin rgba(0, 0, 0, 0.85); border-radius: 1px 2px 2px 1px; }
+.cn-page--left { box-shadow: -1px 1.5px 0 #d4d0c4, -2px 3px 0 #b6b2a7, -3px 4.5px 0 #96938a, -4px 6px 0 #6f6c65, -2px 1.4vmin 3.2vmin rgba(0, 0, 0, 0.85); border-radius: 2px 1px 1px 2px; }
+
+/* On a phone, without the climb: the record's page alone. (After the rules above, which it overrides.) */
+@media (max-width: 699px) {
+  .cn { --pw: min(86vw, 24rem); width: var(--pw); }
+  .cn-page--left, .cn-spiral { display: none; }
+  .cn-page--right { left: 0; }
+}
+
+/* A page's content, the size of a whole page wherever it is shown: a strip of the leaf shows its own
+   part of it. It is the container its sizes are measured in. */
+.cn-slot { position: absolute; top: 0; left: 0; width: var(--pw); height: var(--ph); container-type: size; }
+.cn-face--b > .cn-slot { left: calc(var(--pw) * -0.55); }
+.cn-face--a.cn-face--back > .cn-slot { left: calc(var(--pw) * -0.45); }
+.cn-face--b.cn-face--back > .cn-slot { left: 0; }
+
+/* The shadow a leaf throws on the page under it as it lifts. */
+.cn-cast { position: absolute; top: 0; bottom: 0; width: 72%; opacity: 0; will-change: transform, opacity; }
+.cn-cast--right { left: 0; transform-origin: 0 50%; background: linear-gradient(90deg, rgba(14, 10, 4, 0.6), rgba(14, 10, 4, 0.22) 40%, transparent); }
+.cn-cast--left { right: 0; transform-origin: 100% 50%; background: linear-gradient(270deg, rgba(14, 10, 4, 0.6), rgba(14, 10, 4, 0.22) 40%, transparent); }
+
+/* ---------------------------------------------------------------- paper */
+.cn-sheet {
+  --rule: 5cqh; /* twenty lines to the page */
+  --ink: #1d3c8f;
+  --print: #4f5668; /* 4.5:1 or more against the paper even where the lamp's light falls off */
+  position: absolute; inset: 0; overflow: hidden;
+  color: #1d1d1f; font-family: var(--font); text-align: left;
+}
+.cn-sheet--front {
+  padding: calc(var(--rule) * 2) 6cqw 0 16cqw;
+  background:
+    radial-gradient(circle at 3cqw 50%, #050505 0 1.05cqw, rgba(0, 0, 0, 0.3) calc(1.05cqw + 0.5px), transparent calc(1.05cqw + 1.5px)) 0 0 / 100% var(--rule) repeat-y,
+    linear-gradient(90deg, transparent 13cqw, rgba(209, 52, 43, 0.42) 13cqw calc(13cqw + 1px), transparent calc(13cqw + 1px)),
+    repeating-linear-gradient(transparent 0 calc(var(--rule) - 1px), #c9d4e6 calc(var(--rule) - 1px) var(--rule)) 0 calc(var(--rule) * 2) / 100% calc(var(--rule) * 17) no-repeat,
+    #f7f5ee;
+}
+.cn-sheet--back {
+  background:
+    radial-gradient(circle at calc(100% - 3cqw) 50%, #050505 0 1.05cqw, rgba(0, 0, 0, 0.3) calc(1.05cqw + 0.5px), transparent calc(1.05cqw + 1.5px)) 0 0 / 100% var(--rule) repeat-y,
+    repeating-linear-gradient(transparent 0 calc(var(--rule) - 1px), #d3dbe8 calc(var(--rule) - 1px) var(--rule)) 0 calc(var(--rule) * 2) / 100% calc(var(--rule) * 17) no-repeat,
+    #f4f2ea;
+}
+/* The lamp is over the middle of the notebook: the paper is brightest at the spine and falls off
+   towards its outer edge and its foot. Over the ink as well, as light is. */
+.cn-sheet::after { content: ''; position: absolute; inset: 0; pointer-events: none; }
+.cn-sheet--front::after { background: radial-gradient(130% 95% at 0% 22%, transparent 42%, rgba(38, 30, 16, 0.2)); }
+.cn-sheet--back::after { background: radial-gradient(130% 95% at 100% 22%, transparent 42%, rgba(38, 30, 16, 0.2)); }
+
+.cn-hand { font-family: 'Caveat', 'Bradley Hand', 'Segoe Print', cursive; font-weight: 500; letter-spacing: 0; color: var(--ink, #1d3c8f); }
+
+/* The record's page: its name and who made it by hand, the printed form filled in, the cover print. */
+.cn-title { margin: 0; font-size: 6.8cqw; line-height: var(--rule); text-wrap: balance; }
+.cn-artist { width: fit-content; margin: 0 0 0 0.8cqw; font-size: max(18px, 5.2cqw); line-height: var(--rule); transform: rotate(-0.4deg); }
+.cn-print {
+  float: right; width: 29cqw; margin: calc(var(--rule) * 0.35) 0 calc(var(--rule) * 0.3) 3cqw;
+  padding: 1.1cqw; background: #fbfbf8;
+  position: relative; transform: rotate(2deg);
+  box-shadow: 0 0.25cqw 0.6cqw rgba(0, 0, 0, 0.22), 0 1cqw 2.2cqw rgba(0, 0, 0, 0.1);
+}
+.cn-print img { display: block; width: 100%; height: auto; filter: saturate(0.9) contrast(0.95); }
+/* Photo corners: black paper triangles over each corner of the print, their outer edges on the print's
+   own (so nothing reaches past it). */
+.cn-corner { position: absolute; width: 6.4cqw; height: 6.4cqw; background: #141414; }
+.cn-corner--tl { top: 0; left: 0; clip-path: polygon(0 0, 100% 0, 0 100%); }
+.cn-corner--tr { top: 0; right: 0; clip-path: polygon(0 0, 100% 0, 100% 100%); }
+.cn-corner--bl { bottom: 0; left: 0; clip-path: polygon(0 0, 100% 100%, 0 100%); }
+.cn-corner--br { bottom: 0; right: 0; clip-path: polygon(100% 0, 100% 100%, 0 100%); }
+
+/* The printed part of the page: a label on each line and a rule down beside them, where the hand
+   fills in the value. It sits on the page's own lines. */
+.cn-form {
+  clear: both; margin: var(--rule) 0 0;
+  border-top: 1px solid rgba(93, 100, 116, 0.5);
+}
+.cn-form > div { display: grid; grid-template-columns: 17cqw 1fr; }
+/* A label stands on its value's first line, however many lines the value takes; the rule beside it
+   runs the whole row. */
+.cn-form dt {
+  font-size: max(11px, 2.45cqw); line-height: 1.2; letter-spacing: 0.02em; color: var(--print);
+  border-right: 1px solid rgba(93, 100, 116, 0.35);
+  display: flex; align-items: flex-start;
+  padding-top: calc(var(--rule) - 1.2em - 0.9cqh);
+}
+.cn-form dd { margin: 0; padding-left: 2.6cqw; font-size: max(18px, 4.9cqw); line-height: var(--rule); }
+/* The hand doesn't start each line in the same place. (A margin, not a move: nothing past the page.) */
+.cn-form > div:nth-child(even) dd { padding-left: 3.2cqw; }
+.cn-folio { position: absolute; right: 6cqw; bottom: calc(var(--rule) * 1.1); font-size: max(11px, 2.45cqw); line-height: 1; color: var(--print); font-variant-numeric: tabular-nums; }
+
+/* The back of a page: the record's printed note, cut out and taped in. */
+.cn-clip {
+  position: absolute; left: 9cqw; top: calc(var(--rule) * 2.2); width: 74cqw;
+  padding: 5.5cqw 6cqw 5cqw; background: #fdfdfb;
+  box-shadow: 0 0.25cqw 0.5cqw rgba(0, 0, 0, 0.18), 0 1.2cqw 2.4cqw rgba(0, 0, 0, 0.09);
+  transform: rotate(-1.2deg);
+}
+.cn-clip--1 { transform: rotate(0.8deg); left: 10cqw; }
+.cn-clip--2 { transform: rotate(-0.5deg); top: calc(var(--rule) * 2.6); }
+.cn-clip p { margin: 0; }
+.cn-clip__title { font-size: max(16px, 4.6cqw); line-height: 1.12; font-weight: 600; letter-spacing: -0.01em; color: #1d1d1f; text-wrap: balance; }
+.cn-clip__meta { margin-top: 0.8cqw !important; font-size: max(12px, 2.9cqw); line-height: 1.3; color: #6e6e73; }
+.cn-clip__text { margin-top: 3cqw !important; font-size: max(12px, 2.95cqw); line-height: 1.45; color: #2a2a2d; text-wrap: pretty; }
+.cn-clip__source { margin-top: 2.6cqw !important; font-size: max(11px, 2.3cqw); line-height: 1.3; color: #86868b; }
+.cn-tape {
+  position: absolute; top: -2.4cqw; left: 50%; width: 22cqw; height: 5.4cqw;
+  transform: translateX(-50%) rotate(-3deg);
+  background: rgba(238, 233, 220, 0.74);
+  box-shadow: 0 0 0 0.5px rgba(0, 0, 0, 0.06);
+}
+
+/* ---------------------------------------------------------------- the leaf, the cover, the wire */
+.cn-leaf, .cn-cover { display: none; }
+.cn-face { position: absolute; inset: 0; overflow: hidden; -webkit-backface-visibility: hidden; backface-visibility: hidden; }
+.cn-face--back { transform: rotateY(180deg); }
+.cn-shade { position: absolute; inset: 0; background: #16120b; opacity: 0; pointer-events: none; }
+
+.cn-board {
+  container-type: size;
+  border-radius: 1px 5px 5px 1px;
+  background:
+    repeating-linear-gradient(45deg, rgba(255, 255, 255, 0.014) 0 1px, transparent 1px 3px),
+    radial-gradient(140% 95% at 0% 12%, #3b3b3f, #27272b 46%, #18181b);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.05);
+}
+.cn-board__label {
+  position: absolute; left: 20cqw; top: 13cqh; width: 58cqw; padding: 2.4cqh 5cqw 2cqh;
+  background: #f1eee4; transform: rotate(-1.5deg);
+  box-shadow: 0 0.3cqw 0.8cqw rgba(0, 0, 0, 0.45);
+}
+.cn-board__label .cn-hand { display: block; font-size: 7.6cqw; line-height: 1.1; }
+.cn-board::after { content: ''; position: absolute; inset: 0; background: radial-gradient(130% 95% at 0% 22%, transparent 45%, rgba(0, 0, 0, 0.3)); }
+
+.cn-spiral {
+  position: absolute; top: 0;
+  left: calc(var(--pw) - var(--hole)); width: calc(var(--gap) + var(--hole) * 2); height: var(--ph);
+  overflow: visible;
+}
+.cn-wire { fill: none; stroke: #7c7c81; stroke-width: 1.7; stroke-linecap: round; }
+.cn-wire__hi { fill: none; stroke: #f2f2f5; stroke-width: 0.55; stroke-linecap: round; opacity: 0.8; }
+
+/* ---------------------------------------------------------------- with the climb */
+@media (prefers-reduced-motion: no-preference) {
+  html.js [data-climb] .cn-making {
+    position: absolute; left: 50%; top: var(--words-y, 50%); z-index: 2;
+    width: var(--words-w, 20rem); margin: 0; gap: 0;
+    transform: translate(-50%, -50%);
+    font-size: var(--words-fs, 1.5rem);
+    pointer-events: none;
+  }
+  html.js [data-climb] .cn-making__page { position: relative; grid-area: 1 / 1; align-self: center; opacity: 0; will-change: transform, opacity; }
+
+  /* Laid on the floor by climb.ts, which sizes it in px for this screen. Hidden until the camera comes
+     for it, so the climb is the live page's to the frame. */
+  html.js [data-climb] .cn {
+    position: absolute; top: 0; left: 0; z-index: 1; margin: 0;
+    transform-origin: 50% 50%; transform-style: preserve-3d;
+    visibility: hidden; will-change: transform;
+  }
+  html.js [data-climb] .cn-page--left, html.js [data-climb] .cn-spiral { display: block; }
+  html.js [data-climb] .cn-page--right { left: calc(var(--pw) + var(--gap)); }
+  html.js [data-climb] .cn-page--left { visibility: hidden; }
+  html.js [data-climb] .cn-pool, html.js [data-climb] .cn-page,
+  html.js [data-climb] .cn-board, html.js [data-climb] .cn-spiral { opacity: 0; }
+
+  html.js [data-climb] .cn-leaf, html.js [data-climb] .cn-cover {
+    display: block; position: absolute; top: 0; left: calc(var(--pw) + var(--gap));
+    width: var(--pw); height: var(--ph);
+    transform-style: preserve-3d;
+  }
+  html.js [data-climb] .cn-leaf { transform: translateZ(1px); visibility: hidden; }
+  html.js [data-climb] .cn-cover { transform-origin: calc(var(--gap) / -2) 50%; transform: translateZ(2px); }
+  html.js [data-climb] .cn-spiral { transform: translateZ(3px); }
+  .cn-strip { position: absolute; top: 0; height: 100%; transform-style: preserve-3d; will-change: transform; }
+  .cn-strip--a { left: 0; width: calc(var(--pw) * 0.55); transform-origin: calc(var(--gap) / -2) 50%; }
+  .cn-strip--b { left: 100%; width: calc(var(--pw) * 0.45); transform-origin: 0 50%; }
+  /* Turning too fast to read, the leaf goes by blank, as paper does under a thumb. */
+  .cn.is-riffling .cn-leaf .cn-sheet > * { visibility: hidden; }
+}
+
+@media (prefers-contrast: more) {
+  .cn-sheet { --ink: #0f2766; --print: #3d4350; }
+}
+
+/* ---------------------------------------------------------------- how the pages turn
+   One line under the open notebook, in the caption's grey, until the visitor has turned a page. The
+   climb fades it in once the cover is open; turning a page (notebook.ts) puts it away. */
+.cn-hint { display: none; }
+@media (prefers-reduced-motion: no-preference) {
+  html.js [data-climb] .cn-hint {
+    display: block; position: absolute; left: 0; right: 0; top: var(--cn-hint-y, 90%); z-index: 0; /* a leaf turning towards you passes over it */
+    margin: 0; padding-inline: var(--gutter);
+    font-size: 0.9375rem; line-height: 1.3; letter-spacing: -0.005em; text-align: center; color: var(--on-dark-2);
+    opacity: 0; pointer-events: none; will-change: opacity;
+  }
+  .cn-hint > span { display: inline-block; transition: opacity 240ms ease-out, transform 240ms ease-out; }
+  .cn-hint.is-used > span { opacity: 0; transform: translate3d(0, 4px, 0); }
+}

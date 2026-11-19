@@ -1,0 +1,83 @@
+/* Sketch s2/b, "Blind emboss": a plain white sleeve whose words are only relief. Every rule is under .s2. */
+
+.s2 .v4-shelf { padding-bottom: clamp(3rem, 6vw, 5rem); }
+
+.s2 .s2e {
+  --c: min(calc(100vw - 2 * var(--gutter)), 600px, max(300px, 62svh));
+  padding: clamp(1rem, 3vw, 2rem) 0 clamp(5rem, 10vw, 8rem);
+  overflow-x: clip;
+}
+.s2 .s2e__stage { display: grid; place-items: center; perspective: 1500px; }
+.s2 .s2e-card {
+  position: relative; width: var(--c); height: var(--c);
+  touch-action: pan-y pinch-zoom; cursor: grab;
+  -webkit-user-select: none; user-select: none; -webkit-touch-callout: none;
+}
+.s2 .s2e-card.is-held { cursor: grabbing; }
+.s2 .s2e-body { position: absolute; inset: 0; transform-style: preserve-3d; will-change: transform; }
+
+/* The test pressing inside: black vinyl and a blank paper label, seen only through the hole. It lies a
+   few millimetres behind the card, so it shifts against the hole as the card turns (emboss.ts). */
+.s2 .s2e-disc {
+  position: absolute; left: 4%; top: 4%; width: 92%; height: 92%; border-radius: 50%;
+  background:
+    conic-gradient(from 300deg, transparent 0 4%, rgba(255, 255, 255, 0.1) 9%, transparent 15% 50%, rgba(255, 255, 255, 0.1) 59%, transparent 65%),
+    repeating-radial-gradient(circle at 50% 50%, #111113 0 1px, #1c1c1f 1.4px 2.2px),
+    #111;
+  will-change: transform;
+}
+.s2 .s2e-disc__label {
+  position: absolute; left: 50%; top: 50%; width: 29%; height: 29%; transform: translate(-50%, -50%); border-radius: 50%;
+  background:
+    radial-gradient(circle closest-side, #0a0a0a 0 6%, rgba(0, 0, 0, 0.2) 6.5% 8%, transparent 8.5%),
+    radial-gradient(circle at 50% 30%, #f3f0e9, #ddd8ce 70%, #cdc8be);
+}
+
+/* The card: uncoated white board under the same warm lamp as the records, falling off towards the
+   foot, with the grain of paper in it. The hole is cut with a mask, so everything on the card stops at
+   its edge. */
+.s2 .s2e-board {
+  --paper:
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0.25 0 0 0 0 0.2 0 0 0 0 0.15 0 0 0 .16 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E"),
+    linear-gradient(180deg, #f4f1eb 0%, #e6e2da 45%, #cfcac1 100%);
+  position: absolute; inset: 0; border-radius: 3px; overflow: hidden;
+  background: var(--paper);
+  -webkit-mask-image: radial-gradient(circle at 50% 50%, transparent 0 16.6%, #000 16.75%);
+  mask-image: radial-gradient(circle at 50% 50%, transparent 0 16.6%, #000 16.75%);
+}
+
+/* The words, three times over in the same place: the shade the lamp casts off each letter's far edge,
+   the light its near edge catches, and on top the letter itself, which is the card (the same paper,
+   clipped to the letters), so only the two edges show. */
+.s2 .s2e-type { position: absolute; inset: 0; font-size: var(--c); }
+.s2 .s2e-type--shade { color: rgba(60, 46, 32, 0.9); filter: blur(0.6px); will-change: transform, opacity; }
+.s2 .s2e-type--light { color: #fffdf8; filter: blur(0.4px); will-change: transform, opacity; }
+.s2 .s2e-type--face {
+  background: var(--paper); background-size: auto, 100% 100%;
+  -webkit-background-clip: text; background-clip: text;
+  color: transparent; -webkit-text-fill-color: transparent;
+}
+.s2 .s2e-board { background-size: auto, 100% 100%; }
+.s2 .s2e-t { position: absolute; display: block; font-weight: 650; text-wrap: balance; }
+.s2 .s2e-t--big { left: 8%; top: 7.5%; font-size: 0.094em; line-height: 1; letter-spacing: -0.035em; font-weight: 700; }
+.s2 .s2e-t--line { left: 8.2%; top: 19.5%; width: 46%; font-size: 0.036em; line-height: 1.22; letter-spacing: -0.01em; }
+.s2 .s2e-t--side { right: 8%; bottom: 13%; width: 33%; font-size: 0.036em; line-height: 1.22; letter-spacing: -0.01em; text-align: right; }
+.s2 .s2e-t--name { left: 8.2%; bottom: 7.5%; font-size: 0.026em; line-height: 1; letter-spacing: 0; font-weight: 600; }
+
+/* The light moving on the card as it turns: a broad soft band, and the whole card darkening as it
+   turns its face away from the lamp. */
+.s2 .s2e-board__sheen {
+  position: absolute; left: -100%; top: -100%; width: 300%; height: 300%; pointer-events: none;
+  background: linear-gradient(118deg, transparent 42%, rgba(255, 255, 255, 0.22) 49%, rgba(255, 255, 255, 0.05) 53%, transparent 58%);
+  mix-blend-mode: soft-light; will-change: transform;
+}
+.s2 .s2e-board__dim { position: absolute; inset: 0; background: #1b140c; opacity: 0; pointer-events: none; will-change: opacity; }
+
+/* The cut edge of the hole: the card's thickness, shaded at the top where the lamp can't reach it,
+   catching the light at the bottom. */
+.s2 .s2e-rim {
+  position: absolute; left: 33.25%; top: 33.25%; width: 33.5%; height: 33.5%; border-radius: 50%; pointer-events: none;
+  box-shadow: inset 0 4px 6px -1px rgba(0, 0, 0, 0.55), inset 0 -1.5px 0 rgba(255, 250, 240, 0.55);
+}
+
+.s2 .s2e__hint { margin-top: 1.5rem; text-align: center; font-size: 0.9375rem; color: var(--on-dark-2); }

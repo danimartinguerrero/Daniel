@@ -1,0 +1,37 @@
+---
+/**
+ * s4/c, "After hours". The page is one evening. Past the shelf a photograph of his desk at night comes
+ * up, lit only by its screen with FL Studio open; as it does, the lamp over the shelf goes down
+ * (after-hours.ts). The photograph is a stand-in here, drawn so that it is obviously one: a dark room
+ * and a lit rectangle where the screen would be. He would supply the real one.
+ */
+import { s4Copy } from './copy';
+
+const c = s4Copy.hours;
+---
+<section class="s4h" aria-labelledby="s4h-title" data-intro-rest data-s4h>
+  <div class="s4h-track" data-s4h-track>
+    <div class="s4h-sticky">
+      <figure class="s4h-photo" data-s4h-photo>
+        <!-- STAND-IN for the photograph. Replace the three layers below with one <img>, and keep the
+             two light layers' roles: [data-s4h-dark] is the room before the screen wakes (the same
+             photo, much darker), [data-s4h-lit] is the photo as taken. -->
+        <div class="s4h-photo__dark" data-s4h-dark aria-hidden="true"></div>
+        <div class="s4h-photo__lit" data-s4h-lit aria-hidden="true">
+          <span class="s4h-standin__spill"></span>
+          <span class="s4h-standin__screen"><span class="s4h-standin__ui"></span></span>
+          <span class="s4h-standin__desk"></span>
+        </div>
+        <span class="s4h-photo__vignette" aria-hidden="true"></span>
+        <p class="s4h-tag">Stand-in photo</p>
+        <figcaption class="s4h-words" data-s4h-words>
+          <p class="eyebrow s4h-eyebrow">{c.eyebrow}</p>
+          <h2 class="s4h-title" id="s4h-title">{c.headline}</h2>
+          <p class="s4h-line">{c.beats}</p>
+          <p class="s4h-line">{c.play}</p>
+        </figcaption>
+      </figure>
+      <p class="s4h-note">{c.standIn}</p>
+    </div>
+  </div>
+</section>

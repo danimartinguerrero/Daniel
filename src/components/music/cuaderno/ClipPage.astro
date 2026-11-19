@@ -1,0 +1,20 @@
+---
+/**
+ * The back of a page in the notebook, seen as the left-hand page: the record's printed note pasted in,
+ * held by a strip of tape. Printed, because those words come from a source (Apple Music's notes), not
+ * from the owner's hand.
+ */
+import type { Vinyl } from '@/data/music';
+
+interface Props { v: Vinyl; i: number }
+const { v, i } = Astro.props;
+---
+<div class="cn-sheet cn-sheet--back">
+  <div class={`cn-clip cn-clip--${i % 3}`}>
+    <i class="cn-tape"></i>
+    <p class="cn-clip__title">{v.title}</p>
+    <p class="cn-clip__meta">{v.artist}, {v.year}</p>
+    <p class="cn-clip__text">{v.about}</p>
+    <p class="cn-clip__source">{v.source.label}</p>
+  </div>
+</div>

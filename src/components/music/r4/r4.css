@@ -1,0 +1,117 @@
+/* Music, direction 4: "Spectrum". Every rule is under .r4 (or prefixed r4-). Loaded after
+   v4/listening-bar.css, whose rules it adjusts for this composition.
+
+   One graphic carries the page: the six bands of "music", slanted as they are in the word, run out of
+   it as a sash that crosses the page from its top edge down behind the records. Ink, not light: six
+   flat colours with hard edges, in deep tones of the six, so the word stays the brightest colour on
+   the screen and no text ever sits on them. */
+
+.r4 {
+  /* The headline's size, which the sash's stripes are measured from: in the word a band is a sixth of
+     --rb-p (2.4em) along the line, 0.3625em across. */
+  --r4-hl: clamp(3.5rem, 8vw, 9rem);
+  --r4-w: calc(var(--r4-hl) * 0.3625);
+  /* The inks: the six hues at one lightness, each as saturated as that lightness lets it stay itself
+     (deep green, mustard, burnt orange, oxblood, aubergine, deep blue), as a print of the 1970s would
+     have them. Every one is darker and greyer than its colour in the word. */
+  --r4-l: 0.42;
+  --r4-green: oklch(var(--r4-l) 0.12 145);
+  --r4-yellow: oklch(calc(var(--r4-l) + 0.04) 0.105 82);
+  --r4-orange: oklch(var(--r4-l) 0.13 50);
+  --r4-red: oklch(var(--r4-l) 0.14 24);
+  --r4-purple: oklch(var(--r4-l) 0.12 328);
+  --r4-blue: oklch(var(--r4-l) 0.1 238);
+  /* The printed rule: the floor under the records, the same hairline as the footer's. */
+  --r4-rule: rgba(255, 255, 255, 0.12);
+}
+
+/* ---------------------------------------------------------------- the first screen */
+.r4 .v4-intro {
+  /* Above the shelf, whose wall (the sash) reaches up behind it. */
+  position: relative; z-index: 1;
+  padding: calc(5.25rem + env(safe-area-inset-top, 0px)) 0 clamp(1.5rem, 3vw, 2.5rem); }
+.r4 .v4-intro__title { font-size: var(--r4-hl); line-height: 1; letter-spacing: -0.035em; }
+.r4 .v4-intro .lede { max-width: 36rem; margin-top: 1rem; text-wrap: pretty; }
+
+.r4 .v4-shelf { padding-bottom: clamp(3rem, 6vw, 5rem); }
+.r4 .v4-bar {
+  /* The records as large as the screen's height allows, so the whole row is on the first screen. */
+  --s: clamp(196px, min(56vw, 31svh), 380px);
+  /* Where the sash's middle line meets the floor, from the middle of the row: right of the centre
+     record's middle, so it rises past the copy's right edge into the empty corner. r4.ts moves it
+     further right if a line of copy would come within reach of it. */
+  --r4-x: calc(var(--s) * 0.3 + var(--r4-w) * 0.7);
+  /* Where the sash stops, as a share of the sleeves' height above the floor. Halfway up, the sleeves
+     overlap one another, so its cut end is always behind one, however the row has turned. */
+  --r4-end: 0.5;
+}
+.r4 .v4-bar__wall { display: none; }
+.r4 .v4-shelf__head { gap: 0.5rem; padding-top: 0; }
+.r4 .v4-shelf__title { font-size: clamp(2.25rem, 4.4vw, 3.5rem); }
+.r4 .v4-shelf__lede { max-width: 36rem; text-wrap: pretty; }
+
+/* The floor: one printed rule along the records' feet, across the row's width. */
+.r4-stand { position: relative; }
+.r4-stand::after {
+  content: ''; position: absolute; z-index: -1;
+  left: 50%; width: min(100% - 2 * var(--gutter), var(--wide)); transform: translateX(-50%);
+  bottom: calc(var(--foot) - 1px); height: 1px;
+  background: var(--r4-rule);
+}
+
+/* ---------------------------------------------------------------- the sash
+   Its box is the wall: from far above (the page's top edge cuts it) down to where it stops behind the
+   row, which cuts the stripes level. Inside, the band is a point the six stripes stand on, side by
+   side, turned 25deg as the word's are (115deg less a right angle). The point is placed so that the
+   sash's middle line meets the floor --r4-x right of the middle, wherever the cut is. */
+.r4-sash {
+  position: absolute; z-index: -1;
+  left: 0; right: 0; top: -150svh; bottom: calc(var(--foot) + var(--s) * var(--r4-end));
+  overflow: hidden; pointer-events: none;
+}
+.r4-sash__band {
+  position: absolute;
+  left: calc(50% + var(--r4-x) + (var(--s) * var(--r4-end) - var(--r4-w) * 1.5) * 0.4663);
+  bottom: calc(var(--r4-w) * -1.5);
+  width: 0; height: 320svh;
+  transform: rotate(25deg); transform-origin: 0 100%;
+}
+.r4-sash__stripe {
+  position: absolute; top: 0; bottom: 0;
+  left: calc(var(--r4-w) * (var(--i) - 3));
+  /* A hair wider than its share, under the next one, so no seam of black opens between two bands. */
+  width: calc(var(--r4-w) + 1px);
+  overflow: hidden;
+  transform-origin: 0 50%;
+}
+.r4-sash__ink { position: absolute; inset: 0; background: var(--c); }
+.r4-sash__stripe--green { --c: var(--r4-green); }
+.r4-sash__stripe--yellow { --c: var(--r4-yellow); }
+.r4-sash__stripe--orange { --c: var(--r4-orange); }
+.r4-sash__stripe--red { --c: var(--r4-red); }
+.r4-sash__stripe--purple { --c: var(--r4-purple); }
+.r4-sash__stripe--blue { --c: var(--r4-blue); }
+
+/* Before the intro lays it down, the sash waits unseen, as the rest of the page does (and shows after
+   a few seconds anyway if the script never comes). Once r4.ts has the ink in hand, it is shown. */
+@media (prefers-reduced-motion: no-preference) {
+  html.js .r4[data-intro] .r4-sash:not(.is-laying) { opacity: 0; animation: v4-intro-failsafe 1ms 6s both; }
+}
+
+/* ---------------------------------------------------------------- the phone
+   A tall, narrow screen: the copy runs nearly to the right edge, so the sash comes in from the right
+   edge beside the shelf's lede and goes down behind the right-hand records, a corner of the print.
+   The sleeves there leave a gap between the middle one and the next, so the sash runs on down to the
+   floor and its cut end is the floor rule itself. */
+@media (max-width: 599px) {
+  .r4 .v4-bar { --r4-end: 0; } /* r4.ts moves it up as far as the copy allows */
+  /* The copy's right edge kept in from the screen's, so the sash can start higher up beside it; the
+     shelf's lede in two lines, a sentence each. */
+  .r4 .v4-intro .lede { max-width: min(20rem, 84vw); }
+  .r4-sentence { display: block; }
+  .r4-stand::after { width: 100%; }
+}
+
+@media (prefers-contrast: more) {
+  .r4 { --r4-l: 0.32; --r4-rule: rgba(255, 255, 255, 0.32); }
+}

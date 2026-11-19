@@ -28,7 +28,11 @@ function settle(target: HTMLElement, hash: string) {
   frame = 0;
   // The entry carries the router's state (the page it is on, where it was scrolled), so Back from
   // another page finds its way here; Back within the page is scripts/page.ts.
-  if (location.hash !== hash) history.pushState(history.state, '', hash);
+  if (hash === '#top') {
+    if (location.hash) history.pushState(history.state, '', location.pathname + location.search);
+  } else if (location.hash !== hash) {
+    history.pushState(history.state, '', hash);
+  }
   // Keyboard users continue from where they landed.
   if (!target.hasAttribute('tabindex')) target.setAttribute('tabindex', '-1');
   target.focus({ preventScroll: true });
@@ -51,7 +55,7 @@ function replay(target: HTMLElement) {
 export function goTo(hash: string) {
   const target = document.querySelector<HTMLElement>(hash);
   if (!target) return false;
-  replay(target);
+  if (hash !== '#top') replay(target);
   stop();
   const start = scrollY;
   const max = document.scrollingElement!.scrollHeight - innerHeight;

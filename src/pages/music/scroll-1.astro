@@ -1,0 +1,67 @@
+---
+/**
+ * Music, way scroll-1: the page as it is (design 4, "Listening bar": the intro, the carousel and the
+ * climb to the ring, all reused from components/music/v4), and then it goes on as the rest of the site
+ * does. Past the needle landing, the page scrolls on to what I play and make, then every record of the
+ * ring with its notes and tracks, then the footer. Everything after the ring is read by scrolling.
+ * The continuation lives in components/music/scroll-1.
+ */
+import MusicShell from '@/components/music/MusicShell.astro';
+import { musicCopy } from '@/data/music';
+import Headline from '@/components/music/v4/Headline.astro';
+import Carousel from '@/components/music/v4/Carousel.astro';
+import Caption from '@/components/music/v4/Caption.astro';
+import OpenRecord from '@/components/music/v4/OpenRecord.astro';
+import Continuation from '@/components/music/scroll-1/Continuation.astro';
+import '@/components/music/v4/listening-bar.css';
+import '@/components/music/scroll-1/scroll-1.css';
+---
+<MusicShell title="Music">
+  <main id="main" class="v4" data-music-page data-intro data-sc1>
+    <div class="v4-page" data-v4-page>
+      <section class="v4-intro" aria-labelledby="v4-title">
+        <div class="container v4-intro__inner">
+          <Headline />
+          <p class="lede" data-intro-rest>{musicCopy.lede}</p>
+        </div>
+      </section>
+
+      <section class="v4-shelf" aria-labelledby="v4-shelf-title" data-intro-rest data-climb>
+        <i class="v4-climb__probe" aria-hidden="true" data-climb-probe></i>
+        <div class="v4-climb__stage" data-climb-stage>
+          <div class="v4-floor" aria-hidden="true" data-climb-floor></div>
+          <div class="v4-bar">
+            <div class="v4-bar__wall" aria-hidden="true" data-climb-wall></div>
+            <header class="container v4-shelf__head" data-climb-head>
+              <p class="eyebrow v4-eyebrow">{musicCopy.shelf.eyebrow}</p>
+              <h2 class="v4-shelf__title" id="v4-shelf-title">{musicCopy.shelf.headline}</h2>
+              <p class="lede v4-shelf__lede">{musicCopy.shelf.lede}</p>
+            </header>
+            <Carousel />
+          </div>
+
+          <Caption />
+
+          <div class="v4-making" data-climb-words>
+            {musicCopy.collection.map((passage) => (
+              <p class="v4-making__page" data-climb-page>
+                {passage.split(' ').map((word) => <><span class="w" data-w>{word}</span>{' '}</>)}
+              </p>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      <Continuation />
+    </div>
+
+    <OpenRecord />
+  </main>
+</MusicShell>
+
+<script>
+  import '@/components/music/v4/listening-bar';
+  import '@/components/music/v4/climb';
+  import '@/components/music/v4/intro';
+  import '@/components/music/scroll-1/scroll-1';
+</script>

@@ -257,7 +257,8 @@ function init(root: HTMLElement, signal: AbortSignal) {
         ? `translate3d(${x.toFixed(2)}px,${v.y.toFixed(2)}px,0) ${turned(v)}`
         : `translate3d(${x.toFixed(2)}px,0,0) perspective(${P.toFixed(0)}px) rotateY(${g.rot.toFixed(3)}deg) scale(${g.s.toFixed(4)})`);
       css(shades[i]!, 'opacity', shade.toFixed(3));
-      css(b, 'zIndex', String(g.z));
+      // On the floor every other sleeve rests on both neighbours, wherever the ring turns.
+      css(b, 'zIndex', String(view && view.w > 0.5 ? 1000 + i % 2 : g.z));
       css(b, 'opacity', alpha.toFixed(3));
       css(b, 'pointerEvents', alpha < 0.2 ? 'none' : ''); // nothing to press on the far side
     }

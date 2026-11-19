@@ -105,21 +105,14 @@ function start(root: HTMLElement, signal: AbortSignal, fromHistory: boolean) {
   // the screen as it is now, so it is worked out again whenever the screen changes size during the
   // show: on an iPhone, Safari's toolbar comes back as the page opens at its top (it was tucked away on
   // a page scrolled down), and the screen gets shorter under the headline.
-  const restLove = love.getBoundingClientRect(), restWord = word.getBoundingClientRect();
-  const sx0 = scrollX, sy0 = scrollY;
-  type Box = { left: number; right: number; top: number; width: number; height: number };
-  /** A part's resting box on the screen now, wherever the page has been scrolled to since. */
-  const rest = (r: DOMRect): Box => {
-    const dx = sx0 - scrollX, dy = sy0 - scrollY;
-    return { left: r.left + dx, right: r.right + dx, top: r.top + dy, width: r.width, height: r.height };
-  };
+  const wideFrame = love.closest('.v4-intro--wide .v4-intro__inner');
   // Each part scales about the side that faces the other ("I love" its right, "music." its left, as
   // set in the CSS), so neither swells into the other on the way home.
   type Pose = { x: number; y: number; s: number };
   /** A pose reached at `at` ms; `ease` shapes the way from it to the next one. */
   type Key = Pose & { at: number; ease?: (p: number) => number };
   /** Puts a part's facing side at x and its middle at y, scaled by s. */
-  const place = (r: Box, side: 'left' | 'right', x: number, y: number, s: number): Pose => ({
+  const place = (r: DOMRect, side: 'left' | 'right', x: number, y: number, s: number): Pose => ({
     x: side === 'right' ? x + (s * r.width) / 2 - r.right : x - (s * r.width) / 2 - r.left,
     y: y - r.top - r.height / 2,
     s,
@@ -128,9 +121,12 @@ function start(root: HTMLElement, signal: AbortSignal, fromHistory: boolean) {
   const END = SETTLE + FOLLOW + HOME; // both parts are home
   /** The two parts' paths across the screen as it is now. */
   const paths = (): { love: Key[]; word: Key[] } => {
-    const L = rest(restLove), M = rest(restWord);
+    const L = love.getBoundingClientRect(), M = word.getBoundingClientRect();
     const W = innerWidth, H = innerHeight;
-    const sM = Math.min((W * 0.86) / M.width, (H * 0.4) / M.height); // "music." as wide as the screen allows
+    const frameWidth = wideFrame?.getBoundingClientRect().width ?? W;
+    const sM = Math.min((frameWidth * 0.86) / M.width, (H * 0.4) / M.height);
+    // The first impact fits between the same margins as the oversized headline it settles into.
+    const impact = wideFrame ? Math.min(sM * 1.15, frameWidth / M.width) : sM * 1.35;
     const sL0 = Math.min((W * 0.55) / L.width, (H * 0.24) / L.height); // "I love" alone, large
     const sL1 = sL0 * 0.78; // after the wait
     const sL2 = Math.min(sM * 0.42, sL1); // dwarfed by "music"
@@ -150,9 +146,9 @@ function start(root: HTMLElement, signal: AbortSignal, fromHistory: boolean) {
         { at: SETTLE, ...loveAt(loveY, sL2), ease: EASE_DRAWER.at },
         { at: SETTLE + LOVE_HOME, ...HOME_POSE },
       ],
-      // "music.": lands from larger than the screen allows, all at once, then follows "I love" home.
+      // "music.": lands all at once, then follows "I love" home.
       word: [
-        { at: HIT, ...wordAt(sM * 1.35), ease: EASE_OUT.at },
+        { at: HIT, ...wordAt(impact), ease: EASE_OUT.at },
         { at: HIT + PUNCH, ...wordAt(sM) },
         { at: SETTLE + FOLLOW, ...wordAt(sM), ease: EASE_DRAWER.at },
         { at: END, ...HOME_POSE },
@@ -204,7 +200,13 @@ function start(root: HTMLElement, signal: AbortSignal, fromHistory: boolean) {
   };
   signal.addEventListener('abort', release);
   // The screen changing size mid-show redraws the paths; the parts carry on from where they are in time.
-  const reflow = () => { keys = paths(); };
+  const reflow = () => {
+    // Measure the resized type in its resting position, then restore this frame before paint.
+    love.style.transform = word.style.transform = '';
+    written.clear();
+    keys = paths();
+    draw();
+  };
   addEventListener('resize', reflow, { signal });
   visualViewport?.addEventListener('resize', reflow, { signal });
 

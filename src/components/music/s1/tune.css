@@ -1,0 +1,98 @@
+/* s1, sketch B: out of tune, off the grid. Every rule under .s1. */
+.s1 .v4-shelf { padding-bottom: clamp(3rem, 6vw, 5rem); }
+
+.s1 .s1b { padding-block: clamp(5rem, 12vw, 10rem) clamp(5rem, 10vw, 9rem); }
+
+/* ------------------------------------------------------------------ tune */
+.s1 .s1b-tune { position: relative; touch-action: pan-y; -webkit-user-select: none; user-select: none; }
+.s1 .s1b-line {
+  font-size: clamp(2.75rem, 8.2vw, 7.5rem); line-height: 1.04; font-weight: 600; letter-spacing: -0.035em;
+  color: var(--on-dark);
+}
+.s1 .s1b-off { position: relative; white-space: nowrap; }
+/* Each letter: a grey one out of tune, and the same letter in white that shows as it comes true. */
+.s1 .s1b-l { position: relative; display: inline-block; will-change: transform; }
+.s1 .s1b-l__g { color: #8e8e93; }
+.s1 .s1b-l__w { position: absolute; left: 0; top: 0; color: var(--on-dark); opacity: 0; will-change: opacity; }
+.s1 .s1b-sp { display: inline-block; width: 0.26em; }
+/* Before the script the line is simply grey and straight. */
+.s1 .s1b-note { margin-top: 1.25rem; font-size: 1.0625rem; color: var(--on-dark-2); }
+@media (hover: none) { .s1 .s1b-note { visibility: visible; } }
+
+/* ------------------------------------------------------------------ quantize
+   A grid like a playlist's: beats as hairlines, every fourth one (a bar) a little brighter, and bar
+   numbers along the top. It runs off the right edge of the screen: there is more song than this. */
+.s1 .s1b-q {
+  --g: 30px; /* one beat; the script sets it from the type size */
+  position: relative;
+  margin-top: clamp(5rem, 12vw, 10rem);
+  margin-left: max(var(--gutter), calc(50% - 600px));
+  margin-right: 0;
+  padding-bottom: 1.5rem;
+  touch-action: pan-y;
+  -webkit-user-select: none; user-select: none;
+}
+.s1 .s1b-q__ruler {
+  position: relative; height: 2.25rem;
+  font-size: 0.8125rem; line-height: 1; color: var(--on-dark-2); font-variant-numeric: tabular-nums;
+  box-shadow: inset 0 -1px 0 rgba(255, 255, 255, 0.14);
+  cursor: pointer;
+}
+.s1 .s1b-q__ruler span { position: absolute; bottom: 0.7rem; transform: translateX(0.35rem); }
+.s1 .s1b-q__rows {
+  position: relative;
+  background:
+    repeating-linear-gradient(90deg, rgba(255, 255, 255, 0.16) 0 1px, transparent 1px calc(var(--g) * 4)),
+    repeating-linear-gradient(90deg, rgba(255, 255, 255, 0.06) 0 1px, transparent 1px var(--g));
+  -webkit-mask-image: linear-gradient(90deg, #000 calc(100% - 12rem), transparent);
+  mask-image: linear-gradient(90deg, #000 calc(100% - 12rem), transparent);
+  cursor: ew-resize;
+}
+.s1 .s1b-q__text {
+  position: relative;
+  font-size: clamp(2.125rem, 5.4vw, 5.25rem); line-height: 1.25; font-weight: 600; letter-spacing: -0.03em;
+  color: #8e8e93;
+  padding-right: 4rem;
+}
+/* Laid out by the script on the grid: each word in its own lane slot. */
+.s1 .s1b-q.is-laid .s1b-q__text { height: var(--h); }
+.s1 .s1b-q.is-laid .s1b-w { position: absolute; left: 0; top: 0; white-space: nowrap; will-change: transform; }
+.s1 .s1b-w { position: relative; display: inline-block; margin-right: 0.26em; }
+.s1 .s1b-q.is-laid .s1b-w { margin: 0; }
+.s1 .s1b-w__w { position: absolute; left: 0; top: 0; color: var(--on-dark); opacity: 0; will-change: opacity; }
+/* Where a word starts: a short tick on its lane's floor, like a note's start. */
+.s1 .s1b-w::before {
+  content: ''; position: absolute; left: 0; bottom: 0.06em; width: 2px; height: 0.22em; border-radius: 1px;
+  background: currentColor; opacity: 0.6;
+}
+/* The lanes: a hairline under each row of words. */
+.s1 .s1b-lane { position: absolute; left: 0; right: 0; height: 1px; background: rgba(255, 255, 255, 0.07); pointer-events: none; }
+
+/* The playhead: a line down the grid, and a grip on the ruler to take it by. */
+.s1 .s1b-ph { position: absolute; left: 0; top: 0; bottom: 1.5rem; width: 0; will-change: transform; pointer-events: none; }
+.s1 .s1b-ph__line { position: absolute; left: -1px; top: 2.25rem; bottom: 0; width: 2px; background: var(--on-dark); box-shadow: 0 0 0 0.5px rgba(0, 0, 0, 0.4); }
+.s1 .s1b-ph__grip {
+  position: absolute; left: -15px; top: 0.25rem; width: 30px; height: 1.75rem; border-radius: 8px 8px 15px 15px;
+  pointer-events: auto; cursor: grab; touch-action: none;
+  background: rgba(255, 255, 255, 0.16);
+  -webkit-backdrop-filter: blur(10px) saturate(180%); backdrop-filter: blur(10px) saturate(180%);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.6), inset 0 0 0 1px rgba(255, 255, 255, 0.14), 0 4px 12px rgba(0, 0, 0, 0.45);
+  transition: transform 140ms var(--ease-out);
+}
+.s1 .s1b-ph__grip::before { content: ''; position: absolute; left: -9px; right: -9px; top: -10px; bottom: -10px; }
+.s1 .s1b-ph__grip::after { content: ''; position: absolute; left: 50%; top: 0.5rem; width: 2px; height: 0.75rem; margin-left: -1px; border-radius: 1px; background: rgba(255, 255, 255, 0.85); }
+.s1 .s1b-ph__grip.is-held { transform: scale(1.12); cursor: grabbing; }
+
+/* The one control, in glass, floating over the grid it acts on: quantize all, or undo. */
+.s1 .s1b-chip {
+  position: absolute; right: max(var(--gutter), calc(50vw - 600px)); top: -3.75rem;
+  min-height: 2.75rem; padding: 0.625rem 1.25rem; border: 0; border-radius: 999px;
+  font-size: 1.0625rem; font-weight: 500; color: var(--on-dark);
+  background: rgba(255, 255, 255, 0.1);
+  -webkit-backdrop-filter: blur(20px) saturate(180%); backdrop-filter: blur(20px) saturate(180%);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.4), inset 0 0 0 1px rgba(255, 255, 255, 0.08), 0 10px 30px rgba(0, 0, 0, 0.3);
+  cursor: pointer;
+  transition: transform 120ms var(--ease-out), background-color 200ms ease;
+}
+.s1 .s1b-chip:active { transform: scale(0.97); }
+@media (hover: hover) and (pointer: fine) { .s1 .s1b-chip:hover { background: rgba(255, 255, 255, 0.16); } }

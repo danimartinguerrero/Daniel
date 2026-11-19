@@ -1,0 +1,60 @@
+/* The instruments (StringStory.astro, strings.ts). Laid out as plain sections first: the heading, then
+   each chapter's words above its instrument standing upright. With the script (is-scrubbed), each
+   screen is held while its words fill, and in the chapters the instrument turns in a canvas laid over
+   the whole screen, under the words. The page is black and so are the stills, so they have no edge. */
+.strings { position: relative; color: var(--on-dark); }
+
+.strings__intro-stage {
+  display: grid; place-items: center;
+  padding: clamp(6rem, 18svh, 12rem) var(--gutter);
+  background: var(--dark);
+}
+.is-scrubbed .strings__intro-stage { padding-block: 0; }
+.strings__heading {
+  position: relative; margin: 0; max-width: 13ch;
+  font-size: clamp(2.4rem, min(12vw, 17svh), 12rem); line-height: .98; font-weight: 600;
+  letter-spacing: -.05em; text-align: center; text-wrap: balance;
+}
+
+.strings__stage {
+  position: relative; isolation: isolate; overflow: clip;
+  display: grid; gap: 1.5rem; padding-block: clamp(3rem, 7vw, 7rem);
+  background: var(--dark);
+}
+.strings__content { grid-row: 1; position: relative; z-index: 1; }
+.strings__copy { display: grid; gap: clamp(1.15rem, 2.7vw, 2.5rem); max-width: 36rem; }
+.strings__title, .strings__body { position: relative; text-wrap: balance; }
+.strings__title { margin: 0; font-size: clamp(2.25rem, 6vw, 5.75rem); line-height: 1.01; letter-spacing: -.052em; font-weight: 600; }
+.strings__body { margin: 0; max-width: 48ch; font-size: clamp(1rem, 1.55vw, 1.45rem); line-height: 1.38; letter-spacing: -.016em; font-weight: 500; text-wrap: pretty; }
+
+.strings__art { position: relative; height: min(110vw, 78svh); pointer-events: none; }
+.strings__mover { position: absolute; inset: 0; }
+.strings__still { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; }
+.strings__frame { display: none; }
+
+/* Held: the words at the left (at the top on a phone), the instrument under them, anywhere on the
+   screen. The mover is placed and sized for where the instrument ends, upright; the script moves it
+   there from under the words with transform and opacity alone, and draws the instrument in its canvas.
+   It shows once the scene is ready; without WebGL, the upright still takes the canvas's place. */
+.is-scrubbed .strings__stage { display: block; padding: 0; }
+.is-scrubbed .strings__content {
+  width: 49%; margin: 0;
+  padding: clamp(5rem, 17svh, 12rem) 0 0 max(var(--gutter), calc((100vw - var(--content)) / 2));
+}
+.is-scrubbed .strings__body { max-width: 38ch; }
+.is-scrubbed .strings__art { position: absolute; inset: 0; height: auto; z-index: 0; opacity: 0; transition: opacity 400ms ease; }
+.is-scrubbed .strings__art.is-ready { opacity: 1; }
+.is-scrubbed .strings__mover { inset: auto; transform-origin: 50% 50%; will-change: transform, opacity; }
+.is-scrubbed .strings__still { display: none; }
+.is-scrubbed .strings__frame { display: block; position: absolute; inset: 0; width: 100%; height: 100%; }
+.is-scrubbed .is-flat .strings__still { display: block; }
+.is-scrubbed .is-flat .strings__frame { display: none; }
+@media (max-width: 760px) {
+  .is-scrubbed .strings__content { width: auto; padding: max(4.5rem, 10svh) var(--gutter) 0; }
+  .strings__title { font-size: clamp(2.15rem, 8.5vw, 3.4rem); }
+}
+
+/* Lit, as plain paragraphs, until the script takes them over (is-armed): then the words wait in the
+   site's grey and the light comes along each line over them (text-fill.ts, text-fill.css). */
+.strings .is-armed .w { color: var(--fill-dim); }
+@media (forced-colors: active) { .strings .is-armed .w { color: CanvasText; } }

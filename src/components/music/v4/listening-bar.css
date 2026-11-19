@@ -40,6 +40,14 @@
 .v4-intro__inner { display: grid; justify-items: start; gap: 0.75rem; }
 .v4-intro__title { font-size: clamp(3rem, 9vw, 6rem); line-height: 1; letter-spacing: -0.03em; }
 .v4-intro .lede { max-width: 30rem; }
+.v4-intro--wide { padding-bottom: 0; }
+.v4-intro--wide .v4-intro__inner { container-type: inline-size; }
+.v4-intro--wide .v4-intro__title {
+  font-size: 19.6cqi;
+  letter-spacing: -0.04em;
+  line-height: 1;
+  font-optical-sizing: auto;
+}
 
 /* The headline's parts move on their own in the intro (intro.ts), so they are boxes. */
 .v4-love, .v4-word, .v4-love > [data-intro-w] { display: inline-block; }

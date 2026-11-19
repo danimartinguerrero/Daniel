@@ -1,0 +1,44 @@
+---
+/**
+ * s4/b, "The ring from above". The carousel above is a ring seen edge-on. Here the same eleven records
+ * lie on the floor in that ring, in the same order, and as the page scrolls the point of view rises
+ * until you look down on them. His words are printed on the floor in the middle. The record nearest
+ * you is the one in the middle of the carousel; turning one turns the other (ring.ts).
+ */
+import { vinyls } from '@/data/music';
+import { START } from '@/components/music/v4/start';
+import { s4Copy } from './copy';
+
+const c = s4Copy.ring;
+const first = vinyls[START]!;
+---
+<section class="s4r" aria-labelledby="s4r-title" data-intro-rest data-s4r>
+  <div class="s4r-track" data-s4r-track>
+    <div class="s4r-sticky">
+      <div class="s4r-scene" data-s4r-scene>
+        <div class="s4r-floor" data-s4r-floor>
+          <div class="s4r-pool" aria-hidden="true"></div>
+          <div class="s4r-ring" data-s4r-ring>
+            {vinyls.map((v, i) => (
+              <div class="s4r-slot" data-s4r-slot={i} style={`--i:${i}`}>
+                <button class="s4r-sleeve" type="button" tabindex="-1" aria-hidden="true" data-s4r-sleeve={i}>
+                  <img src={`/img/music/${v.id}.webp`} width="800" height="800" alt="" decoding="async" loading="lazy" draggable="false" />
+                  <span class="s4r-sleeve__film"></span>
+                  <span class="s4r-sleeve__shade" data-s4r-shade></span>
+                </button>
+              </div>
+            ))}
+          </div>
+          <div class="s4r-words">
+            <h2 class="s4r-words__lead" id="s4r-title">{c.play}</h2>
+            <p class="s4r-words__line">{c.beats}</p>
+          </div>
+        </div>
+      </div>
+      <p class="s4r-caption" aria-hidden="true">
+        <span class="s4r-caption__title" data-s4r-cap-title>{first.title}</span>
+        <span class="s4r-caption__meta" data-s4r-cap-meta>{first.artist}, {first.year}</span>
+      </p>
+    </div>
+  </div>
+</section>

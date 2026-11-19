@@ -1,0 +1,8 @@
+---
+import ContactConcept from '@/components/ContactConcept.astro';
+export function getStaticPaths() {
+  return [1, 2, 3, 4].map(variant => ({ params: { variant: String(variant) }, props: { variant } }));
+}
+const { variant } = Astro.props;
+---
+<ContactConcept variant={variant} />

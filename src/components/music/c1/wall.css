@@ -1,0 +1,80 @@
+/* Way c1: the wall. Past the ring the camera looks up at the wall behind the shelf, where the guitar and
+   the bass hang (climb.ts moves the floor out and the wall in; scene.ts draws the wall).
+
+   Without the script, or with reduced motion, there is no film and no canvas: the lines are simply the
+   page's next paragraphs, lit. */
+.c1-wall { position: relative; }
+.c1-wall__canvas, .c1-wall__edge { display: none; }
+.c1-says {
+  display: grid; gap: 0.6em;
+  width: min(100% - 2 * var(--gutter), 34rem); margin: clamp(3rem, 7vw, 5rem) auto 0;
+  font-size: clamp(1.25rem, 3vw, 1.75rem); line-height: 1.12; font-weight: 600; letter-spacing: -0.022em;
+  text-align: center; text-wrap: balance;
+}
+.c1-says__line { margin: 0; }
+/* Each word is filled from its left by --f (0 to 1), as in the ring. Left alone it is lit. */
+.c1-says .w { --f: 1; color: var(--on-dark); }
+@supports ((-webkit-background-clip: text) or (background-clip: text)) {
+  .c1-says .w {
+    background: linear-gradient(90deg, var(--on-dark) calc(var(--f) * 124% - 24%), #48484a calc(var(--f) * 124%));
+    -webkit-background-clip: text; background-clip: text;
+    -webkit-text-fill-color: transparent; color: transparent;
+    padding: 0.12em 0.04em; margin: -0.12em -0.04em;
+  }
+}
+@media (forced-colors: active) {
+  .c1-says .w { background: none; -webkit-text-fill-color: currentColor; color: CanvasText; }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  /* The climb and the wall share the stage: 290svh of scroll for the climb, 400svh for the wall
+     (climb.ts splits it the same way). */
+  html.js .c1 .v4-shelf[data-climb] { --climb-run: 690svh; }
+  html.js .c1 .v4-climb__stage { overflow: hidden; overflow: clip; }
+  /* The floor: the ring, its light, its words and the record's name, as one layer the camera leaves. */
+  html.js .c1-ground { position: relative; height: 100%; will-change: transform; }
+
+  html.js .c1-wall {
+    position: absolute; inset: 0; z-index: 3;
+    visibility: hidden; /* until the camera looks up */
+    will-change: transform;
+    background: #000;
+  }
+  /* Dark until the models are in, then the lamp comes on. */
+  html.js .c1-wall__canvas {
+    display: block; position: absolute; inset: 0; width: 100%; height: 100%;
+    opacity: 0; transition: opacity 600ms ease;
+    touch-action: pan-y pinch-zoom;
+    -webkit-user-select: none; user-select: none; -webkit-touch-callout: none;
+  }
+  html.js .c1-wall.is-lit .c1-wall__canvas { opacity: 1; }
+  html.js .c1-wall__canvas.is-over { cursor: grab; }
+  html.js .c1-wall__canvas.is-held { cursor: grabbing; }
+  /* The wall never meets the page at a line: it goes to the page's black before every edge, along a
+     curve with no corner in it (each ramp is a smootherstep, sampled). */
+  html.js .c1-wall__edge {
+    display: block; position: absolute; inset: 0; pointer-events: none;
+    background:
+      linear-gradient(180deg, rgba(0, 0, 0, 1.000) 0.00%, rgba(0, 0, 0, 0.984) 2.75%, rgba(0, 0, 0, 0.896) 5.50%, rgba(0, 0, 0, 0.725) 8.25%, rgba(0, 0, 0, 0.500) 11.00%, rgba(0, 0, 0, 0.275) 13.75%, rgba(0, 0, 0, 0.104) 16.50%, rgba(0, 0, 0, 0.016) 19.25%, rgba(0, 0, 0, 0.000) 22.00%, rgba(0, 0, 0, 0.000) 78.00%, rgba(0, 0, 0, 0.016) 80.75%, rgba(0, 0, 0, 0.104) 83.50%, rgba(0, 0, 0, 0.275) 86.25%, rgba(0, 0, 0, 0.500) 89.00%, rgba(0, 0, 0, 0.725) 91.75%, rgba(0, 0, 0, 0.896) 94.50%, rgba(0, 0, 0, 0.984) 97.25%, rgba(0, 0, 0, 1.000) 100.00%),
+      linear-gradient(90deg, rgba(0, 0, 0, 1.000) 0.00%, rgba(0, 0, 0, 0.984) 2.00%, rgba(0, 0, 0, 0.896) 4.00%, rgba(0, 0, 0, 0.725) 6.00%, rgba(0, 0, 0, 0.500) 8.00%, rgba(0, 0, 0, 0.275) 10.00%, rgba(0, 0, 0, 0.104) 12.00%, rgba(0, 0, 0, 0.016) 14.00%, rgba(0, 0, 0, 0.000) 16.00%, rgba(0, 0, 0, 0.000) 84.00%, rgba(0, 0, 0, 0.016) 86.00%, rgba(0, 0, 0, 0.104) 88.00%, rgba(0, 0, 0, 0.275) 90.00%, rgba(0, 0, 0, 0.500) 92.00%, rgba(0, 0, 0, 0.725) 94.00%, rgba(0, 0, 0, 0.896) 96.00%, rgba(0, 0, 0, 0.984) 98.00%, rgba(0, 0, 0, 1.000) 100.00%);
+  }
+
+  /* What is said: one line at a time in the same place. On a phone under the instruments; on a wide
+     screen on the page's left edge, as the shelf's heading hangs. */
+  html.js .c1-wall .c1-says {
+    position: absolute; left: var(--gutter); right: var(--gutter); bottom: max(7svh, calc(env(safe-area-inset-bottom) + 2.5rem));
+    width: auto; margin: 0; gap: 0;
+    font-size: clamp(1.625rem, 7.4vw, 2.125rem); line-height: 1.08; letter-spacing: -0.025em;
+    pointer-events: none;
+  }
+  html.js .c1-wall .c1-says__line { grid-area: 1 / 1; align-self: end; opacity: 0; will-change: transform, opacity; }
+  @media (min-width: 820px) {
+    html.js .c1-wall .c1-says {
+      left: max(var(--gutter), calc((100vw - var(--wide)) / 2)); right: auto; top: 0; bottom: 0;
+      width: min(38vw, 30rem);
+      font-size: clamp(2.25rem, 4.4vw, 3.75rem); line-height: 1.05; letter-spacing: -0.03em;
+      text-align: left;
+    }
+    html.js .c1-wall .c1-says__line { align-self: center; }
+  }
+}

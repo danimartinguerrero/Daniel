@@ -1,0 +1,117 @@
+/* The instruments, prototype "B, further" (StringNext.astro, strings-next.ts). Laid out as plain sections
+   first: the heading, then each chapter's words above its instrument standing upright. With the script
+   (is-scrubbed) each screen is held while its words fill, and in a chapter three layers share it: the
+   instrument's name at the back, the instrument in a canvas, the words in front. */
+.sn { position: relative; color: var(--on-dark); }
+
+.sn__intro-stage {
+  display: grid; place-items: center;
+  padding: clamp(6rem, 18svh, 12rem) var(--gutter);
+  background: var(--dark);
+}
+.is-scrubbed .sn__intro-stage { padding-block: 0; }
+.sn__heading {
+  position: relative; margin: 0; max-width: 13ch;
+  font-size: clamp(2.4rem, min(11vw, 16svh), 11rem); line-height: 1; font-weight: 600;
+  letter-spacing: -.028em; text-align: center; text-wrap: balance;
+}
+
+.sn__stage {
+  position: relative; isolation: isolate; overflow: clip;
+  display: grid; gap: 1.5rem; padding-block: clamp(3rem, 7vw, 7rem);
+  background: var(--dark);
+}
+.sn__content { grid-row: 1; position: relative; z-index: 2; }
+.sn__copy { display: grid; gap: clamp(1.1rem, 2vw, 1.8rem); max-width: 34rem; }
+.sn__title, .sn__body { position: relative; margin: 0; }
+/* Type set the way Apple sets it at these sizes: the title tight but never touching, its leading close;
+   the story at a reading weight, tracked a hair open, in the page's second grey so the title is the one
+   bright thing on the screen. The story fills to that grey, not to white (text-fill.css reads --on-dark). */
+.sn__title {
+  font-size: clamp(2.25rem, 4.6vw, 4.5rem); line-height: 1.04; letter-spacing: -.024em; font-weight: 600;
+  text-wrap: balance;
+}
+.sn__body {
+  --on-dark: var(--on-dark-2);
+  max-width: 34ch; color: var(--on-dark-2);
+  font-size: clamp(1.0625rem, 1.5vw, 1.375rem); line-height: 1.42; letter-spacing: .004em; font-weight: 400;
+  text-wrap: pretty;
+}
+
+/* The name: the back wall. Set against the right margin, as wide as the space the words leave (about
+   two fifths of the screen) whatever its length, never taller than about half of it, behind where the
+   instrument will stand. Its own `translate` centres it; the script's
+   `transform` moves it a little with the instrument, slower, so the two read as two depths. */
+.sn__name {
+  position: absolute; z-index: 0; margin: 0; pointer-events: none; user-select: none;
+  left: 50%; top: 50%; translate: -50% -50%;
+  font-size: min(calc(42vw / (var(--name-chars) * .52)), 40svh);
+  line-height: .8; font-weight: 700; letter-spacing: -.035em; white-space: nowrap;
+  color: #1a1a1c;
+  display: none;
+}
+
+.sn__art { position: relative; height: min(110vw, 78svh); }
+.sn__still { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; }
+.sn__frame, .sn__grab, .sn__turn { display: none; }
+
+/* Held. */
+.is-scrubbed .sn__stage { display: block; padding: 0; }
+.is-scrubbed .sn__content {
+  position: absolute; top: 50%; translate: 0 -50%;
+  width: 52%; margin: 0; padding: 0 0 0 max(var(--gutter), calc((100vw - var(--content)) / 2));
+}
+.is-scrubbed .sn__name { display: block; left: auto; right: max(var(--gutter), calc((100vw - var(--wide)) / 2)); translate: 0 -50%; transform-origin: 100% 50%; }
+.is-scrubbed .sn__art { position: absolute; inset: 0; height: auto; z-index: 1; }
+.is-scrubbed .sn__still { display: none; }
+.is-scrubbed .sn__frame {
+  display: block; position: absolute; top: 0; left: 0;
+  transform-origin: 50% 50%; will-change: transform, opacity;
+}
+
+/* The hand. Over the standing instrument only, and only once it stands (is-standing): sideways drags
+   turn it, up and down still scroll the page. */
+.is-scrubbed .sn__grab {
+  display: block; position: absolute; z-index: 3;
+  touch-action: pan-y; cursor: grab; outline: none;
+  pointer-events: none; border-radius: 40px;
+}
+.is-standing .sn__grab { pointer-events: auto; }
+.is-turning .sn__grab { cursor: grabbing; }
+.sn__grab:focus-visible { box-shadow: 0 0 0 2px var(--link-on-dark); }
+
+/* The glass pill under it: arrives as a material (blur and scale with the fade) once the instrument
+   stands, and leaves the same way it came, faster. */
+.is-scrubbed .sn__turn {
+  display: inline-flex; align-items: center; gap: .45rem;
+  position: absolute; z-index: 3; left: 0; top: 0;
+  padding: .55rem 1rem .55rem .8rem; border: 0; border-radius: 999px;
+  font: 600 .875rem/1.2 var(--font); letter-spacing: .01em; color: var(--on-dark);
+  cursor: pointer; -webkit-user-select: none; user-select: none;
+  opacity: 0; filter: blur(6px); scale: .94; pointer-events: none;
+  transition: opacity 180ms ease-out, filter 180ms ease-out, scale 180ms ease-out, transform 120ms var(--ease-out);
+}
+.is-standing .sn__turn {
+  opacity: 1; filter: blur(0); scale: 1; pointer-events: auto;
+  transition: opacity 320ms var(--ease-out), filter 320ms var(--ease-out), scale 420ms var(--ease-out), transform 120ms var(--ease-out);
+}
+.is-scrubbed .sn__turn:active { transform: scale(.96); }
+.sn__turn svg { flex: none; }
+.sn__turn > * { position: relative; z-index: 1; }
+
+@media (max-width: 760px) {
+  .is-scrubbed .sn__content { top: 0; translate: none; width: auto; padding: max(4.5rem, 10svh) var(--gutter) 0; }
+  .sn__title { font-size: clamp(2.15rem, 8.5vw, 3.4rem); }
+  .is-scrubbed .sn__name { right: auto; left: 50%; translate: -50% -50%; transform-origin: 50% 50%; top: 66%; font-size: min(calc(92vw / (var(--name-chars) * .52)), 30svh); }
+}
+
+/* Lit, as plain paragraphs, until the script takes them over (is-armed): then the words wait in the
+   site's dim grey and the light comes along each line over them (text-fill.ts, text-fill.css). */
+.sn .is-armed .w { color: var(--fill-dim); }
+@media (forced-colors: active) {
+  .sn .is-armed .w { color: CanvasText; }
+  .sn__name { display: none !important; }
+}
+@media (prefers-reduced-transparency: reduce) {
+  .is-scrubbed .sn__turn { filter: none; }
+}

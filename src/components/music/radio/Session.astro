@@ -1,0 +1,55 @@
+---
+/**
+ * What the session puts on the stage besides the records themselves (those are the carousel's own
+ * sleeves, lifted out of the ring by listening-bar.ts): the light and the shadow under the record on the
+ * deck, its name underneath with the year on number wheels, and the presenter's two lines.
+ *
+ * And the running order written out, for whoever doesn't see the stage: a screen reader, a page with
+ * reduced motion (where there is no climb, and this list is the session), and a page without scripts.
+ */
+import { sleeveImg } from '../v4/sleeve';
+import { byYear, cues, talk } from './session';
+
+// Each wheel holds 0 to 9 and a 0 again, so a wheel can roll on from 9 into the next 0 without a jump.
+const digits = [...'01234567890'];
+---
+<div class="radio-deck" aria-hidden="true" data-radio-deck>
+  <div class="radio-pool" data-radio-pool></div>
+  <div class="radio-cast" data-radio-cast></div>
+  {byYear.map((v) => (
+    <p class="radio-cap" data-radio-cap={v.id}>
+      <span class="radio-cap__title">{v.title}</span>
+      <span class="radio-cap__meta">{v.artist}, <span class="radio-year" data-radio-year>{[...String(v.year)].map((d) => (
+        <span class="radio-year__win"><span class="radio-year__wheel" data-radio-wheel style={`transform:translate3d(0,${-Number(d) * 1.25}em,0)`}>{digits.map((x) => <span>{x}</span>)}</span></span>
+      ))}</span></span>
+    </p>
+  ))}
+</div>
+
+<div class="radio-talk" aria-hidden="true" data-radio-talk>
+  {cues.filter((c) => c.kind === 'talk').map((c) => (
+    <p class="radio-talk__line" data-radio-line={c.key}>
+      {c.text.split(' ').map((word) => <><span class="w" data-w>{word}</span>{' '}</>)}
+    </p>
+  ))}
+</div>
+
+<section class="radio-log" aria-labelledby="radio-log-title" data-radio-log>
+  <h2 class="radio-log__title" id="radio-log-title">My records, oldest first</h2>
+  <ol class="radio-log__list">
+    {cues.map((c) => c.kind === 'record' ? (
+      <li class="radio-log__item">
+        <button class="radio-log__row" type="button" data-radio-row={c.record.id}>
+          <span class="radio-log__sleeve" set:html={sleeveImg(c.record)} />
+          <span class="radio-log__name">
+            <span class="radio-log__record">{c.record.title}</span>
+            <span class="radio-log__artist">{c.record.artist}</span>
+          </span>
+          <span class="radio-log__year">{c.record.year}</span>
+        </button>
+      </li>
+    ) : (
+      <li class="radio-log__talk"><p>{talk[c.key]}</p></li>
+    ))}
+  </ol>
+</section>

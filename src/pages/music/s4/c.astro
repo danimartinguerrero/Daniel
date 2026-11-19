@@ -1,0 +1,54 @@
+---
+/**
+ * Sketch s4/c, "After hours": today's music page as one evening. Scrolling past the shelf, its
+ * lamp goes down, and the last light in the room is the screen on his desk (a photograph he would
+ * supply; here an obvious stand-in). Behaviour in components/music/s4/after-hours.ts.
+ */
+import MusicShell from '@/components/music/MusicShell.astro';
+import { musicCopy } from '@/data/music';
+import Headline from '@/components/music/v4/Headline.astro';
+import Carousel from '@/components/music/v4/Carousel.astro';
+import Caption from '@/components/music/v4/Caption.astro';
+import OpenRecord from '@/components/music/v4/OpenRecord.astro';
+import AfterHours from "@/components/music/s4/AfterHours.astro";
+import '@/components/music/v4/listening-bar.css';
+import '@/components/music/s4/after-hours.css';
+---
+<MusicShell title="Music">
+  <main id="main" class="v4 s4 s4-c" data-music-page data-intro>
+    <div class="v4-page" data-v4-page>
+      <section class="v4-intro" aria-labelledby="v4-title">
+        <div class="container v4-intro__inner">
+          <Headline />
+          <p class="lede" data-intro-rest>{musicCopy.lede}</p>
+        </div>
+      </section>
+
+      <section class="v4-shelf" aria-labelledby="v4-shelf-title" data-intro-rest>
+        <div class="v4-bar">
+          <div class="v4-bar__wall" aria-hidden="true"></div>
+          <!-- s4/c: the lamp going down as the evening goes on (after-hours.ts). Nothing else up here changes. -->
+          <div class="s4h-dusk" data-s4h-dusk aria-hidden="true"></div>
+          <header class="container v4-shelf__head">
+            <p class="eyebrow v4-eyebrow">{musicCopy.shelf.eyebrow}</p>
+            <h2 class="v4-shelf__title" id="v4-shelf-title">{musicCopy.shelf.headline}</h2>
+            <p class="lede v4-shelf__lede">{musicCopy.shelf.lede}</p>
+          </header>
+          <Carousel />
+        </div>
+
+        <Caption />
+      </section>
+
+      <AfterHours />
+    </div>
+
+    <OpenRecord />
+  </main>
+</MusicShell>
+
+<script>
+  import '@/components/music/v4/listening-bar';
+  import '@/components/music/v4/intro';
+  import '@/components/music/s4/after-hours';
+</script>

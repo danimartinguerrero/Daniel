@@ -1,0 +1,141 @@
+---
+/**
+ * Music, way "atlas": what the records share, as threads between them (routes.ts).
+ *
+ * Three things, all inside the climb's stage:
+ * - The threads over the ring (`.atlas-threads`). Built empty here; atlas/climb.ts lays each one from
+ *   sleeve to sleeve on every frame the ring or the camera moves, and draws it with the scroll.
+ * - The legend under the ring: what each route is, one at a time as its threads are drawn. It is the
+ *   page's text for all of this, so it is real text in order whatever is shown.
+ * - A still map of the same threads (`.atlas-map`), drawn here once, from straight above. It is what
+ *   the page shows with reduced motion or without the script, where there is no ring to draw on. It
+ *   has no names on it: all eleven at once run into each other, and the legend under it names them.
+ */
+import { vinyls } from '@/data/music';
+import { START } from '../v4/start';
+import { routes, atlasCopy } from './routes';
+import { threads, ties, n, around, tie, bow, pathOf, type Pt } from './geometry';
+
+interface Props {
+  /** "threads": the layer drawn over the ring, which goes under the records in the stage. "map": the
+      still map and the legend, which go after the passages. */
+  part: 'threads' | 'map';
+}
+const { part } = Astro.props;
+
+// What the record the ring opens on is tied to, for the last step until the script says otherwise.
+const tiedTo = (i: number) => atlasCopy.all.tied(vinyls[i]!.title, [...new Set(ties[i]!.slice(1))].map((j) => vinyls[j]!.title));
+
+/* ---------------------------------------------------------------- the still map, from above */
+// The ring's proportions are the climb's: a sleeve's width and a little air between neighbours.
+const S = 196;
+const C = S * 0.9; // a cover as drawn: a little smaller than its place, so neighbours don't overlap flat
+const R = (S * 1.06) / (2 * Math.sin(Math.PI / n));
+const O: Pt = { x: 500, y: 500 };
+const inner = R - S / 2 - S * 0.07;
+const spread = S * 0.42;
+// The record the ring opens on is at the front (the bottom), as in the climb.
+const dOf = (i: number) => around(i - START);
+const plan = (p: { across: number; toward: number }): Pt => ({ x: O.x + p.across, y: O.y + p.toward });
+const still = threads.map((t) => {
+  const q = bow(plan(tie(dOf(t.fromIndex), t.fromSlot, inner, spread)), plan(tie(dOf(t.toIndex), t.toSlot, inner, spread)), O, t.pull);
+  return { t, d: pathOf(q), a: q.a, b: q.b };
+});
+const sleeves = vinyls.map((v, i) => {
+  const th = (dOf(i) * 2 * Math.PI) / n;
+  return { v, x: O.x + R * Math.sin(th), y: O.y + R * Math.cos(th), turn: (-th * 180) / Math.PI };
+});
+const span = Math.ceil(R + S * 0.72); // to the sleeves' outer corners
+const box = `${O.x - span} ${O.y - span} ${span * 2} ${span * 2}`;
+---
+{part === 'threads' && (
+<svg class="atlas-threads" data-atlas-svg aria-hidden="true" focusable="false">
+  <defs>
+    <radialGradient id="atlas-glow">
+      <stop offset="0" stop-color="#fffaf4" />
+      <stop offset="0.28" stop-color="#fff3e6" stop-opacity="0.55" />
+      <stop offset="1" stop-color="#fff3e6" stop-opacity="0" />
+    </radialGradient>
+    {threads.map((t) => (
+      <linearGradient id={`atlas-g-${t.key}`} gradientUnits="userSpaceOnUse" data-atlas-grad>
+        <stop offset="0" stop-color={t.fromColour} />
+        <stop offset="1" stop-color={t.toColour} />
+      </linearGradient>
+    ))}
+    {threads.map((t) => <path id={`atlas-r-${t.key}`} d="M0 0" data-atlas-reading />)}
+  </defs>
+  {threads.map((t) => (
+    <g class="atlas-thread" data-atlas-thread={t.key} opacity="0">
+      <path class="atlas-thread__halo" d="M0 0" stroke={`url(#atlas-g-${t.key})`} />
+      <path class="atlas-thread__core" d="M0 0" stroke={`url(#atlas-g-${t.key})`} />
+      <circle class="atlas-thread__end" r="2.25" fill={t.fromColour} data-atlas-end="from" />
+      <circle class="atlas-thread__end" r="2.25" fill={t.toColour} data-atlas-end="to" opacity="0" />
+      <circle class="atlas-thread__head" r="11" fill="url(#atlas-glow)" opacity="0" />
+      {t.label && (
+        <text class="atlas-thread__label" opacity="0" dy="-0.5em">
+          <textPath href={`#atlas-r-${t.key}`} startOffset="50%" text-anchor="middle">{t.label}</textPath>
+        </text>
+      )}
+    </g>
+  ))}
+</svg>
+)}
+
+{part === 'map' && (<>
+<figure class="atlas-map" aria-hidden="true">
+  <svg viewBox={box} focusable="false">
+    <defs>
+      <radialGradient id="atlas-mglow">
+        <stop offset="0" stop-color="#fff3e6" />
+        <stop offset="1" stop-color="#fff3e6" stop-opacity="0" />
+      </radialGradient>
+      {threads.map((t) => (
+        <linearGradient id={`atlas-mg-${t.key}`} gradientUnits="userSpaceOnUse" x1={still.find((s) => s.t === t)!.a.x.toFixed(1)} y1={still.find((s) => s.t === t)!.a.y.toFixed(1)} x2={still.find((s) => s.t === t)!.b.x.toFixed(1)} y2={still.find((s) => s.t === t)!.b.y.toFixed(1)}>
+          <stop offset="0" stop-color={t.fromColour} />
+          <stop offset="1" stop-color={t.toColour} />
+        </linearGradient>
+      ))}
+    </defs>
+    <ellipse class="atlas-map__pool" cx={O.x} cy={O.y} rx={R * 1.15} ry={R * 1.15} />
+    {sleeves.map(({ v, x, y, turn }) => (
+      <g transform={`translate(${x.toFixed(1)} ${y.toFixed(1)}) rotate(${turn.toFixed(2)})`}>
+        <image href={`/img/music/${v.id}.webp`} x={-C / 2} y={-C / 2} width={C} height={C} preserveAspectRatio="xMidYMid slice" />
+        <rect class="atlas-map__edge" x={-C / 2} y={-C / 2} width={C} height={C} rx="3" />
+      </g>
+    ))}
+    {still.map(({ t, d, a, b }) => (
+      <g class="atlas-map__thread">
+        <path class="atlas-thread__halo" d={d} stroke={`url(#atlas-mg-${t.key})`} />
+        <path class="atlas-thread__core" d={d} stroke={`url(#atlas-mg-${t.key})`} />
+        <circle class="atlas-thread__end" cx={a.x.toFixed(1)} cy={a.y.toFixed(1)} r="4" fill={t.fromColour} />
+        <circle class="atlas-thread__end" cx={b.x.toFixed(1)} cy={b.y.toFixed(1)} r="4" fill={t.toColour} />
+      </g>
+    ))}
+  </svg>
+</figure>
+
+<!-- What each route is. Under the ring, one at a time; laid out as a list without the climb. -->
+<div class="atlas-legend" data-atlas-legend role="group" aria-labelledby="atlas-title">
+  <div class="atlas-step atlas-step--intro" data-atlas-step>
+    <h3 class="atlas-step__title" id="atlas-title">{atlasCopy.intro.title}</h3>
+    <p class="atlas-step__text">{atlasCopy.intro.text}</p>
+  </div>
+  <ol class="atlas-routes">
+    {routes.map((route) => (
+      <li class="atlas-step" data-atlas-step>
+        <p class="atlas-step__title">{route.title}</p>
+        <p class="atlas-step__text">{route.text}</p>
+      </li>
+    ))}
+  </ol>
+  <div class="atlas-step atlas-step--all" data-atlas-step>
+    <p class="atlas-step__title">{atlasCopy.all.title}</p>
+    <p class="atlas-step__text">
+      <!-- One space, outside the spans: the script rewrites the first, and only one of the other two is
+           ever shown (a mouse's or a finger's), so the space is there on a phone and a desktop alike. -->
+      <span data-atlas-tied>{tiedTo(START)}</span>{' '}<span class="atlas-step__point">{atlasCopy.all.point}</span>
+      <span class="atlas-step__touch">{atlasCopy.all.touch}</span>
+    </p>
+  </div>
+</div>
+</>)}

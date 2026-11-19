@@ -1,0 +1,137 @@
+/* Four contact explorations. Shared chrome belongs to the preview, not the portfolio. */
+.concept { --surface: #f5f5f7; --muted: #63636b; background: var(--surface); color: var(--ink); min-height: 100svh; }
+.concept a { text-decoration: none; }
+.concept button { cursor: pointer; }
+.concept-skip { position: fixed; top: -5rem; left: 1rem; z-index: 5; padding: .75rem; background: white; color: #111; }
+.concept-skip:focus { top: 1rem; }
+.concept-bar { display: flex; justify-content: space-between; align-items: center; gap: 1rem; padding: 1.25rem 3.5%; min-height: 6rem; }
+.concept-home { font-weight: 650; font-size: .875rem; white-space: nowrap; }
+.concept-label { color: var(--muted); font-size: .75rem; }
+.concept-switch { display: flex; gap: .2rem; padding: .3rem; border-radius: 999px; background: #e7e7ec; }
+.concept-switch a { display: flex; align-items: center; gap: .45rem; padding: .65rem .9rem; border-radius: 999px; min-height: 2.75rem; font-size: .75rem; color: #56565e; }
+.concept-switch a[aria-current] { color: #161617; background: #fff; box-shadow: 0 2px 6px #0000000c; }
+.concept-number { font-variant-numeric: tabular-nums; }
+.concept-main { width: min(1200px, 90%); margin: 0 auto; min-height: calc(100svh - 12rem); display: grid; align-items: center; }
+.concept h1 { font-size: clamp(3.7rem, 6.9vw, 6.3rem); line-height: .99; letter-spacing: -.065em; font-weight: 650; }
+.concept h1 span { color: var(--blue); }
+.contact-eyebrow { display: flex; align-items: center; gap: .5rem; font-size: .75rem; font-weight: 550; letter-spacing: .025em; margin-bottom: 2rem; }
+.availability-dot { width: .45rem; height: .45rem; border-radius: 50%; background: #278047; flex-shrink: 0; }
+.contact-description { font-size: clamp(1.1rem, 1.6vw, 1.3rem); line-height: 1.5; color: var(--muted); margin: 1.8rem 0; letter-spacing: -.015em; }
+.contact-primary { display: inline-flex; align-items: center; justify-content: center; gap: 2rem; min-height: 3.25rem; padding: .9rem 1.45rem; color: #fff; background: var(--blue); border: 0; border-radius: 999px; font-size: 1rem; font-weight: 550; transition: transform 140ms ease-out, background-color 140ms ease-out; }
+.contact-primary:hover { background: #005fca; }
+.contact-primary:active, .copy-email:active, .conversation-choices button:active { transform: scale(.97); }
+.contact-fine { margin-top: 1.2rem; color: var(--muted); font-size: .8rem; }
+.concept-footer { width: 93%; margin: 1.5rem auto 0; padding: 1.5rem 0; min-height: 4.5rem; display: flex; align-items: center; justify-content: space-between; gap: 1rem; border-top: 1px solid #dcdce1; font-size: .75rem; color: var(--muted); }
+.footer-email, .footer-social { display: flex; align-items: center; gap: 1.2rem; }
+.footer-email { gap: .7rem; }
+.copy-email { border: 0; border-radius: 6px; padding: .6rem; min-height: 2.75rem; background: transparent; font-size: .75rem; }
+.concept-footer a:hover { text-decoration: underline; }
+.hello-layout, .orbit-layout { display: grid; grid-template-columns: 1fr 1fr; align-items: center; gap: 4rem; padding: 4rem 0; }
+.conversation { width: 100%; max-width: 470px; justify-self: end; }
+.conversation-person { display: flex; align-items: center; gap: .8rem; font-size: .875rem; font-weight: 600; margin: 0 0 2.3rem .2rem; }
+.avatar { display: grid; place-items: center; width: 2.8rem; height: 2.8rem; background: #e1e4ec; color: #444c64; font-size: 1.3rem; border-radius: 50%; }
+.person-caption { display: block; font-size: .75rem; color: var(--muted); font-weight: 400; margin-top: .15rem; }
+.bubble { width: fit-content; max-width: 95%; padding: 1.35rem 1.6rem; font-size: clamp(1.3rem, 2vw, 1.75rem); line-height: 1.25; letter-spacing: -.035em; }
+.bubble--incoming { background: #e5e5ea; border-radius: 1.9rem 1.9rem 1.9rem .35rem; transform: rotate(-3deg); }
+.bubble--incoming span { color: #63636b; margin-left: .5rem; }
+.bubble--outgoing { background: var(--blue); color: white; border-radius: 1.9rem 1.9rem .35rem 1.9rem; margin: 1.7rem 0 2.8rem auto; min-height: 4.9rem; transform: rotate(3deg); box-shadow: 0 12px 28px #0071e31c; }
+.conversation-choices { display: grid; gap: .5rem; }
+.conversation-choices button { display: flex; justify-content: space-between; align-items: center; width: 100%; text-align: left; border: 1px solid #d9d9df; background: transparent; border-radius: .9rem; padding: .85rem 1.15rem; min-height: 3rem; font-size: .875rem; }
+.conversation-choices button[aria-pressed=true] { background: #fff; border-color: #0071e3; color: #005ab5; }
+.conversation-hint { margin: .9rem 0 0; color: var(--muted); text-align: center; font-size: .7rem; }
+/* A physical postcard: the address remains available outside the playful object. */
+.concept--2 { --surface: #f7f4ef; --muted: #70665d; }
+.postcard-layout { padding: 2.5rem 0 1rem; text-align: center; }
+.postcard-heading .contact-eyebrow, .compose-heading .contact-eyebrow { justify-content: center; margin-bottom: 1.3rem; font-size: .65rem; letter-spacing: .12em; }
+.postcard-heading h1 { font-size: clamp(3.4rem, 5.7vw, 5.1rem); }
+.postcard-heading h1 span { color: #aa4c30; }
+.postcard-heading .contact-description { margin-top: 1rem; font-size: 1rem; }
+.postcard-scene { perspective: 1400px; width: min(640px, 100%); margin: 3rem auto 2.3rem; }
+.postcard { display: block; width: 100%; height: 320px; position: relative; padding: 0; border: 0; background: transparent; transform-style: preserve-3d; transform: rotate(-4deg); transition: transform 650ms cubic-bezier(.2,.7,.2,1); text-align: left; }
+.postcard[aria-pressed=true] { transform: rotate(1deg) rotateY(180deg); }
+.postcard-face { position: absolute; inset: 0; display: flex; flex-direction: column; backface-visibility: hidden; -webkit-backface-visibility: hidden; padding: 1.8rem 2rem; border-radius: 5px; box-shadow: 0 22px 45px #59412c20, 0 3px 8px #59412c10; }
+.postcard-front { background: #eed5b5; color: #483124; }
+.postcard-topline, .postcard-bottom { display: flex; justify-content: space-between; gap: 1rem; align-items: center; font-size: .6rem; letter-spacing: .08em; }
+.postcard-greeting { font-family: 'Caveat', cursive; font-size: 5.7rem; line-height: .83; margin-top: 2rem; letter-spacing: -.055em; }
+.postcard-sun { position: absolute; right: 2.7rem; top: 3.7rem; color: #ac4928; font-size: 10rem; line-height: 1; }
+.postcard-bottom { margin-top: auto; letter-spacing: 0; font-size: .65rem; }
+.postcard-flip { white-space: nowrap; font-family: var(--font); font-size: .65rem; }
+.postcard-back { transform: rotateY(180deg); background: #fffcf5; flex-direction: row; gap: 2rem; }
+.postcard-note { width: 45%; font: 500 2.4rem/1.1 'Caveat', cursive; padding-top: 1.5rem; }
+.postcard-note > span { display: block; margin-top: 1rem; color: #aa4c30; }
+.postcard-address { border-left: 1px solid #d9cfc1; padding-left: 1.5rem; flex: 1; display: flex; flex-direction: column; gap: .6rem; justify-content: end; font-size: .6rem; }
+.postcard-address strong { font-size: .85rem; font-weight: 500; overflow-wrap: anywhere; }
+.postcard-stamp { position: absolute; right: 1.7rem; top: 1.4rem; border: 1px dashed #ac4928; padding: .4rem .65rem; color: #ac4928; font-size: 1.5rem; text-align: center; line-height: 1; }
+.postcard-stamp small { font: 500 .4rem var(--font); }
+.postcard-actions .contact-primary { background: #493529; }
+.postcard-actions .contact-fine { margin-top: .65rem; }
+/* Static orbital composition; the visitor chooses every change. */
+.concept--3 { --surface: #101114; --ink: #f5f5f7; --muted: #a3a5b0; --blue: #0071e3; }
+.concept--3 h1 span { color: #a0b1ff; }
+.concept--3 .concept-switch { background: #25262c; }
+.concept--3 .concept-switch a { color: #b7b8c3; }
+.concept--3 .concept-switch a[aria-current] { background: #42434d; color: white; }
+.concept--3 .concept-footer { border-color: #32343d; }
+.concept--3 .availability-dot { background: #88cf9f; }
+.orbit-layout { gap: 1.5rem; }
+.orbit-system { position: relative; width: 100%; aspect-ratio: 1; max-width: 570px; justify-self: end; }
+.orbit-ring { position: absolute; border: 1px solid #353740; border-radius: 50%; }
+.orbit-ring--outer { inset: 5%; }
+.orbit-ring--inner { inset: 20%; border-style: dashed; border-color: #2d3039; }
+.orbit-center { position: absolute; inset: 28%; display: flex; flex-direction: column; justify-content: center; text-align: center; align-items: center; }
+.orbit-symbol { font-size: 3.7rem; color: #acb9ff; line-height: 1.1; margin-bottom: 1rem; letter-spacing: -.08em; }
+[data-orbit-title] { font-size: 1.25rem; font-weight: 550; letter-spacing: -.025em; }
+.orbit-center p { margin-top: .6rem; color: var(--muted); font-size: .75rem; max-width: 180px; }
+.orbit-node { position: absolute; display: grid; justify-items: center; gap: .4rem; width: 6.6rem; min-height: 6.6rem; padding: .85rem; border: 1px solid #3b3d48; border-radius: 1.5rem; background: #24262e; color: white; font-size: .75rem; box-shadow: 0 12px 30px #0004; transition: transform 180ms ease-out, background-color 180ms ease-out; }
+.orbit-node > span { font-size: 2rem; font-weight: 500; line-height: 1.3; }
+.orbit-node--physics { top: 0; left: 28%; transform: rotate(-8deg); }
+.orbit-node--physics > span { color: #b9c5ff; }
+.orbit-node--code { right: 0; top: 43%; transform: rotate(7deg); }
+.orbit-node--code > span { color: #a5dab8; }
+.orbit-node--idea { bottom: 4%; left: 12%; transform: rotate(-5deg); }
+.orbit-node--idea > span { color: #f4c398; }
+.orbit-node[aria-pressed=true] { background: #3b4056; border-color: #b5c2ff; transform: rotate(0); }
+.orbit-node:active { transform: scale(.96); }
+.orbit-dot { position: absolute; width: .6rem; height: .6rem; background: #a1afd8; border-radius: 50%; }
+.orbit-dot--one { left: 5%; top: 49%; }.orbit-dot--two { right: 27%; bottom: 9%; background: #d7b89e; }
+/* A small, functional mail composer, with explicit handoff to the visitor's mail app. */
+.concept--4 { --surface: #efedf5; --muted: #696375; }
+.compose-layout { text-align: center; padding: 2.5rem 0 1rem; }
+.compose-heading h1 { font-size: clamp(3.4rem, 5.7vw, 5.1rem); }
+.compose-heading h1 span { color: #77609c; }
+.compose-heading .contact-description { margin: 1rem 0 1.8rem; font-size: 1rem; }
+.compose-desk { position: relative; max-width: 660px; margin: 0 auto; }
+.compose-window { position: relative; text-align: left; border: 1px solid #fff; border-radius: 1rem; background: #fff; box-shadow: 0 25px 60px #44385620, 0 3px 8px #44385608; overflow: hidden; }
+.window-chrome { display: flex; align-items: center; justify-content: space-between; padding: .9rem 1.2rem; background: #f8f7fa; border-bottom: 1px solid #eceaf0; font-size: .75rem; color: #68616e; }
+.window-dots { display: flex; gap: .4rem; }.window-dots i { width: .55rem; height: .55rem; border-radius: 50%; background: #dfb1b0; }.window-dots i:nth-child(2) { background: #e5cf9e; }.window-dots i:nth-child(3) { background: #a9c7ad; }
+.compose-row { display: flex; align-items: center; gap: 1rem; margin: 0 1.4rem; padding: .8rem 0; border-bottom: 1px solid #eeedf1; font-size: .8rem; }
+.compose-row > :first-child { width: 3rem; flex-shrink: 0; color: #70697c; }
+.recipient { color: #464f84; background: #f0f1f8; padding: .25rem .55rem; border-radius: .4rem; }
+.recipient-email { font-size: .7rem; }
+.compose-row input { width: 100%; min-width: 0; border: 0; background: white; color: #28262d; font: inherit; padding: .3rem 0; }
+.compose-window textarea { display: block; width: calc(100% - 2.8rem); margin: 1.2rem 1.4rem; border: 0; background: white; min-height: 7.5rem; resize: vertical; color: #28262d; font: .95rem/1.6 var(--font); }
+.compose-window textarea::placeholder { color: #77717e; opacity: 1; }
+.compose-bottom { display: flex; align-items: center; justify-content: space-between; gap: 1rem; padding: 0 1.4rem 1.2rem; }
+.compose-bottom p { font-size: .75rem; color: #49434f; }.compose-bottom p span { color: #77717e; font-size: .65rem; }
+.compose-bottom .contact-primary { font-size: .8rem; min-height: 2.75rem; gap: 1rem; padding: .75rem 1.1rem; }
+.desk-note { position: absolute; left: -8.5rem; top: 6rem; transform: rotate(-12deg); font: 500 1.8rem/1.05 'Caveat', cursive; color: #756288; text-align: left; }.desk-note > span { display: block; font-size: 3rem; text-align: right; margin-right: -.8rem; }
+.compose-availability { margin-top: 1.8rem; }
+@media (max-width: 1100px) { .concept-label { display: none; }.concept-main { width: 88%; }.hello-layout { gap: 2.5rem; }.desk-note { display: none; } }
+@media (max-width: 760px) {
+  .concept-bar { flex-direction: column; gap: 1rem; padding: 1.25rem 1rem; }.concept-home { align-self: flex-start; }.concept-home > span:first-child { display: none; }.concept-switch { width: 100%; justify-content: center; }.concept-switch a { padding: .55rem .65rem; gap: .3rem; font-size: .65rem; }.concept-number { display: none; }
+  .concept-main { width: calc(100% - 2.5rem); min-height: auto; }.hello-layout, .orbit-layout { grid-template-columns: 1fr; gap: 3.5rem; padding: 2.5rem 0; }.concept h1 { font-size: clamp(3.3rem, 12vw, 5rem); }.contact-eyebrow { font-size: .65rem; margin-bottom: 1.5rem; }.contact-description { font-size: 1.05rem; }.contact-fine { font-size: .75rem; }
+  .conversation { justify-self: center; max-width: 430px; }.conversation-person { margin-bottom: 1.6rem; }.bubble { font-size: 1.4rem; }.bubble--outgoing { min-height: auto; }
+  .concept-footer { flex-wrap: wrap; justify-content: center; padding: 1rem 0 1.5rem; gap: .6rem 2rem; }.footer-email { flex-basis: 100%; justify-content: center; }.concept-footer p { font-size: .7rem; }
+  .postcard-layout, .compose-layout { padding-top: 2rem; }.postcard-heading .contact-description { font-size: .95rem; }.postcard-scene { margin: 2.5rem auto; }.postcard { height: 260px; }.postcard-face { padding: 1.2rem; }.postcard-greeting { font-size: 4.5rem; margin-top: 2rem; }.postcard-sun { font-size: 7rem; right: 1rem; top: 4rem; }.postcard-topline { font-size: .5rem; }.postcard-topline > span { display: none; }.postcard-bottom { align-items: flex-end; font-size: .55rem; gap: .6rem; }.postcard-bottom > span { font-size: .6rem; }.postcard-back { gap: 1rem; }.postcard-note { font-size: 1.7rem; width: 40%; }.postcard-address { padding-left: .8rem; gap: .7rem; font-size: .5rem; }.postcard-address strong { font-size: .65rem; }.postcard-stamp { right: 1rem; top: 1rem; }
+  .orbit-layout { gap: 3rem; }.orbit-system { max-width: 460px; justify-self: center; }.orbit-node { width: 5rem; min-height: 5rem; padding: .6rem; border-radius: 1.1rem; font-size: .65rem; gap: .2rem; }.orbit-node > span { font-size: 1.5rem; }.orbit-symbol { font-size: 2.5rem; margin-bottom: .5rem; }[data-orbit-title] { font-size: 1rem; }.orbit-center p { font-size: .65rem; margin-top: .4rem; }
+  .recipient-email { display: none; }.compose-row { margin-inline: 1rem; }.compose-window textarea { width: calc(100% - 2rem); margin-inline: 1rem; }.compose-bottom { padding: 0 1rem 1rem; flex-wrap: wrap; }.compose-bottom .contact-primary { margin-left: auto; }.compose-availability { font-size: .7rem; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .concept *, .concept *::before, .concept *::after { transition: none !important; }
+  .postcard, .postcard[aria-pressed=true], .postcard-back { transform: none; }
+  .postcard-face { backface-visibility: visible; }.postcard [aria-hidden=true] { visibility: hidden; }
+}
+@media (prefers-contrast: more) {
+  .concept { --muted: #424247; }.concept--3 { --muted: #d2d3da; }
+  .concept-switch, .compose-window, .conversation-choices button { border: 1px solid currentColor; }
+}

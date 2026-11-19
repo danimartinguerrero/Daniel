@@ -35,3 +35,16 @@ Component libraries without a skill of their own. For each, a short reference sk
 | `trickle` | https://github.com/akaieuan/trickle-UI-kit (the given URL `akaieuan/trickle` is a 404) | 4112907 |
 
 > Note (2026-10-15): the skill packs themselves are kept out of git (`.claude/skills/` and `.agents/` are ignored) because most third-party packs ship without a license file. They stay on disk for the agents; this file records where they came from.
+
+## Third batch (2026-10-16)
+
+| Source | Commit | Skills |
+|---|---|---|
+| https://github.com/oso95/scroll-world (MIT) | 71cc36d | 1 (`scroll-world`). Needs the Higgsfield CLI + ffmpeg; the video chain bills through Monid (default) or Higgsfield credits. |
+
+## Fourth batch (2026-11-02)
+
+| Source | Commit | Skills |
+|---|---|---|
+| https://github.com/heydamir/unslop (CC-BY-4.0, credit Damir Sokolovsky) | a6f121e | 1 (`unslop`), project scope. Its optional `scripts/` need Playwright; `story.mjs` also needs ffmpeg. |
+| https://github.com/emilkowalski/skills (MIT) | f1090be | 16 (`emil-design-eng`, `animate`, `review-animations`, `improve-animations`, `animation-performance`, `break-ui`, `mobile-native`, `remove-animations`, …). Installed twice: in Claude's **user scope** (`~/.claude/skills/`, updating the 12 installed there on 2026-09-04) and copied here so Codex gets them through `.agents/skills` (a symlink to this folder). Claude's user copy takes precedence over the project one; re-copy both when updating. |

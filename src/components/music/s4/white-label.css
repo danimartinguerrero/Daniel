@@ -1,0 +1,167 @@
+/* s4/a, "White label". Every rule under .s4 / prefixed s4w-. The same room as the shelf above: black,
+   one warm lamp from above, the same film and the same glass. The only new material is paper: an
+   uncoated white sleeve and a white label. */
+
+.s4 .v4-shelf { padding-bottom: clamp(3rem, 6vw, 5rem); }
+
+.s4w { padding-bottom: clamp(5rem, 10vw, 8rem); }
+.s4w-room {
+  --s: clamp(232px, 64vw, 380px);
+  position: relative; isolation: isolate;
+}
+/* Its own lamp, lower on the wall: the same light as the shelf's, a little narrower. */
+.s4w-wall {
+  position: absolute; z-index: -1; inset: 0;
+  background:
+    radial-gradient(34% 46% at 50% 26%, rgba(255, 240, 224, 0.1), rgba(255, 240, 224, 0.03) 56%, transparent 80%),
+    linear-gradient(180deg, #000, #0b0b0c 40%, #000);
+  -webkit-mask-image: radial-gradient(70% 60% at 50% 45%, #000 40%, transparent 100%);
+  mask-image: radial-gradient(70% 60% at 50% 45%, #000 40%, transparent 100%);
+}
+.s4w-head { display: grid; justify-items: start; gap: 0.75rem; padding-top: clamp(3rem, 7vw, 5rem); }
+
+.s4w-stage {
+  position: relative;
+  height: calc(var(--s) + 96px);
+  margin-top: clamp(2.5rem, 5vw, 4rem);
+  display: grid; place-items: center;
+  perspective: 1400px;
+}
+@media (max-width: 699px) {
+  /* On a phone the disc comes out below the sleeve: there is no room beside it. */
+  .s4w-stage { height: calc(var(--s) * 1.8); place-items: start center; padding-top: calc(var(--s) * 0.27); }
+}
+.s4w-pair { position: relative; width: var(--s); height: var(--s); }
+
+/* ---------------------------------------------------------------- the sleeve: uncoated white card */
+.s4w-sleeve {
+  position: absolute; inset: 0; z-index: 2; border-radius: 3px;
+  cursor: pointer; outline: none;
+  -webkit-tap-highlight-color: transparent;
+  will-change: transform;
+}
+.s4w-sleeve:focus-visible { outline: 2px solid var(--blue); outline-offset: 4px; }
+.s4w-sleeve > * { position: absolute; inset: 0; border-radius: inherit; }
+.s4w-sleeve__shadow { box-shadow: 0 30px 60px -24px rgba(0, 0, 0, 0.95), 0 10px 24px rgba(0, 0, 0, 0.5); }
+/* The die-cut hole shows the label of the disc inside. The paper is a mask with a hole in it. */
+.s4w-sleeve__paper {
+  background:
+    radial-gradient(130% 100% at 40% -10%, #e6e3dc, #d3cfc6 55%, #b9b4aa),
+    #d3cfc6;
+  -webkit-mask-image: radial-gradient(circle at 50% 50%, transparent 0 calc(var(--s) * 0.155), #000 calc(var(--s) * 0.157));
+  mask-image: radial-gradient(circle at 50% 50%, transparent 0 calc(var(--s) * 0.155), #000 calc(var(--s) * 0.157));
+}
+/* The edge of the hole: the card's thickness catching the lamp on its lower rim. */
+.s4w-sleeve__paper::after {
+  content: ''; position: absolute; left: 50%; top: 50%;
+  width: calc(var(--s) * 0.314); height: calc(var(--s) * 0.314); transform: translate(-50%, -50%);
+  border-radius: 50%;
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.12), inset 0 -1.5px 0 rgba(255, 255, 255, 0.55), inset 0 3px 5px rgba(0, 0, 0, 0.45);
+}
+/* The lamp's fall-off down the sleeve, as on the records above. */
+.s4w-sleeve__lamp {
+  pointer-events: none;
+  background: linear-gradient(180deg, rgba(255, 244, 232, 0.12), transparent 40%, rgba(0, 0, 0, 0.2));
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.8);
+}
+
+/* The film: the same photographed shrink-wrap as the shelf (v4), in two pieces either side of the tape. */
+.s4w-plastic { pointer-events: none; overflow: visible; --band: max(40px, calc(var(--s) * 0.14)); }
+.s4w-film { position: absolute; left: 0; right: 0; height: calc(50% - var(--band) / 2); overflow: hidden; border-radius: 3px; will-change: transform, opacity; }
+.s4w-film--top { top: 0; transform-origin: 100% 0%; }
+.s4w-film--bottom { bottom: 0; transform-origin: 100% 100%; }
+.s4w-film__sheet {
+  position: absolute; left: 0; right: 0; height: var(--s);
+  background: url('../v4/film-taut.webp') 0 0 / 100% 100% no-repeat;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.6), inset 1px 0 0 rgba(255, 255, 255, 0.5), inset -1px 0 0 rgba(0, 0, 0, 0.16), inset 0 -1px 0 rgba(0, 0, 0, 0.16);
+  /* On white paper the film's light alone doesn't show: a breath of grey in its shadows does. */
+  filter: drop-shadow(0 0 0.5px rgba(0, 0, 0, 0.25));
+}
+.s4w-film--top .s4w-film__sheet { top: 0; }
+.s4w-film--bottom .s4w-film__sheet { bottom: 0; }
+
+/* The tear tape: smoked glass, since the sleeve is pale (v4's data-tone="light"). */
+.s4w-strip { position: absolute; left: 0; right: 0; inset: auto 0; top: calc(50% - max(40px, calc(var(--s) * 0.14)) / 2); height: max(40px, calc(var(--s) * 0.14)); pointer-events: none; }
+.s4w-strip__win { position: absolute; left: 0; right: 0; top: -8px; bottom: -8px; overflow: hidden; will-change: transform; }
+.s4w-strip__band {
+  position: absolute; left: 0; right: 0; top: 8px; bottom: 8px;
+  display: grid; place-items: center;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.22), rgba(255, 255, 255, 0.03) 46%, rgba(255, 255, 255, 0) 78%, rgba(255, 255, 255, 0.08)),
+    rgba(18, 18, 20, 0.36);
+  -webkit-backdrop-filter: blur(9px) saturate(130%) brightness(1.06);
+  backdrop-filter: blur(9px) saturate(130%) brightness(1.06);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.62), inset 0 -1px 0 rgba(255, 255, 255, 0.16), 0 1px 2px rgba(0, 0, 0, 0.3), 0 3px 8px rgba(0, 0, 0, 0.22);
+  will-change: transform;
+}
+.s4w-strip__label { font-size: 0.9375rem; line-height: 1; font-weight: 500; letter-spacing: 0.01em; color: rgba(255, 255, 255, 0.96); text-shadow: 0 1px 2px rgba(0, 0, 0, 0.4); white-space: nowrap; }
+
+.s4w-tab {
+  position: absolute; inset: auto;
+  left: calc(max(28px, calc(var(--s) * 0.09)) * -1); top: calc(50% - max(40px, calc(var(--s) * 0.14)) / 2);
+  width: max(28px, calc(var(--s) * 0.09)); height: max(40px, calc(var(--s) * 0.14));
+  padding: 0; border: 0; background: none; color: inherit;
+  touch-action: none; cursor: grab; -webkit-user-select: none; user-select: none;
+  will-change: transform;
+}
+.s4w-tab::before { content: ''; position: absolute; left: 50%; top: 50%; width: 56px; height: 56px; transform: translate(-50%, -50%); }
+.s4w-tab:focus-visible { outline: none; }
+.s4w-tab:focus-visible .s4w-tab__knob { outline: 2px solid var(--blue); outline-offset: 3px; }
+.s4w-tab.is-pressed { cursor: grabbing; }
+.s4w-tab__knob {
+  position: absolute; inset: 0; border-radius: 12px 0 0 12px; display: grid; place-items: center;
+  background: rgba(30, 30, 32, 0.42);
+  -webkit-backdrop-filter: blur(9px) saturate(160%) brightness(1.06);
+  backdrop-filter: blur(9px) saturate(160%) brightness(1.06);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.55), inset 1px 0 0 rgba(255, 255, 255, 0.25), 0 1px 2px rgba(0, 0, 0, 0.3), -2px 4px 10px rgba(0, 0, 0, 0.26);
+  transition: filter 120ms ease-out;
+}
+.s4w-tab.is-pressed .s4w-tab__knob { filter: brightness(1.15); }
+.s4w-tab__dot { width: 57%; aspect-ratio: 1; border-radius: 50%; display: grid; place-items: center; background: rgba(255, 255, 255, 0.94); color: #1d1d1f; box-shadow: 0 1px 2px rgba(0, 0, 0, 0.28); transition: transform 160ms var(--ease-out); }
+.s4w-tab.is-pressed .s4w-tab__dot { transform: scale(0.9); }
+.s4w-tab__dot svg { display: block; width: 62%; height: 62%; }
+
+/* ---------------------------------------------------------------- the disc */
+.s4w-disc { position: absolute; z-index: 1; top: 2%; left: 2%; width: 96%; height: 96%; will-change: transform; }
+.s4w-disc__shadow { position: absolute; inset: 0; border-radius: 50%; box-shadow: 0 26px 50px -18px rgba(0, 0, 0, 0.9); opacity: 0; will-change: opacity; }
+.s4w-disc__spin { position: absolute; inset: 0; transform-style: preserve-3d; will-change: transform; }
+.s4w-face { position: absolute; inset: 0; border-radius: 50%; backface-visibility: hidden; -webkit-backface-visibility: hidden; overflow: hidden; }
+.s4w-face--b { transform: rotateY(180deg); }
+.s4w-grooves {
+  position: absolute; inset: 0; border-radius: 50%;
+  background:
+    radial-gradient(circle closest-side, transparent 0 46%, rgba(0, 0, 0, 0.55) 46.4% 47%, transparent 47.4% 64%, rgba(0, 0, 0, 0.55) 64.4% 65%, transparent 65.4% 80%, rgba(0, 0, 0, 0.5) 80.4% 81%, transparent 81.4% 96%, rgba(255, 255, 255, 0.06) 96.5% 98.5%, transparent 99%),
+    repeating-radial-gradient(circle closest-side, #121214 0 1px, #1c1c1f 1.5px 2.2px),
+    #111;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.05);
+}
+/* Two wedges of the lamp's light on the grooves; they stay where the lamp is as the disc turns over. */
+.s4w-sheen {
+  position: absolute; inset: 0; border-radius: 50%;
+  background: conic-gradient(from 296deg, transparent 0 3%, rgba(255, 255, 255, 0.14) 8%, transparent 14% 50%, rgba(255, 255, 255, 0.14) 58%, transparent 64% 100%);
+  -webkit-mask-image: radial-gradient(circle closest-side, transparent 0 35%, #000 36% 96%, transparent 97%);
+  mask-image: radial-gradient(circle closest-side, transparent 0 35%, #000 36% 96%, transparent 97%);
+}
+/* The white label, printed in black: his name round the top, the side, what is on it. */
+.s4w-label { position: absolute; left: 32%; top: 32%; width: 36%; height: 36%; overflow: visible; }
+.s4w-label__paper { fill: #e9e6df; }
+.s4w-label__ring { fill: none; stroke: rgba(29, 29, 31, 0.5); stroke-width: 0.6; }
+.s4w-label__arc { font: 600 8px/1 var(--font); letter-spacing: 0.04em; fill: #1d1d1f; }
+.s4w-label__side { font: 700 15px/1 var(--font); fill: #1d1d1f; }
+.s4w-label__title { font: 600 9.5px/1 var(--font); letter-spacing: -0.01em; fill: #1d1d1f; }
+.s4w-label__hole { fill: #050505; }
+
+/* ---------------------------------------------------------------- caption and hint */
+.s4w-caption {
+  position: relative; display: grid; justify-items: center; text-align: center;
+  margin-top: 0.5rem; padding-inline: var(--gutter); min-height: 6.5rem;
+}
+.s4w-caption__side { grid-area: 1 / 1; display: grid; gap: 0.375rem; max-width: 28rem; will-change: opacity; }
+.s4w-caption__title { font-size: 1.3125rem; line-height: 1.2; font-weight: 600; letter-spacing: -0.005em; }
+.s4w-caption__line { font-size: 1.0625rem; line-height: 1.4; color: var(--on-dark-2); text-wrap: balance; }
+.s4w-hint { grid-area: 2 / 1; margin-top: 0.875rem; font-size: 0.9375rem; line-height: 1.25; color: #8e8e93; transition: opacity 200ms ease; }
+html.js .s4w-caption__side--b { opacity: 0; }
+
+@media (prefers-reduced-transparency: reduce) {
+  .s4w-strip__band, .s4w-tab__knob { background: #3a3a3c; -webkit-backdrop-filter: none; backdrop-filter: none; }
+}

@@ -1,0 +1,131 @@
+---
+/**
+ * A record sleeve: original abstract art drawn from the record's palette and motif. None of these
+ * imitates a real cover; there is no type on them at all.
+ */
+import type { Vinyl } from '@/data/music-sleeves';
+
+interface Props {
+  vinyl: Vinyl;
+  /** Unique per instance, so gradient ids never collide (each record is drawn twice). */
+  uid: string;
+  class?: string;
+}
+const { vinyl, uid, class: className } = Astro.props;
+const [deep, mid, light, accent] = vinyl.palette;
+const g = (name: string) => `${uid}-${name}`;
+const range = (n: number) => Array.from({ length: n }, (_, i) => i);
+const wave = (y: number, amp: number, len: number, phase: number) => {
+  let d = `M -4 ${y.toFixed(2)}`;
+  for (let x = -4; x <= 104; x += 2) d += ` L ${x} ${(y + Math.sin(((x + phase) / len) * Math.PI * 2) * amp).toFixed(2)}`;
+  return d;
+};
+---
+<svg class={className} viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true" focusable="false">
+  <defs>
+    <linearGradient id={g('ground')} x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color={deep} />
+      <stop offset="1" stop-color={mid} />
+    </linearGradient>
+    <linearGradient id={g('down')} x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color={mid} />
+      <stop offset="1" stop-color={deep} />
+    </linearGradient>
+    <radialGradient id={g('vignette')} cx="0.5" cy="0.42" r="0.75">
+      <stop offset="0.55" stop-color="#000" stop-opacity="0" />
+      <stop offset="1" stop-color="#000" stop-opacity="0.38" />
+    </radialGradient>
+    <linearGradient id={g('light')} x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#fff" stop-opacity="0.10" />
+      <stop offset="0.5" stop-color="#fff" stop-opacity="0" />
+    </linearGradient>
+  </defs>
+
+  {vinyl.motif === 'horizon' && (
+    <g>
+      <rect width="100" height="64" fill={`url(#${g('ground')})`} />
+      <circle cx="50" cy="63" r="19" fill={light} />
+      <rect y="63" width="100" height="37" fill={accent} />
+      <rect y="63" width="100" height="37" fill={deep} opacity="0.55" />
+      {range(6).map((i) => (
+        <rect x={50 - (17 - i * 2.6)} y={66 + i * 3.4} width={(17 - i * 2.6) * 2} height="1.1" fill={light} opacity={0.75 - i * 0.1} />
+      ))}
+      <rect y="62.6" width="100" height="0.6" fill={light} opacity="0.6" />
+    </g>
+  )}
+
+  {vinyl.motif === 'bands' && (
+    <g>
+      <rect width="100" height="100" fill={deep} />
+      {[
+        [30, 3, mid], [36, 6, mid], [45, 2, light], [50, 9, accent], [62, 4, light], [69, 13, mid], [85, 2, accent],
+      ].map(([y, h, c]) => <rect x="0" y={y} width="100" height={h} fill={c as string} />)}
+      <rect x="10" y="12" width="22" height="1.2" fill={light} opacity="0.8" />
+    </g>
+  )}
+
+  {vinyl.motif === 'arcs' && (
+    <g fill="none">
+      <rect width="100" height="100" fill={deep} />
+      {range(9).map((i) => (
+        <circle cx="100" cy="100" r={18 + i * 10} stroke={i % 3 === 2 ? light : mid} stroke-width={i % 3 === 2 ? 1.2 : 4.2} opacity={1 - i * 0.07} />
+      ))}
+      <circle cx="24" cy="26" r="5" fill={accent} />
+    </g>
+  )}
+
+  {vinyl.motif === 'rings' && (
+    <g fill="none">
+      <rect width="100" height="100" fill={deep} />
+      {range(9).map((i) => (
+        <circle cx="50" cy="50" r={6 + i * 4.6} stroke={i % 2 ? mid : light} stroke-width={i % 2 ? 2.2 : 0.5} opacity={0.9 - i * 0.06} />
+      ))}
+      <circle cx="50" cy="50" r="24.4" stroke={accent} stroke-width="1.6" />
+      <circle cx="50" cy="50" r="2.4" fill={accent} />
+    </g>
+  )}
+
+  {vinyl.motif === 'waves' && (
+    <g fill="none" stroke-linecap="round">
+      <rect width="100" height="100" fill={deep} />
+      {range(7).map((i) => (
+        <path d={wave(22 + i * 9.5, 3 + (i % 3), 34 + i * 3, i * 11)} stroke={[mid, accent, light][i % 3]} stroke-width={i % 3 === 2 ? 1.4 : 3.6} opacity={0.95 - i * 0.04} />
+      ))}
+    </g>
+  )}
+
+  {vinyl.motif === 'dots' && (
+    <g>
+      <rect width="100" height="100" fill={light} />
+      {range(9).flatMap((r) => range(9).map((c) => (
+        <circle cx={7 + c * 10.75} cy={7 + r * 10.75} r={0.7 + ((r + c) / 16) * 3.7} fill={mid} />
+      )))}
+      <circle cx={7 + 2 * 10.75} cy={7 + 6 * 10.75} r="7.5" fill={accent} />
+    </g>
+  )}
+
+  {vinyl.motif === 'grid' && (
+    <g>
+      <rect width="100" height="100" fill={deep} />
+      {range(7).flatMap((r) => range(7).map((c) => {
+        const k = (r * 7 + c * 3) % 11;
+        const fill = r === 3 && c === 4 ? accent : k === 0 ? light : mid;
+        return <rect x={9 + c * 12} y={9 + r * 12} width="9" height="9" rx="0.6" fill={fill} opacity={k === 0 ? 0.9 : 0.85} />;
+      }))}
+    </g>
+  )}
+
+  {vinyl.motif === 'sun' && (
+    <g>
+      <rect width="100" height="100" fill={`url(#${g('down')})`} />
+      <circle cx="50" cy="40" r="17" fill={accent} />
+      <circle cx="50" cy="40" r="24" fill="none" stroke={accent} stroke-width="0.6" opacity="0.6" />
+      {range(5).map((i) => (
+        <rect x="0" y={66 + i * 6.4} width="100" height={1.2 + i * 0.5} fill={light} opacity={0.55 - i * 0.07} />
+      ))}
+    </g>
+  )}
+
+  <rect width="100" height="100" fill={`url(#${g('vignette')})`} />
+  <rect width="100" height="100" fill={`url(#${g('light')})`} />
+</svg>

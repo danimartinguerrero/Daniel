@@ -78,6 +78,9 @@ document.addEventListener('astro:before-swap', (event) => {
   // The router gives <html> the new page's attributes and nothing else. The classes the pages' CSS
   // reads before any script has run go with it: "js" (set inline in the head, which doesn't run
   // again) and "reduce" (scripts/scroll.ts), so the new page's first frame is already the right one.
+  // The handwriting is a cold-load entrance. A client-side return to Home must
+  // already contain the finished greeting when the router captures its first frame.
+  newDocument.querySelector('[data-home-intro]')?.removeAttribute('data-home-intro');
   newDocument.documentElement.classList.add('js');
   newDocument.documentElement.classList.toggle('reduce', reduce.matches);
   // Back and forward put the page where it was; a link to a part of another page lands on it.

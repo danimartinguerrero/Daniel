@@ -1,0 +1,182 @@
+/* The instruments, prototype "Stage" (StageStory.astro, stage.ts). Laid out as plain sections first:
+   the heading, then each chapter's words above its instrument on a lit stage. With the script
+   (is-scrubbed) each screen is held while its words fill, and the stage's lights come up with them.
+
+   The stage is light and nothing else, all of it in the chapter's colour (--light) over the page's
+   black: haze that fills the room, a spot falling from above, the floor catching it, a brighter pool
+   where the instrument stands and the instrument's reflection in it. Each is a soft gradient with no
+   edge, placed once from where the instrument stands (--x, --top, --foot, --len, set by the script)
+   and brought up with opacity alone. A fine grain over the light keeps its long, faint gradients
+   from banding on the black. */
+.st { position: relative; color: var(--on-dark); }
+
+.st__intro-stage {
+  display: grid; place-items: center;
+  padding: clamp(6rem, 18svh, 12rem) var(--gutter);
+  background: var(--dark);
+}
+.is-scrubbed .st__intro-stage { padding-block: 0; }
+.st__heading {
+  position: relative; margin: 0; max-width: 13ch;
+  font-size: clamp(2.4rem, min(11vw, 16svh), 11rem); line-height: 1; font-weight: 600;
+  letter-spacing: -.028em; text-align: center; text-wrap: balance;
+}
+
+.st__stage {
+  position: relative; isolation: isolate; overflow: clip;
+  display: grid; gap: 1.5rem; padding-block: clamp(3rem, 7vw, 7rem);
+  background: var(--dark);
+}
+.st__content { grid-row: 1; position: relative; z-index: 5; display: grid; gap: clamp(1rem, 2vw, 1.6rem); padding-inline: var(--gutter); max-width: calc(var(--content) + 2 * var(--gutter)); margin-inline: auto; width: 100%; }
+.st__head { display: grid; gap: clamp(1rem, 2vw, 1.6rem); }
+.st__title, .st__lede, .st__side { position: relative; margin: 0; }
+/* Type as Apple sets it at these sizes: the title tight but never touching, the story at a reading
+   weight, tracked a hair open, in the page's second grey so the title is the one bright line. The story
+   fills to that grey, not to white (text-fill.css reads --on-dark). */
+.st__title {
+  font-size: clamp(2.15rem, 4.6vw, 4.5rem); line-height: 1.04; letter-spacing: -.024em; font-weight: 600;
+  text-wrap: balance;
+}
+.st__lede, .st__side {
+  --on-dark: var(--on-dark-2);
+  max-width: 34ch; color: var(--on-dark-2);
+  font-size: clamp(1.0625rem, 1.45vw, 1.3125rem); line-height: 1.42; letter-spacing: .004em; font-weight: 400;
+  text-wrap: pretty;
+}
+/* The sentences beside the neck are lit a step brighter when the light swings onto them: they are in it. */
+.st__side { --on-dark: #b4b4b9; }
+
+/* Held: the whole screen is the stage. The title and the first sentence hang centred at the top, in the
+   spot; the other two sentences stand either side of the neck, placed by the script from where the
+   instrument stands (top, left, width), the left one set against the neck, the right one away from it. */
+.is-scrubbed .st__content {
+  position: absolute; inset: 0; display: block; max-width: none; padding: 0; margin: 0;
+  pointer-events: none;
+}
+.is-scrubbed .st__head {
+  position: absolute; left: var(--gutter); right: var(--gutter); top: max(4.25rem, 9svh);
+  justify-items: center; text-align: center; gap: clamp(.7rem, 1.4svh, 1.1rem);
+}
+.is-scrubbed .st__title { font-size: clamp(2rem, min(4vw, 7.4svh), 4.25rem); max-width: 22ch; }
+.is-scrubbed .st__lede { max-width: 40ch; }
+.is-scrubbed .st__side { position: absolute; top: 0; max-width: none; font-size: clamp(.9375rem, 1.3vw, 1.25rem); line-height: 1.4; }
+.is-scrubbed .st__side--left { text-align: right; }
+.is-scrubbed .st__side--right { text-align: left; }
+
+/* The stage. Plain: the instrument fills the box, centred, standing on its floor. */
+.st__art {
+  --x: 50%; --len: calc(min(110vw, 78svh) * .86); --top: calc(min(110vw, 78svh) * .05);
+  --foot: calc(var(--top) + var(--len));
+  position: relative; height: min(110vw, 78svh);
+}
+.st__room, .st__grain { position: absolute; inset: 0; pointer-events: none; }
+.st__room > * { position: absolute; will-change: opacity; }
+/* Plain, the stage is a box under the words: its light fades in from the top instead of starting at an edge. */
+:not(.is-scrubbed) > .st__stage .st__room {
+  -webkit-mask-image: linear-gradient(to bottom, transparent, #000 30%);
+  mask-image: linear-gradient(to bottom, transparent, #000 30%);
+}
+:not(.is-scrubbed) > .st__stage .st__content { justify-items: center; text-align: center; }
+:not(.is-scrubbed) > .st__stage .st__head { justify-items: center; }
+.st__room { z-index: 0; }
+
+/* Haze: the air of the room, lit. A wide, low glow rising from the floor, and a softer column around
+   the instrument where the spot lights it. It reaches the words too: the whole screen is one room. */
+.st__haze {
+  inset: 0;
+  background:
+    radial-gradient(calc(var(--len) * .62) calc(var(--len) * .78) at var(--x) calc(var(--top) + var(--len) * .5),
+      color-mix(in oklab, var(--light) 9%, transparent), transparent),
+    radial-gradient(calc(var(--len) * 2.2) calc(var(--len) * .9) at var(--x) var(--foot),
+      color-mix(in oklab, var(--light) 7%, transparent), color-mix(in oklab, var(--light) 2.5%, transparent) 55%, transparent),
+    /* the back of the room: the spill reaching the far wall, the width of the screen */
+    radial-gradient(max(120vw, calc(var(--len) * 3.4)) calc(var(--len) * 1.5) at var(--x) var(--foot),
+      color-mix(in oklab, var(--light) 3.5%, transparent), color-mix(in oklab, var(--light) 1.2%, transparent) 60%, transparent);
+}
+/* The spot: a cone from above the screen to the floor, its edges blurred away. */
+.st__beam {
+  left: calc(var(--x) - var(--len) * .5); width: var(--len);
+  top: calc(var(--top) - var(--len) * .45); height: calc(var(--foot) - var(--top) + var(--len) * .5);
+  filter: blur(calc(var(--len) * .035));
+}
+.st__beam > i {
+  position: absolute; inset: 0;
+  clip-path: polygon(43% 0, 57% 0, 86% 100%, 14% 100%);
+  background: linear-gradient(180deg,
+    color-mix(in oklab, var(--light) 2%, transparent) 0%,
+    color-mix(in oklab, var(--light) 9%, transparent) 55%,
+    color-mix(in oklab, var(--light) 15%, transparent) 100%);
+}
+/* The side lights: when a sentence beside the neck is read, light swings onto its side of the stage. */
+.st__wash { top: 0; bottom: 0; width: calc(var(--len) * 1.3); }
+.st__wash--left { left: calc(var(--x) - var(--len) * 1.25); background: radial-gradient(calc(var(--len) * .62) calc(var(--len) * .7) at 62% calc(var(--top) + var(--len) * .42), color-mix(in oklab, var(--light) 10%, transparent), transparent); }
+.st__wash--right { left: calc(var(--x) - var(--len) * .05); background: radial-gradient(calc(var(--len) * .62) calc(var(--len) * .7) at 38% calc(var(--top) + var(--len) * .42), color-mix(in oklab, var(--light) 10%, transparent), transparent); }
+/* The floor catching the spot: wide and flat, as a floor seen from a little above. */
+.st__floor {
+  left: 0; right: 0;
+  top: calc(var(--foot) - var(--len) * .2); height: calc(var(--len) * .5);
+  background: radial-gradient(calc(var(--len) * .9) calc(var(--len) * .16) at var(--x) calc(var(--len) * .2),
+    color-mix(in oklab, var(--light) 15%, transparent), color-mix(in oklab, var(--light) 4%, transparent) 60%, transparent);
+}
+/* The pool where the instrument stands: the brightest light on the floor. */
+.st__pool {
+  left: calc(var(--x) - var(--len) * .34); width: calc(var(--len) * .68);
+  top: calc(var(--foot) - var(--len) * .055); height: calc(var(--len) * .11);
+  background: radial-gradient(closest-side,
+    color-mix(in oklab, var(--light) 34%, transparent), color-mix(in oklab, var(--light) 10%, transparent) 55%, transparent);
+}
+/* Grain over the light only (overlay leaves black black). */
+.st__grain {
+  z-index: 1; opacity: .5; mix-blend-mode: overlay;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 .5 0 0 0 0 .5 0 0 0 0 .5 0 0 0 .55 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+.st__still {
+  position: absolute; z-index: 2; left: 50%; top: 0; height: 100%; width: auto; translate: -50% 0;
+  aspect-ratio: 1; object-fit: contain; mix-blend-mode: lighten;
+}
+.st__mirror, .st__frame, .st__grab { display: none; }
+
+/* Held. */
+.is-scrubbed .st__stage { display: block; padding: 0; }
+.is-scrubbed .st__art { position: absolute; inset: 0; height: auto; }
+.is-scrubbed .st__still { display: none; }
+.is-scrubbed .st__frame, .is-scrubbed .st__mirror { display: block; position: absolute; top: 0; left: 0; }
+.is-scrubbed .st__frame { z-index: 3; }
+/* The reflection: the instrument drawn again upside down about its foot, a little flattened, fading
+   into the floor within a quarter of its length. Its box is the instrument's; the script sets where
+   its foot is (--fold) and how strongly it shows (opacity). */
+.is-scrubbed .st__mirror {
+  z-index: 2;
+  transform-origin: 50% var(--fold, 95%);
+  transform: scaleY(-.86);
+  filter: blur(1.5px);
+  -webkit-mask-image: linear-gradient(to top, transparent 0, rgba(0, 0, 0, .7) calc(100% - var(--fold, 95%)), transparent calc(100% - var(--fold, 95%) + 26%));
+  mask-image: linear-gradient(to top, transparent 0, rgba(0, 0, 0, .7) calc(100% - var(--fold, 95%)), transparent calc(100% - var(--fold, 95%) + 26%));
+  will-change: opacity;
+}
+
+/* The hand: over the lit instrument only. Sideways drags turn it; up and down still scroll. */
+.is-scrubbed .st__grab {
+  display: block; position: absolute; z-index: 4;
+  touch-action: pan-y; cursor: grab; outline: none;
+  pointer-events: none; border-radius: 40px;
+}
+.is-lit .st__grab { pointer-events: auto; }
+.is-turning .st__grab { cursor: grabbing; }
+.st__grab:focus-visible { box-shadow: 0 0 0 2px var(--link-on-dark); }
+
+@media (max-width: 760px) {
+  .is-scrubbed .st__head { top: max(4rem, 9svh); }
+  .is-scrubbed .st__title { font-size: clamp(1.9rem, 8vw, 2.6rem); }
+  .is-scrubbed .st__lede { font-size: 1rem; max-width: 30ch; }
+  .is-scrubbed .st__side { font-size: .875rem; line-height: 1.38; }
+}
+
+/* Lit, as plain paragraphs, until the script takes them over (is-armed): then the words wait in the
+   site's dim grey and the light comes along each line over them (text-fill.ts, text-fill.css). */
+.st .is-armed .w { color: var(--fill-dim); }
+@media (forced-colors: active) {
+  .st .is-armed .w { color: CanvasText; }
+  .st__room, .st__grain { display: none; }
+}
