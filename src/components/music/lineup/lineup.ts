@@ -374,8 +374,8 @@ onPage(signal => {
     }
     return true;
   }
-  function turn(scene: Scene, threeQuarterShare: number) {
-    const swayYaw = (lean.get(scene.canvas) ?? 0) * RACK.yaw;
+  function turn(scene: Scene, threeQuarterShare: number, swayShare = 1) {
+    const swayYaw = (lean.get(scene.canvas) ?? 0) * RACK.yaw * swayShare;
     const yaw = (THREE_QUARTER_YAW + swayYaw) * threeQuarterShare + scene.angle;
     scene.yaw = yaw;
     scene.instrument?.pose(yaw);
@@ -506,9 +506,10 @@ onPage(signal => {
     guitar.cam.style.transform = `translate3d(${(reach * (1 - e)).toFixed(2)}px,0,0)`;
     bass.words.style.transform += ` translate3d(${(-reach * .5 * e).toFixed(2)}px,0,0)`;
     guitar.words.style.transform += ` translate3d(${(reach * .5 * (1 - e)).toFixed(2)}px,0,0)`;
-    // The bass turns as the fan opens. The guitar turns to face the reader as its words arrive.
+    // The bass turns as the fan opens. The guitar holds that angle through the slide,
+    // then turns face-on while the reader scrolls through its own text.
     turn(bass, smooth(clamp((bassProgress - .02) / .58)));
-    turn(guitar, 1 - smooth(arrival));
+    turn(guitar, 1 - smooth(guitarProgress), 1 - smooth(arrival));
 
     // The hand: a scene's instrument is free once its words are lit and the move is over.
     stand(bass, bassProgress > .995 && move <= 0);
