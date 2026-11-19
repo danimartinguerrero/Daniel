@@ -66,7 +66,7 @@
 .is-scrubbed .lu__copy[data-rank='2'] { z-index: 0; }
 .is-scrubbed .lu__copy[data-rank='3'] { z-index: -1; }
 .is-scrubbed .lu__copy.is-away { visibility: hidden; }
-.lu__cam:not(.is-sliding) .lu__step { visibility: hidden; }
+.lu__step { opacity: var(--transition-opacity, 0); }
 
 /* The hand, over the instrument only, once the words are lit (is-standing). */
 .is-scrubbed .lu__grab {
