@@ -27,7 +27,7 @@ export interface SurroundPose {
 }
 
 export interface Instrument {
-  pose(degrees: number, surround?: readonly SurroundPose[]): void; // turned about its own long axis; 0 faces you
+  pose(degrees: number, surround: readonly SurroundPose[], pixelRatio: number): void; // turned about its own long axis; 0 faces you
   resize(size: number, compact: boolean): void;
   dispose(): void;
 }
@@ -98,7 +98,7 @@ export async function createInstrument(
   key.position.set(-.48, 1.22, 1);
   key.castShadow = true;
   // A tight frustum resolves the narrow shadows under the strings and bridge saddles.
-  Object.assign(key.shadow.camera, { left: -.57, right: .57, top: .57, bottom: -.57, near: .65, far: 2.35 });
+  Object.assign(key.shadow.camera, { left: -.21, right: .21, top: .51, bottom: -.51, near: .65, far: 2.35 });
   key.shadow.camera.updateProjectionMatrix();
   key.shadow.mapSize.setScalar(compact ? 512 : 1024);
   key.shadow.autoUpdate = false;
@@ -138,12 +138,14 @@ export async function createInstrument(
   scene.environmentIntensity = .14;
   scene.environmentRotation.y = 5.3;
   const model = gltf.scene;
+  const anisotropy = Math.min(4, renderer.capabilities.getMaxAnisotropy());
   model.traverse(node => {
     if (!(node instanceof Mesh)) return;
     node.castShadow = node.receiveShadow = true;
     for (const material of [node.material].flat()) {
       if (material.name === paint || material.name === 'Ebony lacquer') satin(material);
       if (!(material instanceof MeshStandardMaterial)) continue;
+      if (material.map) material.map.anisotropy = anisotropy;
       if (material.name === 'NeckMaterial' || material.name === 'SmallbitsBake') hardware(material);
       if ((material.name === 'NeckMaterial' || material.name === 'Black top hat') && material instanceof MeshPhysicalMaterial) {
         material.clearcoat = .1;
@@ -162,12 +164,18 @@ export async function createInstrument(
 
   let shown = NaN;
   let size = 0;
+  let width = 0;
+  // On mobile, subpixel changes to the pose or the reflected light can share the last render.
+  const desktopThreshold = { angle: 1e-4, x: 1e-4, exposure: 1e-4, lean: 1e-3, yaw: 1e-2 };
+  const mobileThreshold = { angle: .04, x: .001, exposure: .002, lean: .08, yaw: .15 };
+  let threshold = compact ? mobileThreshold : desktopThreshold;
+  let shadowYaw = NaN;
   const lastSurround = new Float32Array(surroundLights.length * 4).fill(NaN);
 
   return {
-    pose(degrees, states) {
+    pose(degrees, states, pixelRatio) {
       if (!size) return;
-      const turned = Math.abs(degrees - shown) >= 1e-4 || Number.isNaN(shown);
+      const turned = Math.abs(degrees - shown) >= threshold.angle || Number.isNaN(shown);
       let dirty = turned;
       for (let i = 0; i < surroundLights.length; i++) {
         const spec = surroundLights[i]!;
@@ -179,10 +187,10 @@ export async function createInstrument(
         const base = i * 4;
         const changed =
           Number.isNaN(lastSurround[base]!) ||
-          Math.abs(rawX - lastSurround[base]!) >= 1e-4 ||
-          Math.abs(exposure - lastSurround[base + 1]!) >= 1e-4 ||
-          Math.abs(lean - lastSurround[base + 2]!) >= 1e-3 ||
-          Math.abs(yaw - lastSurround[base + 3]!) >= 1e-2;
+          Math.abs(rawX - lastSurround[base]!) >= threshold.x ||
+          Math.abs(exposure - lastSurround[base + 1]!) >= threshold.exposure ||
+          Math.abs(lean - lastSurround[base + 2]!) >= threshold.lean ||
+          Math.abs(yaw - lastSurround[base + 3]!) >= threshold.yaw;
         if (!changed) continue;
         dirty = true;
         lastSurround[base] = rawX;
@@ -202,30 +210,40 @@ export async function createInstrument(
         spec.light.width = spec.width * spread;
         spec.light.intensity = spec.intensity * exposure * (.68 + .32 * spread);
       }
+      const ratio = Math.min(devicePixelRatio || 1, pixelRatio);
+      if (ratio !== renderer.getPixelRatio() && (dirty || ratio > renderer.getPixelRatio())) {
+        renderer.setDrawingBufferSize(width, size, ratio);
+        dirty = true;
+      }
       if (!dirty) return;
       shown = degrees;
       holder.rotation.y = MathUtils.degToRad(degrees);
       // The coloured lights and the CSS sway do not move the model relative to the shadow caster.
-      if (turned) key.shadow.needsUpdate = true;
+      // Reuse the depth pass until the body has moved by about one shadow texel.
+      if (!Number.isFinite(shadowYaw) || Math.abs(degrees - shadowYaw) >= .2) {
+        key.shadow.needsUpdate = true;
+        shadowYaw = degrees;
+      }
       renderer.render(scene, camera);
     },
     resize(css, compact) {
-      const ratio = Math.min(devicePixelRatio || 1, compact ? 1.5 : 2);
+      const ratio = Math.min(devicePixelRatio || 1, compact ? 3 : 2);
       const shadowSize = compact ? 512 : 1024;
       if (css === size && ratio === renderer.getPixelRatio() && key.shadow.mapSize.x === shadowSize) return;
       size = css;
+      threshold = compact ? mobileThreshold : desktopThreshold;
       if (key.shadow.mapSize.x !== shadowSize) {
         key.shadow.dispose();
         key.shadow.map = null;
         key.shadow.mapSize.setScalar(shadowSize);
       }
       // Keep the square camera framing, but only allocate the strip containing the turning model.
-      const width = compact ? css * .4 : css;
+      width = compact ? css * .32 : css;
       camera.setViewOffset(css, css, (css - width) / 2, 0, width, css);
       canvas.style.width = `${width}px`;
       canvas.style.height = `${css}px`;
       renderer.setDrawingBufferSize(width, css, ratio);
-      shown = NaN;
+      shown = shadowYaw = NaN;
       lastSurround.fill(NaN);
     },
     dispose() {

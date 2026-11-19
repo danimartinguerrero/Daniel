@@ -271,8 +271,6 @@ onPage(signal => {
     const fanSpacing = narrow.matches
       ? Math.min(naturalSpacing, (width / 2 - 8 - frame * .155) / blue.rank)
       : naturalSpacing;
-    // The widest silhouette reaches 0.151 frame widths from its centre.
-    const slotGap = Math.min(BODY * frame * air, (width / 2 - 8 - frame * .151) / blue.rank);
     const length = frame / FRAME_WIDTH;
     const y = top + band / 2;
     scene.centre = { x: width / 2, y, size: frame };
@@ -419,7 +417,7 @@ onPage(signal => {
     if (scene.grab.getAttribute('aria-valuetext') !== side) scene.grab.setAttribute('aria-valuetext', side);
   }
   // Drive each instrument's coloured surround lights from the live position, reveal, sway and turn of its copies.
-  function renderInstrument(scene: Scene) {
+  function renderInstrument(scene: Scene, pixelRatio: number) {
     if (!scene.instrument || !scene.centre.size) return;
     const scale = FRAME_WIDTH / scene.centre.size;
     const baseLean = lean.get(scene.canvas) ?? 0;
@@ -437,7 +435,7 @@ onPage(signal => {
       const follower = following.get(copy.svg)!;
       out.yaw = Number.isNaN(follower.yaw) ? scene.yaw : follower.yaw;
     }
-    scene.instrument.pose(scene.yaw, scene.lights);
+    scene.instrument.pose(scene.yaw, scene.lights, pixelRatio);
   }
 
   // The rack. Every instrument on the row (the copies, the in-between ones, the two real ones) has weight:
@@ -579,11 +577,38 @@ onPage(signal => {
     stand(guitar, guitarProgress > .995);
   }
 
+  // Use native detail while the phone keeps pace. Sustained late frames lower only the moving
+  // render resolution. The final pose is always drawn at full detail before the loop sleeps.
+  let motionPixelRatio = Math.min(devicePixelRatio || 1, 2);
+  let frameBudget = 1000 / 60;
+  let lateFrames = 0;
+  let sampledFrames = 0;
+  function renderPixelRatio(elapsed: number, moving: boolean) {
+    if (!narrow.matches) return 2;
+    const full = Math.min(devicePixelRatio || 1, 3);
+    if (!moving || elapsed === 0) {
+      lateFrames = sampledFrames = 0;
+      return moving ? motionPixelRatio : full;
+    }
+    if (elapsed >= 6) frameBudget = Math.min(frameBudget, Math.max(1000 / 120, elapsed));
+    sampledFrames++;
+    if (elapsed > frameBudget * 1.45) lateFrames++;
+    if (lateFrames >= 3) {
+      motionPixelRatio = Math.min(full, Math.max(1.5, motionPixelRatio - .5));
+      lateFrames = sampledFrames = 0;
+    } else if (sampledFrames >= 90) {
+      if (!lateFrames) motionPixelRatio = Math.min(full, motionPixelRatio + .5);
+      lateFrames = sampledFrames = 0;
+    }
+    return motionPixelRatio;
+  }
+
   let queued = 0;
   let last = 0;
   function tick(now: number) {
     queued = 0;
-    const dt = last ? Math.min(.05, (now - last) / 1000) : 1 / 60;
+    const elapsed = last ? now - last : 0;
+    const dt = elapsed ? Math.min(.05, elapsed / 1000) : 1 / 60;
     last = now;
     let moving = false;
     if (enabled) {
@@ -605,8 +630,9 @@ onPage(signal => {
       draw(shown, raw);
       if (turnCopies(dt, snap)) moving = true;
       const centre = bass.centre.x + rowX();
-      if (!narrow.matches || onScreen(centre)) renderInstrument(bass);
-      if (!narrow.matches || onScreen(centre + reach)) renderInstrument(guitar);
+      const pixelRatio = renderPixelRatio(elapsed, moving);
+      if (!narrow.matches || onScreen(centre)) renderInstrument(bass, pixelRatio);
+      if (!narrow.matches || onScreen(centre + reach)) renderInstrument(guitar, pixelRatio);
     }
     // Leaving a chapter mid-turn can already have queued the settling spring for the next frame.
     if (moving) request();
