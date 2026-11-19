@@ -15,7 +15,7 @@ import type { Instrument } from './instrument';
      each from behind the one before it and carried out by it, on a strong ease-out, the next starting
      while the last is still moving (a stagger). A card that starts hidden behind its neighbour needs no
      fade, so the colours are never seen half transparent; only the first, out from behind the turned
-     instrument, fades up, quickly. The instrument turns from its side to three quarters on meanwhile.
+     instrument, fades up, quickly. The bass starts face-on and turns as its copies fan out.
    - The slide: the guitar's line-up waits to the right of the bass's, and between the blue bass and the
      green guitar stand STEPS more copies, each a step further from the bass and nearer the guitar, in
      outline and in colour: a flip book laid out along the row. The screen travels the row, eased in and
@@ -40,7 +40,6 @@ import type { Instrument } from './instrument';
 const FOLLOW = 0.07; // s: the screen follows the scroll this closely
 const DECELERATION = 0.998; // Apple's normal scroll deceleration, for projecting a flick
 const REST = -50; // degrees: turned well round, so its depth shows next to the flat copies
-const FROM = 64; // degrees: where it starts, showing its side
 const BODY = .27; // a body's width, in frame widths (the outlines in silhouettes.ts)
 const HOLD = .8; // lines of scroll the lit bass waits before the move
 const MOVE = 4.2; // lines of scroll the slide takes
@@ -375,11 +374,10 @@ onPage(signal => {
     }
     return true;
   }
-  // Its pose: from showing its side to three quarters on as its words fill, plus `extra` degrees (the
-  // move's), plus the hand's turn.
+  // Start face-on. The turn begins with the first card and reaches the resting pose as the fan opens.
   function turn(scene: Scene, progress: number, extra = 0) {
-    // It has turned to face you by the time the hand of cards is out, well before its words are all lit.
-    const yaw = FROM + (REST - FROM) * smooth(clamp(progress / .6)) + extra + scene.angle;
+    const reveal = smooth(clamp((progress - .02) / .58));
+    const yaw = (REST + extra) * reveal + scene.angle;
     scene.yaw = yaw;
     scene.instrument?.pose(yaw);
     const angle = Math.round(wrap(yaw - REST)) % 360;
