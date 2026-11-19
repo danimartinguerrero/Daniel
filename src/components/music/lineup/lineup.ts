@@ -19,8 +19,8 @@ import type { Instrument, SurroundPose } from './instrument';
    - The slide: the guitar's line-up waits to the right of the bass's, and between the blue bass and the
      green guitar stand STEPS more copies, each a step further from the bass and nearer the guitar, in
      outline and in colour: a flip book laid out along the row. The screen travels the row, eased in and
-     out (smoothstep, the page's curve for scrubbed motion). The bass text stays in place until the
-     guitar arrives. The in-between copies fan out behind the blue bass in order and stay on the row.
+     out (smoothstep, the page's curve for scrubbed motion). Each text stays above its own instrument
+     as the row passes the edges of the stage. The in-between copies fan out behind the blue bass in order.
    - The instruments have weight. Whatever moves them across the screen (a card slid out in the deal, the
      row sliding along), they lean back against the motion, the more the faster it goes, and when it slows
      they swing past upright, rock and settle, each at its own pace (a spring each, Apple's damping ratio
@@ -508,12 +508,11 @@ onPage(signal => {
     // The bass's line-up is off the screen's left edge after the slide, all but the in-between copies
     // nearest the guitar, which stay; so it is never hidden.
     guitar.element.style.visibility = move <= 0 ? 'hidden' : '';
-    stage.classList.toggle('at-guitar', at >= span.guitarAt);
     const arrival = clamp((move - .6) / .4);
     // The slide: the row travels left by the distance between the two line-ups.
     const e = smooth(move);
-    bass.cam.style.transform = `translate3d(${(-reach * e).toFixed(2)}px,0,0)`;
-    guitar.cam.style.transform = `translate3d(${(reach * (1 - e)).toFixed(2)}px,0,0)`;
+    bass.element.style.transform = `translate3d(${(-reach * e).toFixed(2)}px,0,0)`;
+    guitar.element.style.transform = `translate3d(${(reach * (1 - e)).toFixed(2)}px,0,0)`;
     // The bass turns as the fan opens. The guitar holds that angle through the slide,
     // then turns face-on while the reader scrolls through its own text.
     turn(bass, smooth(clamp((bassProgress - .02) / .58)));
