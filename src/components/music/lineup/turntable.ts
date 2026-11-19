@@ -2,13 +2,13 @@ import type { Instrument } from './instrument';
 
 const TILE_COUNT = 30;
 const STEPS = 6; // Six 2° intervals, with a seventh view shared by the next tile.
+const SCROLL_COLS = 14, SCROLL_ROWS = 2, SCROLL_FRAMES = SCROLL_COLS * SCROLL_ROWS; // 0° to -54° every 2°
+const SCROLL_HEIGHT = 700;
 const DETAIL_HEIGHT = 1600;
 const ASPECT = .32;
-const MAX_TILES = 5; // Holds the bass's full 0° to -50° scroll arc without eviction.
 const wrapTile = (tile: number) => (tile + TILE_COUNT) % TILE_COUNT;
 
 type Photograph = ImageBitmap | HTMLImageElement;
-type Surface = Photograph | HTMLCanvasElement;
 
 async function photograph(url: string): Promise<Photograph> {
   if (typeof createImageBitmap === 'function') {
@@ -23,40 +23,24 @@ async function photograph(url: string): Promise<Photograph> {
   return image;
 }
 
-function release(image: Surface | undefined) {
-  if (!image) return;
-  if ('close' in image) image.close();
-  else if (image instanceof HTMLCanvasElement) image.width = image.height = 0;
+function release(image: Photograph | undefined) {
+  if (image && 'close' in image) image.close();
 }
 
-// Downscale an HD strip once on load to the display canvas height so every scroll frame is a
-// 1:1 pixel blit with no live resampling and roughly a third of the decoded memory footprint.
-function fitTile(source: Photograph, frameWidth: number, frameHeight: number): Surface {
-  if (frameHeight < 32 || frameWidth < 16 || source.height <= frameHeight) return source;
-  const sheet = document.createElement('canvas');
-  sheet.width = frameWidth * (STEPS + 1);
-  sheet.height = frameHeight;
-  const ctx = sheet.getContext('2d', { alpha: true });
-  if (!ctx) return source;
-  ctx.imageSmoothingEnabled = true;
-  ctx.imageSmoothingQuality = 'high';
-  ctx.drawImage(source, 0, 0, sheet.width, sheet.height);
-  release(source);
-  return sheet;
-}
-
-// Keep pre-scaled HD strips for the visible angles and warm the scroll arc sequentially in the
-// background. The compact full-circle sheet covers fast spins when a detail strip hasn't landed yet.
+// A single pre-scaled sheet (`scroll.webp`) covers the bass's entire 0° to -50° scroll arc with
+// zero mid-scroll network requests, decodes or GPU texture uploads. Full-circle detail strips and
+// the overview sheet load only when the reader grabs an instrument and spins it past that arc.
 export async function createTurntable(
   canvas: HTMLCanvasElement,
   folder: string,
   initialYaw: number,
   initialSize: number,
   repaint: () => void,
-  warmTiles: readonly number[] = [],
+  hasScrollSheet = false,
 ): Promise<Instrument> {
   const positionAt = (yaw: number) => ((-yaw % 360 + 360) % 360) / 2;
-  const initialTile = Math.floor(positionAt(initialYaw) / STEPS);
+  const initialPosition = positionAt(initialYaw);
+  const initialTile = Math.floor(initialPosition / STEPS);
   const loadTile = (index: number) => photograph(folder + '/detail/' + index + '.webp');
   const overviewUrl = folder + '/turntable.webp';
   const context = canvas.getContext('2d', { alpha: true });
@@ -64,8 +48,9 @@ export async function createTurntable(
 
   function sizeCanvas(size: number) {
     if (size <= 0) return false;
-    const dpr = Math.min(devicePixelRatio || 1, 2);
-    const height = Math.min(DETAIL_HEIGHT, Math.max(1, Math.ceil(size * dpr)));
+    const cap = hasScrollSheet ? SCROLL_HEIGHT : DETAIL_HEIGHT;
+    const dpr = Math.min(devicePixelRatio || 1, 1.6);
+    const height = Math.min(cap, Math.max(1, Math.ceil(size * dpr)));
     const width = Math.max(1, Math.round(height * ASPECT));
     canvas.style.width = `${size * ASPECT}px`;
     canvas.style.height = `${size}px`;
@@ -76,71 +61,41 @@ export async function createTurntable(
   }
   sizeCanvas(initialSize);
 
-  const tiles = new Map<number, Surface>();
+  const tiles = new Map<number, Photograph>();
   const failed = new Set<number>();
+  let scrollSheet: Photograph | undefined;
   let overview: Photograph | undefined;
-  try {
-    const raw = await loadTile(initialTile);
-    tiles.set(initialTile, fitTile(raw, canvas.width, canvas.height));
-  } catch {
-    failed.add(initialTile);
-    overview = await photograph(overviewUrl);
+
+  if (hasScrollSheet && initialPosition <= SCROLL_FRAMES - 1) {
+    try {
+      scrollSheet = await photograph(folder + '/scroll.webp');
+    } catch {
+      // Fall back to the per-angle detail strips if the scroll sheet is missing.
+    }
+  }
+  if (!scrollSheet) {
+    try {
+      tiles.set(initialTile, await loadTile(initialTile));
+    } catch {
+      failed.add(initialTile);
+      overview = await photograph(overviewUrl);
+    }
   }
 
   let disposed = false;
   let fetchingTile = false;
   let pendingTile: number | null = null;
-  let wantedTile = initialTile;
   let requestedOverview = !!overview;
   let previousYaw = NaN;
+  let drawnYaw = NaN;
   let direction = 0;
   let dirty = true;
   let painted = false;
-  const warmQueue = warmTiles.filter(index => index !== initialTile);
 
   function invalidate() {
     if (disposed) return;
     dirty = true;
     repaint();
-  }
-
-  function startFetch(index: number, background: boolean) {
-    fetchingTile = true;
-    loadTile(index).then(image => {
-      if (disposed) return release(image);
-      tiles.set(index, fitTile(image, canvas.width, canvas.height));
-      if (tiles.size > MAX_TILES) {
-        const oldest = tiles.keys().next().value!;
-        release(tiles.get(oldest));
-        tiles.delete(oldest);
-      }
-      if (!background || index === wantedTile) invalidate();
-    }, () => {
-      failed.add(index);
-      if (!background || index === wantedTile) invalidate();
-    }).finally(() => {
-      fetchingTile = false;
-      pumpQueue();
-    });
-  }
-
-  function pumpQueue() {
-    if (disposed || fetchingTile) return;
-    if (pendingTile !== null) {
-      const next = pendingTile;
-      pendingTile = null;
-      if (!tiles.has(next) && !failed.has(next)) {
-        startFetch(next, false);
-        return;
-      }
-    }
-    while (warmQueue.length) {
-      const next = warmQueue.shift()!;
-      if (!tiles.has(next) && !failed.has(next)) {
-        startFetch(next, true);
-        return;
-      }
-    }
   }
 
   function fetchDetail(index: number) {
@@ -149,7 +104,24 @@ export async function createTurntable(
       pendingTile = index;
       return;
     }
-    startFetch(index, false);
+    fetchingTile = true;
+    loadTile(index).then(image => {
+      if (disposed) return release(image);
+      tiles.set(index, image);
+      if (tiles.size > 3) {
+        const oldest = tiles.keys().next().value!;
+        release(tiles.get(oldest));
+        tiles.delete(oldest);
+      }
+      invalidate();
+    }, () => failed.add(index)).finally(() => {
+      fetchingTile = false;
+      if (!disposed && pendingTile !== null) {
+        const next = pendingTile;
+        pendingTile = null;
+        fetchDetail(next);
+      }
+    });
   }
 
   function fetchOverview() {
@@ -162,10 +134,9 @@ export async function createTurntable(
     }, () => {});
   }
 
-  function paint(image: Surface, position: number, columns: number, rows: number) {
+  function paint(image: Photograph, position: number, columns: number, rows: number, wrapFrames: boolean, singlePass: boolean) {
     painted = true;
-    const first = Math.floor(position);
-    const blend = position - first;
+    const total = columns * rows;
     const width = image.width / columns, height = image.height / rows;
     function draw(frame: number) {
       context!.drawImage(image, frame % columns * width, Math.floor(frame / columns) * height,
@@ -173,66 +144,84 @@ export async function createTurntable(
     }
     context!.clearRect(0, 0, canvas.width, canvas.height);
     context!.globalCompositeOperation = 'source-over';
-    if (blend <= .001) {
+    if (singlePass) {
+      const nearest = wrapFrames ? Math.round(position) % total : Math.min(total - 1, Math.round(position));
+      context!.globalAlpha = 1;
+      draw(nearest);
+      return;
+    }
+    const first = Math.floor(position);
+    const blend = position - first;
+    const second = wrapFrames ? (first + 1) % total : Math.min(total - 1, first + 1);
+    if (blend <= .01 || second === first) {
       context!.globalAlpha = 1;
       draw(first);
-    } else if (blend >= .999) {
+    } else if (blend >= .99) {
       context!.globalAlpha = 1;
-      draw((first + 1) % (columns * rows));
+      draw(second);
     } else {
       context!.globalAlpha = 1 - blend;
       draw(first);
       context!.globalCompositeOperation = 'lighter';
       context!.globalAlpha = blend;
-      draw((first + 1) % (columns * rows));
+      draw(second);
     }
   }
 
-  // Quietly warm the bass's scroll path one tile at a time once the initial view is ready.
-  pumpQueue();
+  // Upload the decoded bitmap to the GPU backing texture ahead of scroll.
+  if (canvas.width > 1 && canvas.height > 1) {
+    if (scrollSheet) paint(scrollSheet, initialPosition, SCROLL_COLS, SCROLL_ROWS, false, false);
+    else if (tiles.has(initialTile)) paint(tiles.get(initialTile)!, initialPosition - initialTile * STEPS, STEPS + 1, 1, false, false);
+    drawnYaw = previousYaw = initialYaw;
+    dirty = false;
+  }
 
   return {
     pose(yaw) {
-      if (yaw === previousYaw && !dirty) return;
+      const exactRest = yaw === 0 || yaw === -50;
+      if (!dirty && (yaw === drawnYaw || (!exactRest && Math.abs(yaw - drawnYaw) < .12))) return;
+      const step = Number.isFinite(previousYaw) ? Math.abs(yaw - previousYaw) : 0;
       if (Number.isFinite(previousYaw) && previousYaw !== yaw) direction = Math.sign(previousYaw - yaw);
       previousYaw = yaw;
+      drawnYaw = yaw;
       dirty = false;
+      const fast = !exactRest && step > .75;
       const position = positionAt(yaw);
+      if (scrollSheet && position <= SCROLL_FRAMES - 1) {
+        paint(scrollSheet, position, SCROLL_COLS, SCROLL_ROWS, false, fast);
+        return;
+      }
       const tile = Math.floor(position / STEPS);
-      wantedTile = tile;
       const local = position - tile * STEPS;
       const image = tiles.get(tile);
       if (image) {
-        // Keep the visible tile most-recently-used so prefetching won't evict it.
         tiles.delete(tile);
         tiles.set(tile, image);
-        paint(image, local, STEPS + 1, 1);
+        paint(image, local, STEPS + 1, 1, false, fast);
         if ((direction > 0 && local >= 2) || (direction < 0 && local <= 4)) fetchDetail(wrapTile(tile + direction));
       } else {
         fetchDetail(tile);
         fetchOverview();
-        if (overview) paint(overview, ((yaw % 360 + 360) % 360) / 4, 15, 6);
+        if (overview) paint(overview, ((yaw % 360 + 360) % 360) / 4, 15, 6, true, fast);
         else if (!painted) {
-          // A deep scroll link can skip the initial pose before the first paint.
           const firstAvailable = tiles.entries().next().value;
           if (firstAvailable) {
             const [index, sheet] = firstAvailable;
-            paint(sheet, Math.max(0, Math.min(STEPS, position - index * STEPS)), STEPS + 1, 1);
+            paint(sheet, Math.max(0, Math.min(STEPS, position - index * STEPS)), STEPS + 1, 1, false, true);
           }
         }
       }
     },
     resize(size) {
       if (!sizeCanvas(size)) return;
-      for (const tile of tiles.values()) release(tile);
-      tiles.clear();
       painted = false;
       dirty = true;
     },
     dispose() {
       disposed = true;
-      warmQueue.length = 0;
       pendingTile = null;
+      release(scrollSheet);
+      scrollSheet = undefined;
       for (const tile of tiles.values()) release(tile);
       tiles.clear();
       release(overview);

@@ -216,7 +216,7 @@ function init(root: HTMLElement, track: HTMLElement, signal: AbortSignal) {
       on the first frame, there is nothing to see move, and the spring is simply put there. */
   function follow(snap = false) {
     const y = scrollY;
-    const from = trackTop - lead - innerHeight, to = trackTop + run + innerHeight;
+    const from = trackTop - lead - innerHeight, to = trackTop + run + 8;
     const outside = (v: number) => (v < from ? -1 : v > to ? 1 : 0);
     if (snap || (outside(y) !== 0 && outside(y) === outside(at.value))) {
       at.set(y);

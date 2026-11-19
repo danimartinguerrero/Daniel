@@ -48,8 +48,8 @@
 /* Each scene travels as a unit. The stage clips the words and instruments at the same edge. */
 .is-scrubbed .lu__stage { display: block; padding: 0; }
 .is-scrubbed .lu__scene { position: absolute; inset: 0; display: block; will-change: transform; }
-.is-scrubbed .lu__words { position: absolute; left: 50%; translate: -50% 0; top: max(5.25rem, 10svh); width: min(100% - 2 * var(--gutter), 60rem); will-change: transform, opacity; }
-.is-scrubbed .lu__cam { position: absolute; inset: 0; height: auto; z-index: 1; transform-origin: 0 0; will-change: transform, opacity; }
+.is-scrubbed .lu__words { position: absolute; left: 50%; translate: -50% 0; top: max(5.25rem, 10svh); width: min(100% - 2 * var(--gutter), 60rem); }
+.is-scrubbed .lu__cam { position: absolute; inset: 0; height: auto; z-index: 1; transform-origin: 0 0; }
 /* Hold the matching studio photograph until the interactive instrument has painted. */
 .is-scrubbed .lu__cam .lu__still {
   inset: var(--frame-top) auto auto 50%; translate: -50% 0; z-index: 2;
@@ -73,11 +73,10 @@
 .is-scrubbed .lu__copy[data-rank='3'] { z-index: -1; }
 .is-scrubbed .lu__copy.is-away { visibility: hidden; }
 .has-copy-layer .lu__copy { display: none; }
-.lu__copy-layer { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
+.lu__copy-layer { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; will-change: opacity; }
 .lu__step { opacity: 0; }
-.lu__slide-strip { display: none; position: absolute; left: 0; max-width: none; pointer-events: none; will-change: transform; }
-.has-slide-strip .lu__slide-strip { display: block; }
-.has-slide-strip .lu__copy, .has-slide-strip .lu__copy-layer { visibility: hidden; }
+.lu__slide-strip { position: absolute; left: 0; max-width: none; opacity: 0; pointer-events: none; will-change: transform, opacity; }
+.has-slide-strip .lu__copy { visibility: hidden; }
 
 /* The hand, over the instrument only, once the instrument has settled (is-standing). */
 .is-scrubbed .lu__grab {

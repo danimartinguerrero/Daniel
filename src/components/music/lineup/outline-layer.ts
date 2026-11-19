@@ -77,8 +77,8 @@ export function createOutlineLayer(stage: HTMLElement, copies: TurningCopy[], ba
   }
   const strip = upload(gl.ELEMENT_ARRAY_BUFFER, indices);
   gl.enable(gl.STENCIL_TEST);
-  gl.enable(gl.BLEND);
   gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
+  let blending = false;
   const angles = bass.length / (points * 2);
   const bytesPerAngle = points * 2 * Uint16Array.BYTES_PER_ELEMENT;
   // Each angle always reads the same two slices from each immutable outline buffer.
@@ -121,6 +121,7 @@ export function createOutlineLayer(stage: HTMLElement, copies: TurningCopy[], ba
   let width = 0, height = 0, size = 0, foot = 0;
   let resized = true;
   return {
+    element: canvas,
     resize(stageWidth: number, centreY: number, frameSize: number, pivotFoot: number, ratio: number) {
       resized = true;
       width = stageWidth;
@@ -142,20 +143,39 @@ export function createOutlineLayer(stage: HTMLElement, copies: TurningCopy[], ba
       for (const pose of poses) {
         const copy = pose.copy;
         const x = copy.x();
-        const opacity = x < -size * .32 || x > width + size * .32 ? 0 : copy.opacity();
+        const opacity = x < -size * .28 || x > width + size * .28 ? 0 : copy.opacity();
         if (!opacity && !pose.opacity) continue;
         const yaw = copy.yaw(), lean = copy.lean();
-        if (x !== pose.x || opacity !== pose.opacity || yaw !== pose.yaw || lean !== pose.lean) dirty = true;
-        pose.x = x;
-        pose.opacity = opacity;
-        pose.yaw = yaw;
-        pose.lean = lean;
+        if (
+          Math.abs(x - pose.x) >= .08 ||
+          Math.abs(opacity - pose.opacity) >= .004 ||
+          Math.abs(yaw - pose.yaw) >= .08 ||
+          Math.abs(lean - pose.lean) >= .04
+        ) {
+          dirty = true;
+        }
       }
       if (!dirty) return;
       resized = false;
+      for (const pose of poses) {
+        const copy = pose.copy;
+        const x = copy.x();
+        pose.x = x;
+        pose.opacity = x < -size * .28 || x > width + size * .28 ? 0 : copy.opacity();
+        if (pose.opacity) {
+          pose.yaw = copy.yaw();
+          pose.lean = copy.lean();
+        }
+      }
       gl.clear(gl.COLOR_BUFFER_BIT | gl.STENCIL_BUFFER_BIT);
       for (const pose of poses) {
         if (!pose.opacity) continue;
+        const needBlend = pose.opacity < .999;
+        if (needBlend !== blending) {
+          blending = needBlend;
+          if (needBlend) gl.enable(gl.BLEND);
+          else gl.disable(gl.BLEND);
+        }
         const angle = ((pose.yaw % 360 + 360) % 360) * angles / 360;
         const first = Math.floor(angle);
         bindAngle(first);

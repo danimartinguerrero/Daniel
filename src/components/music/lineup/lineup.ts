@@ -185,6 +185,16 @@ onPage(signal => {
   }
   const outlines = new Map<Scene, Uint16Array>();
   const scratch = [new Float32Array(POINTS * 2), new Float32Array(POINTS * 2)] as const;
+  let stripTimer = 0;
+  function scheduleSlideStrip() {
+    if (stripTimer || stopped) return;
+    stripTimer = requestAnimationFrame(() => {
+      stripTimer = 0;
+      if (stopped) return;
+      prepareSlideStrip();
+      if (near) request();
+    });
+  }
   async function loadOutlines(scene: Scene) {
     if (outlines.has(scene)) return;
     outlines.set(scene, new Uint16Array(0));
@@ -197,10 +207,12 @@ onPage(signal => {
       if (ready(bass) && ready(guitar)) {
         configureCopyLayer();
         resizeCopyLayer();
-        prepareSlideStrip();
+        // Rasterize the cached slide strip on the next frame so WebGL setup and 2D path
+        // filling never combine into a single long main-thread task.
+        scheduleSlideStrip();
       }
       invalidateOutlines();
-      request();
+      if (near) request();
     } catch {
       outlines.delete(scene);
     }
@@ -252,14 +264,17 @@ onPage(signal => {
     try {
       const folder = scene.model.replace(/\.glb$/, '');
       const initialYaw = scene === bass ? 0 : THREE_QUARTER_YAW;
-      const warmTiles = scene === bass ? [1, 2, 3, 4] : [];
       const instrument = mobileView.matches
-        ? await createTurntable(scene.canvas, folder, initialYaw, scene.centre.size, request, warmTiles).catch(() => liveInstrument(scene))
+        ? await createTurntable(scene.canvas, folder, initialYaw, scene.centre.size, request, scene === bass).catch(() => liveInstrument(scene))
         : await liveInstrument(scene);
       if (stopped) return instrument.dispose();
       scene.instrument = instrument;
       instrument.resize(scene.centre.size, narrow.matches);
-      request();
+      if (mobileView.matches && scene === bass && shown <= introEnd) {
+        scene.instrument.pose(0, scene.lights, 1);
+        scene.cam.classList.add('has-model');
+      }
+      if (near) request();
     } catch {
       // Keep the still if both renderers fail. Retrying on each scroll frame stalls the entrance.
     }
@@ -332,6 +347,18 @@ onPage(signal => {
     scene.instrument?.resize(frame, narrow.matches);
   }
 
+  const writtenStyles = new WeakMap<HTMLElement | SVGElement, Record<string, string>>();
+  function writeStyle(el: HTMLElement | SVGElement, prop: 'transform' | 'opacity' | 'visibility', value: string) {
+    let entry = writtenStyles.get(el);
+    if (!entry) {
+      entry = {};
+      writtenStyles.set(el, entry);
+    }
+    if (entry[prop] === value) return;
+    entry[prop] = value;
+    el.style[prop] = value;
+  }
+
   function invalidateOutlines() {
     for (const follower of following.values()) follower.drawn = NaN;
     for (const item of steps) item.turn.drawn = NaN;
@@ -341,13 +368,15 @@ onPage(signal => {
     if (enabled) pinStart = show.getBoundingClientRect().top + scrollY - (parseFloat(getComputedStyle(stage).top) || 0);
   }
 
+  let lastDealProgress = -1;
   function measure() {
     // The outline sampling density can change when crossing the mobile breakpoint.
     invalidateOutlines();
-    const baseLine = measureFillLine(root!);
-    line = narrow.matches ? baseLine * .8 : baseLine;
-    scrollPosition.response = mobileView.matches ? .13 : .21;
-    scrollPosition.precision = mobileView.matches ? .0008 : .0002;
+    lastDealProgress = -1;
+    line = measureFillLine(root!);
+    // Match climb.ts's smoothing window on touch screens so iOS's 60/120 Hz scroll-event beat doesn't judder.
+    scrollPosition.response = mobileView.matches ? .2 : .21;
+    scrollPosition.precision = mobileView.matches ? .0004 : .0002;
     enabled = allowed.matches;
     configureCopyLayer();
     show.classList.toggle('statement', enabled);
@@ -357,8 +386,10 @@ onPage(signal => {
       headingRows.forEach(clearTextFill);
       show.style.removeProperty('height');
       show.style.removeProperty('--words-shift');
-      upper.style.transform = lower.style.transform = heading.style.opacity = '';
-      bass.words.style.opacity = bass.words.style.transform = '';
+      for (const el of [upper, lower, heading, bass.words]) {
+        writtenStyles.delete(el);
+        el.style.transform = el.style.opacity = '';
+      }
       for (const scene of scenes) { stand(scene, false); reset(scene); }
       return;
     }
@@ -371,13 +402,13 @@ onPage(signal => {
     resizeCopyLayer();
     bass.cam.style.transformOrigin = `${bass.centre.x}px ${bass.centre.y}px`;
     if (narrow.matches) {
-      // Keep the mobile story crisp (~2.8 screens total) instead of multiplying wrapped text lines.
-      span.entrance = 1.4;
+      // Keep the mobile story unhurried (~4.8 screens total) without letting extra text wrapping bloat it.
+      span.entrance = 1.9;
       introEnd = headingFill.length + span.entrance;
-      span.bass = 2.6;
-      span.moveAt = introEnd + span.bass + .55;
-      span.move = 2.0;
-      span.end = span.moveAt + span.move + 1.2;
+      span.bass = 4.2;
+      span.moveAt = introEnd + span.bass + .75;
+      span.move = 3.0;
+      span.end = span.moveAt + span.move + 1.8;
     } else {
       span.entrance = BASS_ENTRANCE;
       introEnd = headingFill.length + span.entrance;
@@ -407,11 +438,16 @@ onPage(signal => {
     shown = -1;
     if (!near) {
       paintIntro(0);
-      guitar.element.style.visibility = 'hidden';
+      writeStyle(bass.element, 'transform', 'translate3d(0.00px,0,0)');
+      writeStyle(guitar.element, 'transform', `translate3d(${reach.toFixed(2)}px,0,0)`);
+      writeStyle(guitar.element, 'visibility', narrow.matches ? '' : 'hidden');
     }
-    request();
+    if (near) request();
   }
   function reset(scene: Scene) {
+    for (const el of [scene.still, scene.cam, scene.element, scene.canvas, ...scene.copies.map(c => c.svg), ...steps.map(s => s.svg)]) {
+      writtenStyles.delete(el);
+    }
     scene.still.style.transform = '';
     scene.cam.style.transform = scene.cam.style.opacity = '';
     scene.element.style.visibility = scene.element.style.clipPath = scene.element.style.transform = '';
@@ -431,6 +467,8 @@ onPage(signal => {
   const reveals = new Float64Array(blue.rank + STEPS + 1);
   const offsets = new Float64Array(reveals.length);
   function updateDeal(progress: number) {
+    if (progress === lastDealProgress) return;
+    lastDealProgress = progress;
     for (let rank = 1; rank < reveals.length; rank++) {
       const reveal = stepOut(progress, rank);
       reveals[rank] = reveal;
@@ -446,8 +484,8 @@ onPage(signal => {
   }
   function deal(scene: Scene) {
     for (const copy of scene.copies) {
-      copy.svg.style.transform = `translate3d(${dealt(copy).toFixed(2)}px,0,0)${leaning(copy.svg)}`;
-      copy.svg.style.opacity = bassOpacity(copy.rank).toFixed(3);
+      writeStyle(copy.svg, 'transform', `translate3d(${dealt(copy).toFixed(2)}px,0,0)${leaning(copy.svg)}`);
+      writeStyle(copy.svg, 'opacity', bassOpacity(copy.rank).toFixed(3));
     }
   }
 
@@ -548,11 +586,12 @@ onPage(signal => {
   function sway(dt: number) {
     const width = bass.centre.x * 2 || 1;
     const most = narrow.matches ? RACK.mostNarrow : RACK.most;
-    const smoothing = 1 - Math.exp(-dt / RACK.smoothing);
+    const stepDt = Math.max(1 / 120, dt);
+    const smoothing = 1 - Math.exp(-stepDt / RACK.smoothing);
     let moving = false;
     for (const piece of rack) {
       const x = piece.at();
-      const speed = Number.isNaN(piece.x) ? 0 : (x - piece.x) / dt;
+      const speed = Number.isNaN(piece.x) ? 0 : (x - piece.x) / stepDt;
       piece.x = x;
       if (!speed && !piece.moving && !piece.speed && !piece.lean) continue;
       piece.moving += (speed - piece.moving) * smoothing;
@@ -605,10 +644,17 @@ onPage(signal => {
   let slideStrip: HTMLCanvasElement | null = null;
   let usingStrip = false;
 
+  function syncStripVisibility() {
+    if (slideStrip) writeStyle(slideStrip, 'opacity', usingStrip ? '1' : '0');
+    const surface = outlineLayer?.element ?? copyLayer?.element;
+    if (surface) writeStyle(surface, 'opacity', usingStrip ? '0' : '1');
+    else show.classList.toggle('has-slide-strip', usingStrip);
+  }
+
   function showSlideStrip(active: boolean) {
     if (active === usingStrip) return;
     usingStrip = active;
-    show.classList.toggle('has-slide-strip', active);
+    syncStripVisibility();
     if (!active) outlineLayer?.invalidate();
   }
 
@@ -617,7 +663,7 @@ onPage(signal => {
   function prepareSlideStrip() {
     const { y, size } = bass.centre;
     const width = stage.clientWidth + reach;
-    const density = Math.min(devicePixelRatio || 1, 2);
+    const density = Math.min(devicePixelRatio || 1, mobileView.matches ? 1.5 : 2);
     const ratio = Math.min(density, 4096 / width, 4096 / size);
     // Keep live vector edges on desktops whose complete row won't fit at native density.
     if (!enabled || !ready(bass) || !ready(guitar) || (!mobileView.matches && ratio < density)) {
@@ -635,15 +681,22 @@ onPage(signal => {
     canvas.style.height = `${size}px`;
     canvas.style.top = `${y - size / 2}px`;
     canvas.style.transformOrigin = `0 ${size * (.5 + .5 / FRAME_WIDTH)}px`;
-    const from = shapeAt(outlines.get(bass)!, THREE_QUARTER_YAW, scratch[0], 1);
-    const to = shapeAt(outlines.get(guitar)!, THREE_QUARTER_YAW, scratch[1], 1);
+    const stride = mobileView.matches ? 2 : 1;
+    const from = shapeAt(outlines.get(bass)!, THREE_QUARTER_YAW, scratch[0], stride);
+    const to = shapeAt(outlines.get(guitar)!, THREE_QUARTER_YAW, scratch[1], stride);
     const shapes = new Map<number, Path2D>();
     for (const copy of flatCopies) {
       const share = copy.guitarShare;
       let path = shapes.get(share);
       if (!path) {
-        const points = from.map((v, i) => v + share * (to[i]! - v));
-        path = new Path2D(pathOf(points));
+        path = new Path2D();
+        for (let i = 0; i < from.length; i += 2) {
+          const px = from[i]! + share * (to[i]! - from[i]!);
+          const py = from[i + 1]! + share * (to[i + 1]! - from[i + 1]!);
+          if (i === 0) path.moveTo(px, py);
+          else path.lineTo(px, py);
+        }
+        path.closePath();
         shapes.set(share, path);
       }
       ctx.setTransform(size / VIEW * ratio, 0, 0, size / VIEW * ratio, (copy.restX() - size / 2) * ratio, 0);
@@ -656,11 +709,12 @@ onPage(signal => {
       stage.prepend(canvas);
       slideStrip = canvas;
     }
+    syncStripVisibility();
   }
 
   function resizeCopyLayer() {
     const { y, size } = bass.centre;
-    const ratio = Math.min(devicePixelRatio || 1, 2);
+    const ratio = Math.min(devicePixelRatio || 1, mobileView.matches ? 1.5 : 2);
     outlineLayer?.resize(stage.clientWidth, y, size, size * (.5 + .5 / FRAME_WIDTH), ratio);
     copyLayer?.resize(stage.clientWidth, stage.clientHeight);
   }
@@ -688,6 +742,7 @@ onPage(signal => {
       copyLayer = null;
     }
     show.classList.toggle('has-copy-layer', !!(copyLayer || outlineLayer));
+    syncStripVisibility();
   }
 
   // Allow for the widest body and the head swinging sideways about the foot.
@@ -753,16 +808,16 @@ onPage(signal => {
     const t = clamp((at - headingFill.length) / span.entrance);
     const upperExit = smooth(clamp((t - .08) / .72));
     const lowerExit = smooth(clamp((t - .16) / .72));
-    upper.style.transform = `translate3d(${-75 * upperExit}%,0,0)`;
-    lower.style.transform = `translate3d(${75 * lowerExit}%,0,0)`;
-    heading.style.opacity = String(1 - smooth(clamp((t - .36) / .45)));
+    writeStyle(upper, 'transform', `translate3d(${(-75 * upperExit).toFixed(2)}%,0,0)`);
+    writeStyle(lower, 'transform', `translate3d(${(75 * lowerExit).toFixed(2)}%,0,0)`);
+    writeStyle(heading, 'opacity', (1 - smooth(clamp((t - .36) / .45))).toFixed(3));
 
     const rise = easeOut(clamp((t - .09) / .85));
-    bass.cam.style.transform = rise === 1 ? 'translate3d(0,0,0)' : `translate3d(0,${(1 - rise) * 48}%,0) rotate(${(1 - rise) * -16}deg)`;
-    bass.cam.style.opacity = String(smooth(clamp((t - .12) / .32)));
+    writeStyle(bass.cam, 'transform', rise === 1 ? '' : `translate3d(0,${((1 - rise) * 48).toFixed(2)}%,0) rotate(${((1 - rise) * -16).toFixed(2)}deg)`);
+    writeStyle(bass.cam, 'opacity', smooth(clamp((t - .12) / .32)).toFixed(3));
     const caption = smooth(clamp((t - .48) / .42));
-    bass.words.style.transform = caption === 1 ? 'translate3d(0,0,0)' : `translate3d(0,${(16 * (1 - caption)).toFixed(2)}px,0)`;
-    bass.words.style.opacity = String(caption);
+    writeStyle(bass.words, 'transform', caption === 1 ? '' : `translate3d(0,${(16 * (1 - caption)).toFixed(2)}px,0)`);
+    writeStyle(bass.words, 'opacity', caption.toFixed(3));
   }
 
   function draw(at: number) {
@@ -772,23 +827,24 @@ onPage(signal => {
     // Every piece of the row leans on its foot as the rack sways.
     if (!copyLayer && !outlineLayer) {
       deal(bass);
-      for (const copy of guitar.copies) copy.svg.style.transform = leaning(copy.svg);
+      for (const copy of guitar.copies) writeStyle(copy.svg, 'transform', leaning(copy.svg));
       for (const item of steps) {
-        item.svg.style.transform = `translate3d(${dealt(item).toFixed(2)}px,0,0)${leaning(item.svg)}`;
-        item.svg.style.opacity = smooth(clamp(reveals[item.rank]! * 4)).toFixed(3);
+        writeStyle(item.svg, 'transform', `translate3d(${dealt(item).toFixed(2)}px,0,0)${leaning(item.svg)}`);
+        writeStyle(item.svg, 'opacity', smooth(clamp(reveals[item.rank]! * 4)).toFixed(3));
       }
     }
     for (const scene of scenes) {
-      scene.canvas.style.transform = leaning(scene.canvas);
-      if (!scene.instrument) scene.still.style.transform = scene.canvas.style.transform;
+      const tilt = leaning(scene.canvas);
+      writeStyle(scene.canvas, 'transform', tilt);
+      if (!scene.instrument) writeStyle(scene.still, 'transform', tilt);
     }
-    // The bass's line-up is off the screen's left edge after the slide, all but the in-between copies
-    // nearest the guitar, which stay; so it is never hidden.
-    guitar.element.style.visibility = move <= 0 ? 'hidden' : '';
+    // On narrow screens `reach >= stage.clientWidth`, so `guitar.element` is already clipped off-stage
+    // at `move === 0`; keeping it visible avoids mid-scroll layer creation when the slide starts.
+    writeStyle(guitar.element, 'visibility', !narrow.matches && move <= 0 ? 'hidden' : '');
     // The slide: the row travels left by the distance between the two line-ups.
     const e = smooth(move);
-    bass.element.style.transform = `translate3d(${(-reach * e).toFixed(2)}px,0,0)`;
-    guitar.element.style.transform = `translate3d(${(reach * (1 - e)).toFixed(2)}px,0,0)`;
+    writeStyle(bass.element, 'transform', `translate3d(${(-reach * e).toFixed(2)}px,0,0)`);
+    writeStyle(guitar.element, 'transform', `translate3d(${(reach * (1 - e)).toFixed(2)}px,0,0)`);
     // During the cached slide the model leans with the row, holding the outlines’ axial angle.
     const bassSway = slideStrip ? 0 : (lean.get(bass.canvas) ?? 0) * RACK.yaw;
     turn(bass, (THREE_QUARTER_YAW + bassSway) * smooth(bassProgress));
@@ -869,16 +925,18 @@ onPage(signal => {
       showSlideStrip(canStrip);
       if (usingStrip && slideStrip) {
         const tilt = lean.get(bass.canvas) ?? 0;
-        slideStrip.style.transform = `translate3d(${rowX().toFixed(2)}px,0,0) skewX(${(-tilt).toFixed(3)}deg)`;
+        writeStyle(slideStrip, 'transform', `translate3d(${rowX().toFixed(2)}px,0,0) skewX(${(-tilt).toFixed(3)}deg)`);
       } else if (outlineLayer) {
         outlineLayer.paint();
       } else if (copyLayer) {
         const { y, size } = bass.centre;
         copyLayer.paint(y, size, size * (.5 + .5 / FRAME_WIDTH));
       }
-      // The transparent 50° still already shows the arrival pose. Decode the interactive
-      // instrument once the mobile slide settles, or immediately if the reader takes hold.
-      if (!guitar.loading && guitar.standing && (!moving || guitar.drag || guitar.spring)) void load(guitar);
+      // On mobile `rest-50.webp` already renders the 50° guitar at full studio detail; only load
+      // the turntable if the reader grabs or spins it.
+      if (!guitar.loading && guitar.standing && (!mobileView.matches ? !moving : !!(guitar.drag || guitar.spring))) {
+        void load(guitar);
+      }
       const centre = bass.centre.x + rowX();
       const pixelRatio = renderPixelRatio(elapsed, moving);
       if (onScreen(centre)) renderInstrument(bass, pixelRatio);
@@ -942,6 +1000,7 @@ onPage(signal => {
     grab.addEventListener('lostpointercapture', event => release(event, true), { signal });
     grab.addEventListener('keydown', event => {
       if (!scene.standing) return;
+      if (!scene.loading) void load(scene);
       const step = event.key === 'ArrowRight' || event.key === 'ArrowUp' ? 45 : event.key === 'ArrowLeft' || event.key === 'ArrowDown' ? -45 : 0;
       if (step) aim(scene, Math.round(scene.rest / 45) * 45 + step, 1, .4);
       else if (event.key === 'Home') aim(scene, Math.round(scene.angle / 360) * 360, 1, .4);
@@ -950,21 +1009,42 @@ onPage(signal => {
     }, { signal });
   }
 
-  let stillsWarmed = false;
+  // Warm outlines, WebGL shaders, the cached slide strip, stills and the bass scroll sheet during
+  // idle time well ahead of the section so scrolling into #instruments hits zero setup work.
+  let warmed = false;
+  const idle = (fn: () => void, delay = 120) => {
+    if (stopped) return;
+    if ('requestIdleCallback' in window) window.requestIdleCallback(() => { if (!stopped) fn(); }, { timeout: 1200 });
+    else setTimeout(() => { if (!stopped) fn(); }, delay);
+  };
+  function warmAssets() {
+    if (warmed || stopped || !enabled) return;
+    warmed = true;
+    warmWatch.disconnect();
+    for (const scene of scenes) {
+      scene.still.loading = 'eager';
+      void scene.still.decode?.().catch(() => {});
+      void loadOutlines(scene);
+    }
+    idle(() => { if (enabled && !bass.loading) void load(bass); }, 240);
+  }
+  const warmTimer = setTimeout(() => idle(warmAssets, 0), 1100);
+  const warmWatch = new IntersectionObserver(entries => {
+    for (const entry of entries) if (entry.isIntersecting) warmAssets();
+  }, { rootMargin: '160% 0px' });
+  warmWatch.observe(show);
+
   const watch = new IntersectionObserver(entries => {
     for (const entry of entries) if (entry.target === show) near = entry.isIntersecting;
     if (near) {
+      warmAssets();
       locatePin();
-      if (!stillsWarmed) {
-        stillsWarmed = true;
-        for (const scene of scenes) {
-          scene.still.loading = 'eager';
-          void scene.still.decode?.().catch(() => {});
-        }
-      }
-    } else { shown = -1; still(); }
-    request();
-  }, { rootMargin: '40% 0px' }); // Warm the bass, outlines and guitar still well before the title arrives.
+      request();
+    } else {
+      shown = -1;
+      still();
+    }
+  }, { rootMargin: '64px 0px' });
   watch.observe(show);
   // The record shelf above can change height after its fonts or artwork arrive.
   const layout = new ResizeObserver(() => {
@@ -976,19 +1056,22 @@ onPage(signal => {
   let size = '';
   function resized() {
     const now = `${innerWidth}x${stage.offsetHeight}`;
-    if (now === size) return request();
+    if (now === size) return near && request();
     size = now;
     measure();
   }
   resized();
   document.fonts.ready.then(() => { if (!signal.aborted) measure(); });
-  window.addEventListener('scroll', request, { passive: true, signal });
+  window.addEventListener('scroll', () => { if (near) request(); }, { passive: true, signal });
   window.addEventListener('resize', resized, { passive: true, signal });
   allowed.addEventListener('change', measure, { signal });
   mobileView.addEventListener('change', measure, { signal });
   signal.addEventListener('abort', () => {
     stopped = true;
+    clearTimeout(warmTimer);
     cancelAnimationFrame(queued);
+    cancelAnimationFrame(stripTimer);
+    warmWatch.disconnect();
     watch.disconnect();
     layout.disconnect();
     slideStrip?.remove();

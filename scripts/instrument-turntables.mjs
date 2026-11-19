@@ -71,6 +71,21 @@ try {
           .webp({ quality: 95, alphaQuality: 100 }).toFile(folder + (bass ? '/rest-front.webp' : '/rest-50.webp'));
       }
     }
+    if (detail && name === 'pj-bass') {
+      const fw = 224, fh = 700, cols = 14, rows = 2;
+      const composites = [];
+      for (let pos = 0; pos < cols * rows; pos++) {
+        const tile = Math.floor(pos / 6), local = pos - tile * 6;
+        const input = await sharp(`${folder}/detail/${tile}.webp`)
+          .extract({ left: local * 512, top: 0, width: 512, height: 1600 })
+          .resize(fw, fh, { kernel: 'lanczos3' }).png().toBuffer();
+        composites.push({ input, left: (pos % cols) * fw, top: Math.floor(pos / cols) * fh });
+      }
+      await sharp({ create: { width: cols * fw, height: rows * fh, channels: 4, background: { r: 0, g: 0, b: 0, alpha: 0 } } })
+        .composite(composites)
+        .withExif({ IFD0: { Artist: 'Ryan_Nein', Copyright: 'Model: CC BY 4.0' } })
+        .webp({ quality: 88, alphaQuality: 92, effort: 6 }).toFile(`${folder}/scroll.webp`);
+    }
   }
 } finally {
   await browser.close();
