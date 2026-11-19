@@ -1,50 +1,157 @@
 import type { Instrument } from './instrument';
 
-// The mobile studio is photographed every four degrees (scripts/instrument-turntables.mjs).
-// Blend adjacent views in premultiplied alpha so the strings and the outer contour turn continuously.
-export async function createTurntable(canvas: HTMLCanvasElement, url: string): Promise<Instrument> {
-  const sheet = new Image();
-  sheet.decoding = 'async';
-  sheet.src = url;
-  await sheet.decode();
+const TILE_COUNT = 30;
+const STEPS = 6; // Six 2° intervals, with a seventh view shared by the next tile.
+const DETAIL_HEIGHT = 1600;
+const ASPECT = .32;
+const wrapTile = (tile: number) => (tile + TILE_COUNT) % TILE_COUNT;
+
+type Photograph = ImageBitmap | HTMLImageElement;
+
+async function photograph(url: string): Promise<Photograph> {
+  if (typeof createImageBitmap === 'function') {
+    const response = await fetch(url);
+    if (!response.ok) throw new Error('Missing instrument view');
+    return createImageBitmap(await response.blob());
+  }
+  const image = new Image();
+  image.decoding = 'async';
+  image.src = url;
+  await image.decode();
+  return image;
+}
+
+function release(image: Photograph | undefined) {
+  if (image && 'close' in image) image.close();
+}
+
+// Keep the current and neighbouring HD strips. The small, full-circle sheet covers
+// fast spins and slow networks when the next detailed view hasn't arrived yet.
+export async function createTurntable(canvas: HTMLCanvasElement, folder: string, initialYaw: number, repaint: () => void): Promise<Instrument> {
+  const positionAt = (yaw: number) => ((-yaw % 360 + 360) % 360) / 2;
+  const initialTile = Math.floor(positionAt(initialYaw) / STEPS);
+  const loadTile = (index: number) => photograph(folder + '/detail/' + index + '.webp');
+  const overviewUrl = folder + '/turntable.webp';
+  const tiles = new Map<number, Photograph>();
+  const failed = new Set<number>();
+  let overview: Photograph | undefined;
+  try {
+    tiles.set(initialTile, await loadTile(initialTile));
+  } catch {
+    failed.add(initialTile);
+    overview = await photograph(overviewUrl);
+  }
   const context = canvas.getContext('2d', { alpha: true });
-  if (!context) throw new Error('2D canvas unavailable');
+  if (!context) {
+    release(tiles.get(initialTile));
+    release(overview);
+    throw new Error('2D canvas unavailable');
+  }
 
-  const columns = 15, rows = 6;
-  const count = columns * rows;
-  const width = canvas.width = sheet.naturalWidth / columns;
-  const height = canvas.height = sheet.naturalHeight / rows;
-  let last = NaN;
+  let disposed = false;
+  let fetchingTile = false;
+  let requestedOverview = !!overview;
+  let previousYaw = NaN;
+  let direction = 0;
+  let dirty = true;
+  let painted = false;
+  function invalidate() {
+    if (disposed) return;
+    dirty = true;
+    repaint();
+  }
+  function fetchDetail(index: number) {
+    if (fetchingTile || tiles.has(index) || failed.has(index)) return;
+    fetchingTile = true;
+    loadTile(index).then(image => {
+      if (disposed) return release(image);
+      tiles.set(index, image);
+      if (tiles.size > 2) {
+        const oldest = tiles.keys().next().value!;
+        release(tiles.get(oldest));
+        tiles.delete(oldest);
+      }
+    }, () => failed.add(index)).finally(() => {
+      fetchingTile = false;
+      invalidate();
+    });
+  }
+  function fetchOverview() {
+    if (requestedOverview) return;
+    requestedOverview = true;
+    photograph(overviewUrl).then(image => {
+      if (disposed) return release(image);
+      overview = image;
+      invalidate();
+    }, () => {});
+  }
 
-  function draw(frame: number) {
-    context!.drawImage(sheet, frame % columns * width, Math.floor(frame / columns) * height,
-      width, height, 0, 0, width, height);
+  function paint(image: Photograph, position: number, columns: number, rows: number) {
+    painted = true;
+    const first = Math.floor(position);
+    const blend = position - first;
+    const width = image.width / columns, height = image.height / rows;
+    function draw(frame: number) {
+      context!.drawImage(image, frame % columns * width, Math.floor(frame / columns) * height,
+        width, height, 0, 0, canvas.width, canvas.height);
+    }
+    context!.clearRect(0, 0, canvas.width, canvas.height);
+    context!.globalCompositeOperation = 'source-over';
+    context!.globalAlpha = 1 - blend;
+    draw(first);
+    if (blend > 0) {
+      context!.globalCompositeOperation = 'lighter';
+      context!.globalAlpha = blend;
+      draw((first + 1) % (columns * rows));
+    }
   }
 
   return {
-    pose(degrees) {
-      if (degrees === last) return;
-      last = degrees;
-      const angle = ((degrees % 360) + 360) % 360;
-      const position = angle / 360 * count;
-      const first = Math.floor(position);
-      const blend = position - first;
-      context.clearRect(0, 0, width, height);
-      context.globalCompositeOperation = 'source-over';
-      context.globalAlpha = 1 - blend;
-      draw(first);
-      if (blend > 0) {
-        context.globalCompositeOperation = 'lighter';
-        context.globalAlpha = blend;
-        draw((first + 1) % count);
+    pose(yaw) {
+      if (yaw === previousYaw && !dirty) return;
+      if (Number.isFinite(previousYaw) && previousYaw !== yaw) direction = Math.sign(previousYaw - yaw);
+      previousYaw = yaw;
+      dirty = false;
+      const position = positionAt(yaw);
+      const tile = Math.floor(position / STEPS);
+      const local = position - tile * STEPS;
+      const image = tiles.get(tile);
+      if (image) {
+        // Keep the visible tile when a prefetch finishes after a change of direction.
+        tiles.delete(tile);
+        tiles.set(tile, image);
+        paint(image, local, STEPS + 1, 1);
+        if ((direction > 0 && local >= 2) || (direction < 0 && local <= 4)) fetchDetail(wrapTile(tile + direction));
+      } else {
+        fetchDetail(tile);
+        fetchOverview();
+        if (overview) paint(overview, ((yaw % 360 + 360) % 360) / 4, 15, 6);
+        else if (!painted) {
+          // A deep scroll link can skip the initial pose before the first paint.
+          const firstAvailable = tiles.entries().next().value;
+          if (firstAvailable) {
+            const [index, sheet] = firstAvailable;
+            paint(sheet, Math.max(0, Math.min(STEPS, position - index * STEPS)), STEPS + 1, 1);
+          }
+        }
       }
     },
     resize(size) {
-      canvas.style.width = `${size * width / height}px`;
+      const height = Math.min(DETAIL_HEIGHT, Math.ceil(size * (devicePixelRatio || 1)));
+      canvas.style.width = `${size * ASPECT}px`;
       canvas.style.height = `${size}px`;
+      if (canvas.height === height) return;
+      canvas.width = Math.max(1, Math.round(height * ASPECT));
+      canvas.height = height;
+      painted = false;
+      dirty = true;
     },
     dispose() {
-      sheet.removeAttribute('src');
+      disposed = true;
+      for (const tile of tiles.values()) release(tile);
+      tiles.clear();
+      release(overview);
+      overview = undefined;
       canvas.width = canvas.height = 1;
     },
   };

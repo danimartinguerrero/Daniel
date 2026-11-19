@@ -43,7 +43,7 @@ const FRAME_WIDTH = 1.1; // matches instrument.ts: the frame's width in instrume
 const BODY = .27; // a body's width, in frame widths (the outlines in silhouettes.ts)
 const BASS_ENTRANCE = 2.4; // lines of scroll for the title to part and the bass to rise
 const HOLD = .8; // lines of scroll the lit bass waits before the move
-const MOVE = 4.2; // lines of scroll the slide takes
+const MOVE = 3.6; // lines of scroll the slide takes
 const STEPS = 5; // copies between the blue bass and the green guitar
 const VIEW = 1600; // the outlines' frame, silhouettes.ts
 // The outlines as the instrument turns (scripts/instrument-outlines.mjs): every TURN_STEP degrees about its
@@ -111,6 +111,7 @@ onPage(signal => {
   if (!root) return;
   const allowed = matchMedia('(prefers-reduced-motion: no-preference) and (min-height: 500px) and (min-width: 320px) and (forced-colors: none)');
   const narrow = matchMedia('(max-width: 760px)');
+  const mobileView = matchMedia('(max-width: 760px), (pointer: coarse)');
 
   const show = root.querySelector<HTMLElement>('[data-lu-show]')!;
   const stage = show.querySelector<HTMLElement>('[data-lu-stage]')!;
@@ -126,6 +127,7 @@ onPage(signal => {
     cam: element.querySelector<HTMLElement>('[data-lu-cam]')!,
     words: element.querySelector<HTMLElement>('[data-lu-words]')!,
     canvas: element.querySelector('canvas')!,
+    still: element.querySelector('img')!,
     grab: element.querySelector<HTMLElement>('[data-lu-grab]')!,
     model: element.dataset.model!,
     paint: element.dataset.paint ?? '',
@@ -195,6 +197,7 @@ onPage(signal => {
       if (ready(bass) && ready(guitar)) {
         configureCopyLayer();
         resizeCopyLayer();
+        prepareSlideStrip();
       }
       invalidateOutlines();
       request();
@@ -247,8 +250,10 @@ onPage(signal => {
     if (scene.loading) return;
     scene.loading = true;
     try {
-      const instrument = narrow.matches
-        ? await createTurntable(scene.canvas, scene.model.replace(/\.glb$/, '/turntable.webp')).catch(() => liveInstrument(scene))
+      const folder = scene.model.replace(/\.glb$/, '');
+      const initialYaw = scene === bass ? 0 : THREE_QUARTER_YAW;
+      const instrument = mobileView.matches
+        ? await createTurntable(scene.canvas, folder, initialYaw, request).catch(() => liveInstrument(scene))
         : await liveInstrument(scene);
       if (stopped) return instrument.dispose();
       scene.instrument = instrument;
@@ -325,6 +330,7 @@ onPage(signal => {
     show.classList.toggle('statement', enabled);
     show.classList.toggle('is-scrubbed', enabled);
     if (!enabled) {
+      prepareSlideStrip();
       headingRows.forEach(clearTextFill);
       show.style.removeProperty('height');
       upper.style.transform = lower.style.transform = heading.style.opacity = '';
@@ -340,14 +346,14 @@ onPage(signal => {
     resizeCopyLayer();
     bass.cam.style.transformOrigin = `${bass.centre.x}px ${bass.centre.y}px`;
     const chapterLines = (scene: Scene) => Array.from(scene.words.children).reduce((sum, el) => sum + lineCount(el), 0);
-    // Give half of the former guitar turn to the fan and keep the other half for reading.
+    // Allow the stagger to overlap while keeping the final guitar caption on screen.
     const guitarHold = chapterLines(guitar) / 2;
-    span.bass = chapterLines(bass) + guitarHold;
+    span.bass = .9 * (chapterLines(bass) + guitarHold);
     span.moveAt = introEnd + span.bass + HOLD;
     span.end = span.moveAt + MOVE + guitarHold + FILL_HOLD;
     show.style.height = `${(stage.offsetHeight + span.end * line).toFixed(1)}px`;
     // Every piece of the row leans on its foot.
-    for (const element of pieces) element.style.transformOrigin = `50% ${(50 + 50 / 1.1).toFixed(2)}%`;
+    for (const element of [...pieces, guitar.still]) element.style.transformOrigin = `50% ${(50 + 50 / 1.1).toFixed(2)}%`;
     still();
     spacing = (blue.slot.x - bass.centre.x) / blue.rank;
     // The two captions still need a viewport between them when the fans overlap tightly.
@@ -358,6 +364,7 @@ onPage(signal => {
       placeCopy(svg, { ...blue.slot, x: blue.slot.x + (index + 1) * bridgeSpacing });
       svg.style.zIndex = String(-2 - index); // further right, further under, as the copies at the right are
     });
+    prepareSlideStrip();
     locatePin();
     shown = -1;
     if (!near) {
@@ -367,6 +374,7 @@ onPage(signal => {
     request();
   }
   function reset(scene: Scene) {
+    scene.still.style.transform = '';
     scene.cam.style.transform = scene.cam.style.opacity = '';
     scene.element.style.visibility = scene.element.style.clipPath = scene.element.style.transform = '';
     for (const copy of scene.copies) { copy.svg.style.transform = copy.svg.style.opacity = ''; copy.svg.style.visibility = ''; }
@@ -468,7 +476,7 @@ onPage(signal => {
       out.exposure = dealtScene
         ? (copy.rank === 1 ? smooth(clamp(step * 2.5)) : smooth(step))
         : 1;
-      out.lean = (lean.get(copy.svg) ?? 0) - baseLean;
+      out.lean = usingStrip ? 0 : (lean.get(copy.svg) ?? 0) - baseLean;
       const follower = following.get(copy.svg)!;
       out.yaw = Number.isNaN(follower.yaw) ? scene.yaw : follower.yaw;
     }
@@ -532,17 +540,21 @@ onPage(signal => {
   };
 
   // Back to front, in the same stacking order as the desktop SVGs.
-  const flatCopies: TurningCopy[] = [...steps].reverse().map(item => ({
-    svg: item.svg, yaw: () => item.turn.yaw, guitarShare: item.t, colour: item.path.getAttribute('fill')!,
-    x: () => rowX() + blue.slot.x + (item.rank - blue.rank) * bridgeSpacing + dealt(item),
-    opacity: () => smooth(clamp(reveals[item.rank]! * 4)),
-    lean: () => lean.get(item.svg) ?? 0,
-  }));
+  const flatCopies: (TurningCopy & { restX(): number })[] = [...steps].reverse().map(item => {
+    const restX = () => blue.slot.x + (item.rank - blue.rank) * bridgeSpacing;
+    return {
+      svg: item.svg, yaw: () => item.turn.yaw, guitarShare: item.t, colour: item.path.getAttribute('fill')!,
+      restX, x: () => rowX() + restX() + dealt(item),
+      opacity: () => smooth(clamp(reveals[item.rank]! * 4)),
+      lean: () => lean.get(item.svg) ?? 0,
+    };
+  });
   for (const scene of scenes) {
     for (const copy of [...scene.copies].sort((a, b) => b.rank - a.rank)) {
+      const restX = () => copy.slot.x + (scene === bass ? 0 : reach);
       flatCopies.push({
         svg: copy.svg, colour: copy.colour, yaw: () => following.get(copy.svg)!.yaw, guitarShare: Number(scene === guitar),
-        x: () => rowX() + copy.slot.x + (scene === bass ? dealt(copy) : reach),
+        restX, x: () => rowX() + restX() + (scene === bass ? dealt(copy) : 0),
         opacity: () => scene === guitar ? Number(shown > span.moveAt) : bassOpacity(copy.rank),
         lean: () => lean.get(copy.svg) ?? 0,
       });
@@ -552,6 +564,62 @@ onPage(signal => {
 
   let outlineLayer: ReturnType<typeof createOutlineLayer> = null;
   let gpuUnavailable = false;
+  let slideStrip: HTMLCanvasElement | null = null;
+  let usingStrip = false;
+
+  function showSlideStrip(active: boolean) {
+    if (active === usingStrip) return;
+    usingStrip = active;
+    show.classList.toggle('has-slide-strip', active);
+    if (!active) outlineLayer?.invalidate();
+  }
+
+  // Both ends of the fully opened row face the same angle. Paint the entire row, including
+  // the five intermediate shapes, ahead of the slide. Moving it then costs one transform.
+  function prepareSlideStrip() {
+    const { y, size } = bass.centre;
+    const width = stage.clientWidth + reach;
+    const density = Math.min(devicePixelRatio || 1, mobileView.matches ? 1.5 : 2);
+    const ratio = Math.min(density, 4096 / width, 4096 / size);
+    // Keep live vector edges on desktops whose complete row won't fit at native density.
+    if (!enabled || !ready(bass) || !ready(guitar) || (!mobileView.matches && ratio < density)) {
+      showSlideStrip(false);
+      slideStrip?.remove();
+      slideStrip = null;
+      return;
+    }
+    const canvas = slideStrip ?? document.createElement('canvas');
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+    canvas.width = Math.ceil(width * ratio);
+    canvas.height = Math.ceil(size * ratio);
+    canvas.style.width = `${width}px`;
+    canvas.style.height = `${size}px`;
+    canvas.style.top = `${y - size / 2}px`;
+    canvas.style.transformOrigin = `0 ${size * (.5 + .5 / FRAME_WIDTH)}px`;
+    const from = shapeAt(outlines.get(bass)!, THREE_QUARTER_YAW, scratch[0], 1);
+    const to = shapeAt(outlines.get(guitar)!, THREE_QUARTER_YAW, scratch[1], 1);
+    const shapes = new Map<number, Path2D>();
+    for (const copy of flatCopies) {
+      const share = copy.guitarShare;
+      let path = shapes.get(share);
+      if (!path) {
+        const points = from.map((v, i) => v + share * (to[i]! - v));
+        path = new Path2D(pathOf(points));
+        shapes.set(share, path);
+      }
+      ctx.setTransform(size / VIEW * ratio, 0, 0, size / VIEW * ratio, (copy.restX() - size / 2) * ratio, 0);
+      ctx.fillStyle = copy.colour;
+      ctx.fill(path, 'evenodd');
+    }
+    if (!slideStrip) {
+      canvas.className = 'lu__slide-strip';
+      canvas.setAttribute('aria-hidden', 'true');
+      stage.prepend(canvas);
+      slideStrip = canvas;
+    }
+  }
+
   function resizeCopyLayer() {
     const { y, size } = bass.centre;
     const ratio = Math.min(devicePixelRatio || 1, narrow.matches ? 1.5 : 2);
@@ -673,6 +741,7 @@ onPage(signal => {
       }
     }
     for (const scene of scenes) scene.canvas.style.transform = leaning(scene.canvas);
+    if (!guitar.instrument) guitar.still.style.transform = guitar.canvas.style.transform;
     // The bass's line-up is off the screen's left edge after the slide, all but the in-between copies
     // nearest the guitar, which stay; so it is never hidden.
     guitar.element.style.visibility = move <= 0 ? 'hidden' : '';
@@ -680,7 +749,8 @@ onPage(signal => {
     const e = smooth(move);
     bass.element.style.transform = `translate3d(${(-reach * e).toFixed(2)}px,0,0)`;
     guitar.element.style.transform = `translate3d(${(reach * (1 - e)).toFixed(2)}px,0,0)`;
-    const bassSway = (lean.get(bass.canvas) ?? 0) * RACK.yaw;
+    // During the cached slide the model leans with the row, holding the outlines’ axial angle.
+    const bassSway = slideStrip ? 0 : (lean.get(bass.canvas) ?? 0) * RACK.yaw;
     turn(bass, (THREE_QUARTER_YAW + bassSway) * smooth(bassProgress));
     turn(guitar, THREE_QUARTER_YAW);
 
@@ -696,8 +766,8 @@ onPage(signal => {
   let lateFrames = 0;
   let sampledFrames = 0;
   function renderPixelRatio(elapsed: number, moving: boolean) {
-    if (!narrow.matches) return 2;
     const full = Math.min(devicePixelRatio || 1, 3);
+    if (!narrow.matches) return full;
     if (!moving || elapsed === 0) {
       lateFrames = sampledFrames = 0;
       return moving ? motionPixelRatio : full;
@@ -740,7 +810,7 @@ onPage(signal => {
       for (const scene of scenes) if (!outlines.has(scene)) void loadOutlines(scene);
       if (snap) scrollPosition.set(raw);
       if (!bass.loading) void load(bass);
-      if (!guitar.loading && raw >= introEnd + span.bass * .5) void load(guitar);
+      if (!guitar.loading && !mobileView.matches && raw >= introEnd + span.bass * .5) void load(guitar);
       scrollPosition.to(raw);
       moving = !scrollPosition.step(dt);
       shown = scrollPosition.value;
@@ -751,12 +821,22 @@ onPage(signal => {
       updateDeal(bassAt());
       if (sway(dt)) moving = true;
       draw(shown);
-      if (turnCopies(dt, snap)) moving = true;
-      outlineLayer?.paint();
-      if (copyLayer) {
+      const turning = turnCopies(dt, snap);
+      if (turning) moving = true;
+      showSlideStrip(!!slideStrip && !turning && shown >= introEnd + span.bass
+        && bass.yaw === THREE_QUARTER_YAW && guitar.yaw === THREE_QUARTER_YAW);
+      if (usingStrip && slideStrip) {
+        const tilt = lean.get(bass.canvas) ?? 0;
+        slideStrip.style.transform = `translate3d(${rowX().toFixed(2)}px,0,0) skewX(${(-tilt).toFixed(3)}deg)`;
+      } else if (outlineLayer) {
+        outlineLayer.paint();
+      } else if (copyLayer) {
         const { y, size } = bass.centre;
         copyLayer.paint(y, size, size * (.5 + .5 / FRAME_WIDTH));
       }
+      // The transparent 50° still already shows the arrival pose. Decode the interactive
+      // instrument once the mobile slide settles, or immediately if the reader takes hold.
+      if (!guitar.loading && guitar.standing && (!moving || guitar.drag || guitar.spring)) void load(guitar);
       const centre = bass.centre.x + rowX();
       const pixelRatio = renderPixelRatio(elapsed, moving);
       if (onScreen(centre)) renderInstrument(bass, pixelRatio);
@@ -773,6 +853,7 @@ onPage(signal => {
     const { grab, element } = scene;
     grab.addEventListener('pointerdown', event => {
       if (!scene.standing || scene.drag || event.button > 0) return; // one finger at a time
+      if (!scene.loading) void load(scene);
       scene.spring = null; // caught mid-spin: from where it is on screen
       scene.velocity = 0;
       scene.pointer.reset(event.clientX, event.timeStamp);
@@ -853,11 +934,13 @@ onPage(signal => {
   window.addEventListener('scroll', request, { passive: true, signal });
   window.addEventListener('resize', resized, { passive: true, signal });
   allowed.addEventListener('change', measure, { signal });
+  mobileView.addEventListener('change', measure, { signal });
   signal.addEventListener('abort', () => {
     stopped = true;
     cancelAnimationFrame(queued);
     watch.disconnect();
     layout.disconnect();
+    slideStrip?.remove();
     outlineLayer?.dispose();
     copyLayer?.dispose();
     for (const scene of scenes) scene.instrument?.dispose();

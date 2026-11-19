@@ -26,6 +26,6 @@ Generate the lighter mobile bass from the finished model with gltfpack 1.3. It s
 gltfpack -i public/music/instruments/pj-bass.glb -o public/music/instruments/pj-bass-mobile.glb -si 0.18 -sp -sv -sa -km -cc -ce ext
 ```
 
-Regenerate both mobile turntables with `node scripts/instrument-turntables.mjs` from the repo root. Set `CHROME_PATH` to a Chromium executable and make `playwright-core` available through `NODE_PATH`. Each transparent WebP contains 90 studio views, packed into 15 columns and six rows.
+Regenerate both mobile turntables with `node scripts/instrument-turntables.mjs` from the repo root. Set `CHROME_PATH` to a Chromium executable and make `playwright-core` available through `NODE_PATH`. Each full-circle WebP contains 90 studio views, packed into 15 columns and six rows. Add `--detail` to bake the 1,600-pixel lineup views at two-degree intervals and the matching bass and guitar posters. Every detailed strip covers 12° and shares its final view with the next strip.
 
-For each still, call the live renderer’s `resize(1624, 1)` and set the pose with `pose(0)` for the guitar or `pose(1)` for the bass. Capture its canvas in the same frame, then downsample to 960 × 960 and save as WebP. These tools are only used when regenerating the assets.
+For the square stills used elsewhere, call the live renderer’s `resize(1624, 1)` and set the pose with `pose(0)` for the guitar or `pose(1)` for the bass. Capture its canvas in the same frame, then downsample to 960 × 960 and save as WebP. These tools are only used when regenerating the assets.

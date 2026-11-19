@@ -136,6 +136,7 @@ export function createOutlineLayer(stage: HTMLElement, copies: TurningCopy[], ba
       gl.uniform2f(scale, 2 / width, -2 / height);
       gl.uniform3f(frame, size, foot / size, unitsPerFrame);
     },
+    invalidate() { resized = true; },
     paint() {
       let dirty = resized;
       for (const pose of poses) {
