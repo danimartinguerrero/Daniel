@@ -51,11 +51,11 @@ const copies = [
     <div class="lu__stage statement__slide" data-lu-stage>
       {chapters.map(({ noun, instrument, paint, title, body }, index) => (
         <div class="lu__scene" data-lu-scene data-model={`/music/instruments/${instrument}.glb`} data-paint={paint}
-          data-colours={copies.map(copy => copy.colour).join(',')}>
+          data-outline={silhouettes[instrument]}>
           <div class="lu__cam" aria-hidden="true" data-lu-cam>
             {copies.map(({ colour, side, rank }) => (
               <svg class="lu__copy" viewBox={`0 0 ${VIEW} ${VIEW}`} style={`--c:${colour}`} data-side={side} data-rank={rank} data-lu-copy>
-                <path d={silhouettes[instrument]} fill-rule="evenodd" />
+                <path fill-rule="evenodd" />
               </svg>
             ))}
             <img class="lu__still" loading="lazy" decoding="async" alt="" width="960" height="960"

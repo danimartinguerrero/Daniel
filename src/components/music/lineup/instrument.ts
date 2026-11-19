@@ -90,7 +90,7 @@ export async function createInstrument(
   renderer.outputColorSpace = SRGBColorSpace;
   renderer.toneMapping = AgXToneMapping;
   renderer.toneMappingExposure = .92;
-  renderer.shadowMap.enabled = !compact;
+  renderer.shadowMap.enabled = true;
   renderer.shadowMap.type = PCFSoftShadowMap;
 
   const scene = new Scene();
@@ -100,7 +100,8 @@ export async function createInstrument(
   // A tight frustum resolves the narrow shadows under the strings and bridge saddles.
   Object.assign(key.shadow.camera, { left: -.57, right: .57, top: .57, bottom: -.57, near: .65, far: 2.35 });
   key.shadow.camera.updateProjectionMatrix();
-  key.shadow.mapSize.set(1024, 1024);
+  key.shadow.mapSize.setScalar(compact ? 512 : 1024);
+  key.shadow.autoUpdate = false;
   key.shadow.normalBias = .00022;
   key.shadow.bias = -.00012;
   // A quiet strip across the body contour and pickups, restrained so black finishes stay deep on #000.
@@ -166,7 +167,8 @@ export async function createInstrument(
   return {
     pose(degrees, states) {
       if (!size) return;
-      let dirty = Math.abs(degrees - shown) >= 1e-4 || Number.isNaN(shown);
+      const turned = Math.abs(degrees - shown) >= 1e-4 || Number.isNaN(shown);
+      let dirty = turned;
       for (let i = 0; i < surroundLights.length; i++) {
         const spec = surroundLights[i]!;
         const state = states?.[i];
@@ -203,13 +205,20 @@ export async function createInstrument(
       if (!dirty) return;
       shown = degrees;
       holder.rotation.y = MathUtils.degToRad(degrees);
+      // The coloured lights and the CSS sway do not move the model relative to the shadow caster.
+      if (turned) key.shadow.needsUpdate = true;
       renderer.render(scene, camera);
     },
     resize(css, compact) {
       const ratio = Math.min(devicePixelRatio || 1, compact ? 1.5 : 2);
-      if (css === size && ratio === renderer.getPixelRatio() && renderer.shadowMap.enabled === !compact) return;
+      const shadowSize = compact ? 512 : 1024;
+      if (css === size && ratio === renderer.getPixelRatio() && key.shadow.mapSize.x === shadowSize) return;
       size = css;
-      renderer.shadowMap.enabled = !compact;
+      if (key.shadow.mapSize.x !== shadowSize) {
+        key.shadow.dispose();
+        key.shadow.map = null;
+        key.shadow.mapSize.setScalar(shadowSize);
+      }
       // Keep the square camera framing, but only allocate the strip containing the turning model.
       const width = compact ? css * .4 : css;
       camera.setViewOffset(css, css, (css - width) / 2, 0, width, css);

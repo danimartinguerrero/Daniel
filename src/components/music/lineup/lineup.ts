@@ -82,12 +82,17 @@ function shapeAt(data: Uint16Array, yaw: number, out: Float32Array, stride: numb
   const at = wrap(yaw) / TURN_STEP;
   const count = data.length / (POINTS * 2);
   const a = Math.floor(at) % count, b = (a + 1) % count, t = at - Math.floor(at);
-  for (let i = 0; i < POINTS * 2; i += stride * 2) out[i] = (data[a * POINTS * 2 + i]! * (1 - t) + data[b * POINTS * 2 + i]! * t) / UNITS;
-  return out;
+  const start = a * POINTS * 2, end = b * POINTS * 2;
+  let written = 0;
+  for (let i = 0; i < POINTS * 2; i += stride * 2) {
+    out[written++] = (data[start + i]! * (1 - t) + data[end + i]! * t) / UNITS;
+    out[written++] = (data[start + i + 1]! * (1 - t) + data[end + i + 1]! * t) / UNITS;
+  }
+  return out.subarray(0, written);
 }
-function pathOf(points: Float32Array, stride: number) {
+function pathOf(points: Float32Array) {
   let d = '';
-  for (let i = 0; i < POINTS; i += stride) d += `${i ? 'L' : 'M'}${points[i * 2]!.toFixed(1)} ${points[i * 2 + 1]!.toFixed(1)}`;
+  for (let i = 0; i < points.length; i += 2) d += `${i ? 'L' : 'M'}${points[i]!.toFixed(1)} ${points[i + 1]!.toFixed(1)}`;
   return `${d}Z`;
 }
 
@@ -142,6 +147,10 @@ onPage(signal => {
   // The in-between copies, blue bass to green guitar, made once: outline and colour a step further each.
   const blue = bass.copies.find(copy => copy.side === 1 && copy.rank === 3)!;
   const green = guitar.copies.find(copy => copy.side === -1 && copy.rank === 3)!;
+  for (const scene of scenes) {
+    const front = scene.element.dataset.outline!;
+    for (const copy of scene.copies) copy.svg.querySelector('path')!.setAttribute('d', front);
+  }
   const steps = (() => {
     const blueLab = toLab(blue.svg.style.getPropertyValue('--c').trim());
     const greenLab = toLab(green.svg.style.getPropertyValue('--c').trim());
@@ -171,7 +180,10 @@ onPage(signal => {
     if (outlines.has(scene)) return;
     outlines.set(scene, new Uint16Array(0));
     try {
-      const data = await (await fetch(scene.model.replace(/\.glb$/, '.outlines.bin'))).arrayBuffer();
+      const response = await fetch(scene.model.replace(/\.glb$/, '.outlines.bin'), { signal });
+      if (!response.ok) return;
+      const data = await response.arrayBuffer();
+      if (stopped || data.byteLength !== (360 / TURN_STEP) * POINTS * 2 * Uint16Array.BYTES_PER_ELEMENT) return;
       outlines.set(scene, new Uint16Array(data));
       for (const follower of following.values()) follower.drawn = NaN;
       for (const item of steps) item.turn.drawn = NaN;
@@ -197,6 +209,7 @@ onPage(signal => {
   // How far the guitar's line-up waits to the right: its green copy STEPS + 1 steps after the blue bass.
   let reach = 0;
   let spacing = 0;
+  let bridgeSpacing = 0;
 
   let line = 1;
   let enabled = false;
@@ -249,15 +262,22 @@ onPage(signal => {
     const bottom = height - (narrow.matches ? 76 : 84); // clear of the dock
     const band = Math.max(80, bottom - top);
     const air = narrow.matches ? .8 : 1.14;
-    // On phones the outer copies can run past the edges. On desktop the first bridge copy fits too.
+    // Fit the fan to the width independently of instrument height on narrow screens.
     const halfRow = BODY * (air * (blue.rank + 1) + .5);
     const widthLimit = narrow.matches ? width * 1.65 : (width / 2 - 8) / halfRow;
     const frame = Math.min(band * FRAME_WIDTH, widthLimit);
+    const naturalSpacing = BODY * frame * air;
+    // At any yaw the widest outline extends at most .151 frame widths from the centre.
+    const fanSpacing = narrow.matches
+      ? Math.min(naturalSpacing, (width / 2 - 8 - frame * .155) / blue.rank)
+      : naturalSpacing;
+    // The widest silhouette reaches 0.151 frame widths from its centre.
+    const slotGap = Math.min(BODY * frame * air, (width / 2 - 8 - frame * .151) / blue.rank);
     const length = frame / FRAME_WIDTH;
     const y = top + band / 2;
     scene.centre = { x: width / 2, y, size: frame };
     for (const copy of scene.copies) {
-      copy.slot = { x: width / 2 + copy.side * BODY * frame * air * copy.rank, y, size: frame };
+      copy.slot = { x: width / 2 + copy.side * fanSpacing * copy.rank, y, size: frame };
       placeCopy(copy.svg, copy.slot);
     }
     scene.canvas.style.top = `${(y - frame / 2).toFixed(1)}px`;
@@ -300,9 +320,12 @@ onPage(signal => {
     for (const element of pieces) element.style.transformOrigin = `50% ${(50 + 50 / 1.1).toFixed(2)}%`;
     still();
     spacing = (blue.slot.x - bass.centre.x) / blue.rank;
-    reach = blue.slot.x + (STEPS + 1) * spacing - green.slot.x;
+    // The two captions still need a viewport between them when the fans overlap tightly.
+    const fanWidth = blue.slot.x - green.slot.x;
+    bridgeSpacing = narrow.matches ? Math.max(spacing, (stage.clientWidth - fanWidth) / (STEPS + 1)) : spacing;
+    reach = fanWidth + (STEPS + 1) * bridgeSpacing;
     steps.forEach(({ svg }, index) => {
-      placeCopy(svg, { ...blue.slot, x: blue.slot.x + (index + 1) * spacing });
+      placeCopy(svg, { ...blue.slot, x: blue.slot.x + (index + 1) * bridgeSpacing });
       svg.style.zIndex = String(-2 - index); // further right, further under, as the copies at the right are
     });
     shown = -1;
@@ -324,18 +347,24 @@ onPage(signal => {
     // A bridge copy already moves with its neighbour. Ease their separation in from zero velocity.
     return rank > blue.rank ? smooth(t) : easeOut(t);
   }
-  // How far a card is from its place (px, along the row) at this point of the deal.
-  function dealt(copy: { rank: number; side: number }, progress: number) {
-    let out = 0;
-    for (let rank = 1; rank <= copy.rank; rank++) out += stepOut(progress, rank);
-    // `out` steps from the middle; at home it is `rank` steps.
-    return copy.side * (out - copy.rank) * spacing;
+  // Each card carries its neighbours. Compute the stagger once per frame for the SVGs, springs and lights.
+  const reveals = new Float64Array(blue.rank + STEPS + 1);
+  const offsets = new Float64Array(reveals.length);
+  function updateDeal(progress: number) {
+    for (let rank = 1; rank < reveals.length; rank++) {
+      const reveal = stepOut(progress, rank);
+      reveals[rank] = reveal;
+      offsets[rank] = offsets[rank - 1]! + (reveal - 1) * (rank <= blue.rank ? spacing : bridgeSpacing);
+    }
   }
-  function deal(scene: Scene, progress: number) {
-    const first = stepOut(progress, 1);
+  function dealt(copy: { rank: number; side: number }) {
+    return copy.side * offsets[copy.rank]!;
+  }
+  function deal(scene: Scene) {
+    const first = reveals[1]!;
     const opacity = clamp(first * 4).toFixed(3);
     for (const copy of scene.copies) {
-      copy.svg.style.transform = `translate3d(${dealt(copy, progress).toFixed(2)}px,0,0)${leaning(copy.svg)}`;
+      copy.svg.style.transform = `translate3d(${dealt(copy).toFixed(2)}px,0,0)${leaning(copy.svg)}`;
       // Only the first card, out from behind the turned instrument, fades up; the others are switched on
       // once it is opaque, while still exactly behind it.
       copy.svg.style.opacity = copy.rank === 1 ? opacity : (first >= .25 ? '1' : '0');
@@ -390,15 +419,15 @@ onPage(signal => {
     if (scene.grab.getAttribute('aria-valuetext') !== side) scene.grab.setAttribute('aria-valuetext', side);
   }
   // Drive each instrument's coloured surround lights from the live position, reveal, sway and turn of its copies.
-  function renderInstrument(scene: Scene, progress: number) {
+  function renderInstrument(scene: Scene) {
     if (!scene.instrument || !scene.centre.size) return;
     const scale = FRAME_WIDTH / scene.centre.size;
     const baseLean = lean.get(scene.canvas) ?? 0;
     const dealtScene = scene === bass;
     for (let i = 0; i < scene.copies.length; i++) {
       const copy = scene.copies[i]!;
-      const offset = dealtScene ? dealt(copy, progress) : 0;
-      const step = dealtScene ? stepOut(progress, copy.rank) : 1;
+      const offset = dealtScene ? dealt(copy) : 0;
+      const step = dealtScene ? reveals[copy.rank]! : 1;
       const out = scene.lights[i]!;
       out.x = (copy.slot.x + offset - scene.centre.x) * scale;
       out.exposure = dealtScene
@@ -423,7 +452,7 @@ onPage(signal => {
   const rowX = () => -reach * smooth(clamp((shown - span.moveAt) / MOVE)); // the bass's row; the guitar's moves with it
   const bassAt = () => clamp(shown / span.bass);
   const sources: [Piece['element'], () => number][] = [
-    ...[...bass.copies, ...steps].map(copy => [copy.svg, () => rowX() + dealt(copy, bassAt())] as [Piece['element'], () => number]),
+    ...[...bass.copies, ...steps].map(copy => [copy.svg, () => rowX() + dealt(copy)] as [Piece['element'], () => number]),
     ...guitar.copies.map(copy => [copy.svg, rowX] as [Piece['element'], () => number]),
     [bass.canvas, rowX], [guitar.canvas, rowX],
   ];
@@ -477,20 +506,25 @@ onPage(signal => {
     const stride = compact ? 4 : 1;
     const minTurn = compact ? .6 : .05;
     const travel = rowX();
-    const progress = bassAt();
     let moving = false;
     for (const scene of scenes) {
       const data = outlines.get(scene);
+      const paths = new Map<number, string>(); // Left and right copies at the same yaw share an outline.
       for (const copy of scene.copies) {
         const follower = following.get(copy.svg)!;
         if (follow(follower, scene.yaw, dt, snap)) moving = true;
         if (!data?.length || Math.abs(follower.yaw - follower.drawn) < minTurn) continue;
         if (compact) {
-          const offset = scene === bass ? dealt(copy, progress) : reach;
+          const offset = scene === bass ? dealt(copy) : reach;
           if (!onScreen(travel + copy.slot.x + offset)) continue;
         }
         follower.drawn = follower.yaw;
-        follower.path.setAttribute('d', pathOf(shapeAt(data, follower.yaw, scratch[0], stride), stride));
+        let path = paths.get(follower.yaw);
+        if (path === undefined) {
+          path = pathOf(shapeAt(data, follower.yaw, scratch[0], stride));
+          paths.set(follower.yaw, path);
+        }
+        follower.path.setAttribute('d', path);
       }
     }
     if (!ready(bass) || !ready(guitar)) return moving;
@@ -501,12 +535,12 @@ onPage(signal => {
       if (!Number.isNaN(item.turn.yaw)) target = item.turn.yaw + (((target - item.turn.yaw) % 360 + 540) % 360 - 180);
       if (follow(item.turn, target, dt, snap)) moving = true;
       if (Math.abs(item.turn.yaw - item.turn.drawn) < minTurn) continue;
-      if (compact && !onScreen(travel + bass.centre.x + item.rank * spacing + dealt(item, progress))) continue;
+      if (compact && !onScreen(travel + blue.slot.x + (item.rank - blue.rank) * bridgeSpacing + dealt(item))) continue;
       item.turn.drawn = item.turn.yaw;
       const from = shapeAt(outlines.get(bass)!, item.turn.yaw, scratch[0], stride);
       const to = shapeAt(outlines.get(guitar)!, item.turn.yaw, scratch[1], stride);
-      for (let i = 0; i < from.length; i += stride * 2) from[i] = from[i]! + (to[i]! - from[i]!) * item.t;
-      item.path.setAttribute('d', pathOf(from, stride));
+      for (let i = 0; i < from.length; i++) from[i] = from[i]! + (to[i]! - from[i]!) * item.t;
+      item.path.setAttribute('d', pathOf(from));
     }
     return moving;
   }
@@ -520,11 +554,11 @@ onPage(signal => {
     const guitarProgress = clamp((at - span.guitarAt) / span.guitar);
     // The bass is dealt out and turned as its words fill; the guitar's line-up is whole from the move on.
     // Every piece of the row leans on its foot as the rack sways.
-    deal(bass, bassProgress);
+    deal(bass);
     for (const copy of guitar.copies) copy.svg.style.transform = leaning(copy.svg);
     for (const item of steps) {
-      item.svg.style.transform = `translate3d(${dealt(item, bassProgress).toFixed(2)}px,0,0)${leaning(item.svg)}`;
-      item.svg.style.opacity = smooth(clamp(stepOut(bassProgress, item.rank) * 4)).toFixed(3);
+      item.svg.style.transform = `translate3d(${dealt(item).toFixed(2)}px,0,0)${leaning(item.svg)}`;
+      item.svg.style.opacity = smooth(clamp(reveals[item.rank]! * 4)).toFixed(3);
     }
     for (const scene of scenes) scene.canvas.style.transform = leaning(scene.canvas);
     // The bass's line-up is off the screen's left edge after the slide, all but the in-between copies
@@ -566,12 +600,13 @@ onPage(signal => {
       if (Math.abs(raw - shown) < .0005) shown = raw;
       else moving = true;
       for (const scene of scenes) if (stepSpring(scene, dt)) moving = true;
+      updateDeal(bassAt());
       if (sway(dt)) moving = true;
       draw(shown, raw);
       if (turnCopies(dt, snap)) moving = true;
       const centre = bass.centre.x + rowX();
-      if (!narrow.matches || onScreen(centre)) renderInstrument(bass, bassAt());
-      if (!narrow.matches || onScreen(centre + reach)) renderInstrument(guitar, 1);
+      if (!narrow.matches || onScreen(centre)) renderInstrument(bass);
+      if (!narrow.matches || onScreen(centre + reach)) renderInstrument(guitar);
     }
     // Leaving a chapter mid-turn can already have queued the settling spring for the next frame.
     if (moving) request();
