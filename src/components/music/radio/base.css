@@ -291,7 +291,7 @@ html:not(.js) .v4-vinyl__shade { opacity: 0 !important; }
 .v4-open.is-closing .v4-open__scroll { overflow-y: hidden; }
 /* While the record is out, everything the frame loop moves or fades has its own layer, so a frame is
    only a composite. The overlay isn't rendered at all otherwise, so none of these layers are kept at rest. */
-.v4-open__scrim, .v4-open__edge, .v4-open__titles, .v4-open__hint, .v4-open__bar, .v4-rec__shadow { will-change: opacity; }
+.v4-open__scrim, .v4-open__edge, .v4-open__titles, .v4-open__bar, .v4-rec__shadow { will-change: opacity; }
 .v4-stage, .v4-rec__group { will-change: transform; }
 .v4-open__inner {
   --so: max(220px, min(360px, 76vw, calc(100svh - 300px)));
@@ -489,7 +489,7 @@ html:not(.js) .v4-vinyl__shade { opacity: 0 !important; }
   .v4-tab__knob { background: #3a3a3c; -webkit-backdrop-filter: none; backdrop-filter: none; }
 }
 @media (prefers-contrast: more) {
-  .v4-caption__meta, .v4-open__meta, .v4-block__title, .v4-fact dt, .v4-open__hint { color: #c7c7cc; }
+  .v4-caption__meta, .v4-open__meta, .v4-block__title, .v4-fact dt { color: #c7c7cc; }
   .v4-strip__band { background: var(--tape-matte); -webkit-backdrop-filter: none; backdrop-filter: none; }
   .v4-strip__label { color: var(--tape-matte-ink); text-shadow: none; }
   .v4-tab__knob { background: #3a3a3c; -webkit-backdrop-filter: none; backdrop-filter: none; }

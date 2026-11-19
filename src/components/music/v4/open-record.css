@@ -29,8 +29,6 @@
   letter-spacing: -0.055em; text-wrap: balance; overflow-wrap: anywhere;
 }
 .v4-open__meta { margin-top: 0.65rem; color: #efefee; font-size: clamp(1.15rem, 2.1vw, 1.7rem); line-height: 1.25; }
-.v4-open__hint { margin-top: 1.3rem; color: var(--record-secondary); font-size: 0.95rem; }
-.v4-open[data-layout-open] .v4-open__hint { display: none; }
 .v4-details {
   margin-top: clamp(2.25rem, 5vw, 4.5rem); padding-top: 2rem; border-top: 1px solid var(--record-rule);
   display: grid; align-items: start; gap: 2.25rem;
@@ -107,11 +105,23 @@
 }
 @media (max-width: 49.99rem) {
   .v4-open { --record-width: 36rem; }
+  .v4-open .v4-open__inner {
+    --so: clamp(9rem, min(68vw, 42svh), 21rem);
+    padding-top: max(5rem, calc(env(safe-area-inset-top) + 4rem));
+  }
   .v4-open__scrim::before {
-    bottom: auto; height: min(100%, 33rem);
+    bottom: auto; height: min(78svh, 38rem);
+    background-image: linear-gradient(180deg, rgb(11 11 12 / 62%), rgb(11 11 12 / 75%) 45%, #0b0b0c), var(--record-wallpaper);
     background-position: center, 50% 35%;
   }
-  .v4-open__titles { text-align: left; }
+  .v4-stage { gap: clamp(1.25rem, 3svh, 2rem); }
+  .v4-open__titles { display: flex; flex-direction: column; align-items: center; text-shadow: none; }
+  .v4-open__title { font-size: clamp(1.875rem, 7.5vw, 2.625rem); line-height: 1.08; letter-spacing: -0.035em; }
+  .v4-open__meta { margin-top: 0.3rem; font-size: 1.1875rem; }
+  .v4-open__edition {
+    order: 1; margin: 0.75rem 0 0; color: var(--record-secondary);
+    font-size: 0.8125rem; font-weight: 450; letter-spacing: 0.015em; text-transform: none;
+  }
   .v4-open__bar { left: max(1rem, env(safe-area-inset-left)); }
   .v4-open .v4-close { justify-content: center; width: 44px; padding: 0; }
   .v4-close span { position: absolute; clip-path: inset(50%); width: 1px; height: 1px; overflow: hidden; }

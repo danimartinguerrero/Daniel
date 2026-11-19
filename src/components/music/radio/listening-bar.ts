@@ -691,7 +691,6 @@ function init(root: HTMLElement, signal: AbortSignal) {
   const lamp = q('[data-v4-lamp]');
   const discShadow = q('[data-v4-disc-shadow]');
   const sweep = q('[data-v4-sweep]');
-  const hintCaption = q('[data-v4-hint]');
 
   let unwrapped = false; // the record that is out has been unwrapped; putting it back wraps it again
   let openIndex: number | null = null;
@@ -976,8 +975,6 @@ function init(root: HTMLElement, signal: AbortSignal) {
     css(stripBand, 'visibility', late === 0 ? 'hidden' : '');
     css(knob, 'visibility', late === 0 ? 'hidden' : '');
     css(filmMid, 'opacity', (1 - late).toFixed(3));
-    // "Slide to unwrap" under the title while sealed; it goes as the tape comes off.
-    css(hintCaption, 'opacity', (late * clamp(1 - peel.value * 2.5, 0, 1)).toFixed(3));
   }
 
   /** How far the record leans, 0 to 1. It comes on early in the pull. Once the tape is off the record
