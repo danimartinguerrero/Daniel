@@ -237,7 +237,7 @@ export async function createInstrument(
         key.shadow.map = null;
       }
       // Keep the square camera framing, but only allocate the strip containing the turning model.
-      width = compact ? css * .32 : css;
+      width = css * .32;
       camera.setViewOffset(css, css, (css - width) / 2, 0, width, css);
       canvas.style.width = `${width}px`;
       canvas.style.height = `${css}px`;

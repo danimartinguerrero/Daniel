@@ -2,22 +2,21 @@ import { onPage } from '@/scripts/page';
 import { FILL_HOLD, clearTextFill, measureFillLine, measureTextFill, paintTextFill, type LitLine } from '../v4/text-fill';
 import type { Instrument, SurroundPose } from './instrument';
 import { createTurntable } from './turntable';
-import { createCopyLayer, type FlatCopy } from './copy-layer';
-import { Spring } from '../v4/physics';
+import { createCopyLayer } from './copy-layer';
+import { createOutlineLayer, type TurningCopy } from './outline-layer';
+import { Spring, VelocityTracker } from '../v4/physics';
 
 /* The instruments on the music page (LineupStory.astro). The heading and both instruments share a
    pinned stage. The timeline is measured in the scroll a line takes to fill (text-fill.ts):
 
-     title fills ─ title parts ─ bass rises ─ bass fans out ─ hold ─ the slide from the bass to the guitar ─ guitar turns ─ hold
+     title fills ─ title parts ─ bass rises ─ bass fans out ─ hold ─ the slide from the bass to the guitar ─ guitar holds its angle
 
    Every frame is a function of where the scroll is (smoothed, so a wheel's steps glide), so scrolling back
    plays it all backwards exactly. Motion, by Emil Kowalski's rules:
 
    - The bass arrives as a hand of cards fanned out: its copies come out one at a time, nearest first,
-     each from behind the one before it and carried out by it, on a strong ease-out, the next starting
-     while the last is still moving (a stagger). A card that starts hidden behind its neighbour needs no
-     fade, so the colours are never seen half transparent; only the first, out from behind the turned
-     instrument, fades up, quickly. The bass starts face-on and turns as its copies fan out.
+     each from behind the one before it and carried out by it, easing gently into and out of its travel, the next starting
+     while the last is still moving (a stagger). The bass starts face-on and turns as its copies fan out.
    - The slide: the guitar's line-up waits to the right of the bass's, and between the blue bass and the
      green guitar stand STEPS more copies, each a step further from the bass and nearer the guitar, in
      outline and in colour: a flip book laid out along the row. The screen travels the row, eased in and
@@ -26,7 +25,7 @@ import { Spring } from '../v4/physics';
    - The instruments have weight. Whatever moves them across the screen (a card slid out in the deal, the
      row sliding along), they lean back against the motion, the more the faster it goes, and when it slows
      they swing past upright, rock and settle, each at its own pace (a spring each, Apple's damping ratio
-     and response, a little different from one to the next). The real ones turn on their axis with it.
+     and response, a little different from one to the next). The bass turns on its axis with it.
      It is driven by how things actually move, not by where the scroll is, so it is never quite the same
      twice; scrolling back sways them the other way.
 
@@ -38,7 +37,6 @@ import { Spring } from '../v4/physics';
    Fluid Interfaces): a sideways drag turns it 1:1, even mid-spin; on release the velocity goes to a
    spring that rests where the velocity projects it, a whole number of turns from its pose. */
 
-const FOLLOW = 0.07; // s: the screen follows the scroll this closely
 const DECELERATION = 0.998; // Apple's normal scroll deceleration, for projecting a flick
 const THREE_QUARTER_YAW = -50; // degrees from face-on
 const FRAME_WIDTH = 1.1; // matches instrument.ts: the frame's width in instrument lengths
@@ -76,7 +74,8 @@ function fromLab([L, A, B]: Lab) {
   const m = (L - .1055613458 * A - .0638541728 * B) ** 3;
   const s = (L - .0894841775 * A - 1.291485548 * B) ** 3;
   const rgb = [4.0767416621 * l - 3.3077115913 * m + .2309699292 * s, -1.2684380046 * l + 2.6097574011 * m - .3413193965 * s, -.0041960863 * l - .7034186147 * m + 1.707614701 * s];
-  return `rgb(${rgb.map(c => Math.round(255 * Math.min(1, Math.max(0, c <= .0031308 ? 12.92 * c : 1.055 * c ** (1 / 2.4) - .055)))).join(',')})`;
+  const channel = (c: number) => Math.round(255 * clamp(c <= .0031308 ? 12.92 * c : 1.055 * c ** (1 / 2.4) - .055));
+  return '#' + rgb.map(c => channel(c).toString(16).padStart(2, '0')).join('');
 }
 
 // ── Outlines as the instrument turns ─────────────────────────────────────────────────────────────────
@@ -146,7 +145,8 @@ onPage(signal => {
     angle: 0, velocity: 0, rest: 0,
     yaw: 0, // degrees: where the real one is turned, all told
     spring: null as null | { damping: number; response: number },
-    drag: null as null | { id: number; x: number; y: number; from: number; decided: boolean; history: { t: number; x: number }[] },
+    pointer: new VelocityTracker(),
+    drag: null as null | { id: number; x: number; y: number; from: number; decided: boolean; lastSample: number; interval: number },
     perPixel: .5,
   }));
   type Scene = typeof scenes[number];
@@ -192,8 +192,11 @@ onPage(signal => {
       const data = await response.arrayBuffer();
       if (stopped || data.byteLength !== (360 / TURN_STEP) * POINTS * 2 * Uint16Array.BYTES_PER_ELEMENT) return;
       outlines.set(scene, new Uint16Array(data));
-      for (const follower of following.values()) follower.drawn = NaN;
-      for (const item of steps) item.turn.drawn = NaN;
+      if (ready(bass) && ready(guitar)) {
+        configureCopyLayer();
+        resizeCopyLayer();
+      }
+      invalidateOutlines();
       request();
     } catch {
       outlines.delete(scene);
@@ -203,13 +206,14 @@ onPage(signal => {
   // A follower one frame on, towards `target`; true while it still moves.
   function follow(follower: Follower, target: number, dt: number, snap: boolean) {
     if (snap || Number.isNaN(follower.yaw)) { follower.yaw = target; follower.speed = 0; return false; }
-    const stiffness = (2 * Math.PI / follower.response) ** 2;
-    const friction = 4 * Math.PI / follower.response; // damping ratio 1
-    for (let left = dt; left > 0; left -= 1 / 240) {
-      const h = Math.min(left, 1 / 240);
-      follower.speed += (-stiffness * (follower.yaw - target) - friction * follower.speed) * h;
-      follower.yaw += follower.speed * h;
-    }
+    if (follower.yaw === target && follower.speed === 0) return false;
+    // Exact critically damped response for this frame's duration, including on high-refresh screens.
+    const omega = 2 * Math.PI / follower.response;
+    const offset = follower.yaw - target;
+    const slope = follower.speed + omega * offset;
+    const decay = Math.exp(-omega * dt);
+    follower.yaw = target + (offset + slope * dt) * decay;
+    follower.speed = (follower.speed - omega * slope * dt) * decay;
     if (Math.abs(follower.yaw - target) < .02 && Math.abs(follower.speed) < .5) { follower.yaw = target; follower.speed = 0; return false; }
     return true;
   }
@@ -223,9 +227,10 @@ onPage(signal => {
   let near = false;
   let stopped = false;
   // The timeline, in lines of scroll from where the screen is first held.
-  const span = { bass: 1, guitar: 1, moveAt: 1, guitarAt: 1, end: 1 };
+  const span = { bass: 1, moveAt: 1, end: 1 };
   let shown = -1; // where the screen is on the timeline, following the scroll
-  const touchScroll = new Spring(0, { response: .21, damping: 1 }, .0002);
+  let pinStart = 0;
+  const scrollPosition = new Spring(0, { response: .21, damping: 1 }, .0002);
 
   async function liveInstrument(scene: Scene) {
     const { createInstrument } = await import('./instrument');
@@ -302,22 +307,23 @@ onPage(signal => {
     scene.instrument?.resize(frame, narrow.matches);
   }
 
-  function measure() {
-    // The outline sampling density can change when crossing the mobile breakpoint.
+  function invalidateOutlines() {
     for (const follower of following.values()) follower.drawn = NaN;
     for (const item of steps) item.turn.drawn = NaN;
+  }
+
+  function locatePin() {
+    if (enabled) pinStart = show.getBoundingClientRect().top + scrollY - (parseFloat(getComputedStyle(stage).top) || 0);
+  }
+
+  function measure() {
+    // The outline sampling density can change when crossing the mobile breakpoint.
+    invalidateOutlines();
     line = measureFillLine(root!);
     enabled = allowed.matches;
-    if (enabled && narrow.matches) {
-      copyLayer ??= createCopyLayer(stage, flatCopies, VIEW);
-    } else {
-      copyLayer?.dispose();
-      copyLayer = null;
-    }
-    show.classList.toggle('has-copy-layer', !!copyLayer);
+    configureCopyLayer();
     show.classList.toggle('statement', enabled);
     show.classList.toggle('is-scrubbed', enabled);
-    copyLayer?.resize(stage.clientWidth, stage.clientHeight);
     if (!enabled) {
       headingRows.forEach(clearTextFill);
       show.style.removeProperty('height');
@@ -331,13 +337,14 @@ onPage(signal => {
     // Keep the reading time responsive to wrapping without changing the text during scroll.
     const wordsBottom = Math.max(...scenes.map(({ words }) => words.offsetTop + words.offsetHeight));
     for (const scene of scenes) place(scene, wordsBottom);
+    resizeCopyLayer();
     bass.cam.style.transformOrigin = `${bass.centre.x}px ${bass.centre.y}px`;
     const chapterLines = (scene: Scene) => Array.from(scene.words.children).reduce((sum, el) => sum + lineCount(el), 0);
-    span.bass = chapterLines(bass);
-    span.guitar = chapterLines(guitar);
+    // Give half of the former guitar turn to the fan and keep the other half for reading.
+    const guitarHold = chapterLines(guitar) / 2;
+    span.bass = chapterLines(bass) + guitarHold;
     span.moveAt = introEnd + span.bass + HOLD;
-    span.guitarAt = span.moveAt + MOVE;
-    span.end = span.guitarAt + span.guitar + FILL_HOLD;
+    span.end = span.moveAt + MOVE + guitarHold + FILL_HOLD;
     show.style.height = `${(stage.offsetHeight + span.end * line).toFixed(1)}px`;
     // Every piece of the row leans on its foot.
     for (const element of pieces) element.style.transformOrigin = `50% ${(50 + 50 / 1.1).toFixed(2)}%`;
@@ -351,6 +358,7 @@ onPage(signal => {
       placeCopy(svg, { ...blue.slot, x: blue.slot.x + (index + 1) * bridgeSpacing });
       svg.style.zIndex = String(-2 - index); // further right, further under, as the copies at the right are
     });
+    locatePin();
     shown = -1;
     if (!near) {
       paintIntro(0);
@@ -369,10 +377,9 @@ onPage(signal => {
   // the one before it, which carries it along: a copy's place is the sum of its own step and those of the
   // copies nearer the middle. Each starts while the one before is still moving.
   function stepOut(progress: number, rank: number) {
-    const start = .02 + (rank - 1) * .1;
-    const t = clamp((progress - start) / Math.min(.3, 1 - start));
-    // A bridge copy already moves with its neighbour. Ease their separation in from zero velocity.
-    return rank > blue.rank ? smooth(t) : easeOut(t);
+    const duration = .4;
+    const start = (rank - 1) * (1 - duration) / (blue.rank + STEPS - 1);
+    return smooth(clamp((progress - start) / duration));
   }
   // Each card carries its neighbours. Compute the stagger once per frame for the SVGs, springs and lights.
   const reveals = new Float64Array(blue.rank + STEPS + 1);
@@ -387,14 +394,14 @@ onPage(signal => {
   function dealt(copy: { rank: number; side: number }) {
     return copy.side * offsets[copy.rank]!;
   }
-  function deal(scene: Scene) {
+  function bassOpacity(rank: number) {
     const first = reveals[1]!;
-    const opacity = clamp(first * 4).toFixed(3);
+    return smooth(clamp(rank === 1 ? first * 4 : (first - .18) / .18));
+  }
+  function deal(scene: Scene) {
     for (const copy of scene.copies) {
       copy.svg.style.transform = `translate3d(${dealt(copy).toFixed(2)}px,0,0)${leaning(copy.svg)}`;
-      // Only the first card, out from behind the turned instrument, fades up; the others are switched on
-      // once it is opaque, while still exactly behind it.
-      copy.svg.style.opacity = copy.rank === 1 ? opacity : (first >= .25 ? '1' : '0');
+      copy.svg.style.opacity = bassOpacity(copy.rank).toFixed(3);
     }
   }
 
@@ -436,14 +443,15 @@ onPage(signal => {
     }
     return true;
   }
-  function turn(scene: Scene, threeQuarterShare: number, swayShare = 1) {
-    const swayYaw = (lean.get(scene.canvas) ?? 0) * RACK.yaw * swayShare;
-    const yaw = (THREE_QUARTER_YAW + swayYaw) * threeQuarterShare + scene.angle;
+  function turn(scene: Scene, baseYaw: number) {
+    const yaw = baseYaw + scene.angle;
+    const previous = Math.round(wrap(scene.yaw)) % 360;
     scene.yaw = yaw;
     const angle = Math.round(wrap(yaw)) % 360;
+    if (angle === previous) return;
     scene.grab.setAttribute('aria-valuenow', String(angle));
     const side = angle === 0 ? 'Facing forward' : `${angle} degrees`;
-    if (scene.grab.getAttribute('aria-valuetext') !== side) scene.grab.setAttribute('aria-valuetext', side);
+    scene.grab.setAttribute('aria-valuetext', side);
   }
   // Drive each instrument's coloured surround lights from the live position, reveal, sway and turn of its copies.
   function renderInstrument(scene: Scene, pixelRatio: number) {
@@ -494,12 +502,14 @@ onPage(signal => {
   function sway(dt: number) {
     const width = bass.centre.x * 2 || 1;
     const most = narrow.matches ? RACK.mostNarrow : RACK.most;
+    const smoothing = 1 - Math.exp(-dt / RACK.smoothing);
     let moving = false;
     for (const piece of rack) {
       const x = piece.at();
       const speed = Number.isNaN(piece.x) ? 0 : (x - piece.x) / dt;
       piece.x = x;
-      piece.moving += (speed - piece.moving) * (1 - Math.exp(-dt / RACK.smoothing));
+      if (!speed && !piece.moving && !piece.speed && !piece.lean) continue;
+      piece.moving += (speed - piece.moving) * smoothing;
       if (Math.abs(piece.moving) < .5) piece.moving = 0;
       else moving = true;
       const goal = Math.max(-most, Math.min(most, -piece.moving / width * RACK.perSpeed));
@@ -522,8 +532,8 @@ onPage(signal => {
   };
 
   // Back to front, in the same stacking order as the desktop SVGs.
-  const flatCopies: FlatCopy[] = [...steps].reverse().map(item => ({
-    svg: item.svg, colour: item.path.getAttribute('fill')!,
+  const flatCopies: TurningCopy[] = [...steps].reverse().map(item => ({
+    svg: item.svg, yaw: () => item.turn.yaw, guitarShare: item.t, colour: item.path.getAttribute('fill')!,
     x: () => rowX() + blue.slot.x + (item.rank - blue.rank) * bridgeSpacing + dealt(item),
     opacity: () => smooth(clamp(reveals[item.rank]! * 4)),
     lean: () => lean.get(item.svg) ?? 0,
@@ -531,15 +541,48 @@ onPage(signal => {
   for (const scene of scenes) {
     for (const copy of [...scene.copies].sort((a, b) => b.rank - a.rank)) {
       flatCopies.push({
-        svg: copy.svg, colour: copy.colour,
+        svg: copy.svg, colour: copy.colour, yaw: () => following.get(copy.svg)!.yaw, guitarShare: Number(scene === guitar),
         x: () => rowX() + copy.slot.x + (scene === bass ? dealt(copy) : reach),
-        opacity: () => scene === guitar ? Number(shown > span.moveAt)
-          : copy.rank === 1 ? clamp(reveals[1]! * 4) : Number(reveals[1]! >= .25),
+        opacity: () => scene === guitar ? Number(shown > span.moveAt) : bassOpacity(copy.rank),
         lean: () => lean.get(copy.svg) ?? 0,
       });
     }
   }
   let copyLayer: ReturnType<typeof createCopyLayer> = null;
+
+  let outlineLayer: ReturnType<typeof createOutlineLayer> = null;
+  let gpuUnavailable = false;
+  function resizeCopyLayer() {
+    const { y, size } = bass.centre;
+    const ratio = Math.min(devicePixelRatio || 1, narrow.matches ? 1.5 : 2);
+    outlineLayer?.resize(stage.clientWidth, y, size, size * (.5 + .5 / FRAME_WIDTH), ratio);
+    copyLayer?.resize(stage.clientWidth, stage.clientHeight);
+  }
+  function configureCopyLayer() {
+    if (enabled && !outlineLayer && !gpuUnavailable && ready(bass) && ready(guitar)) {
+      outlineLayer = createOutlineLayer(stage, flatCopies, outlines.get(bass)!, outlines.get(guitar)!,
+        POINTS, VIEW * UNITS, () => {
+          gpuUnavailable = true;
+          outlineLayer?.dispose();
+          outlineLayer = null;
+          invalidateOutlines();
+          configureCopyLayer();
+          resizeCopyLayer();
+          request();
+        });
+      gpuUnavailable = !outlineLayer;
+    }
+    if (!enabled) {
+      outlineLayer?.dispose();
+      outlineLayer = null;
+    }
+    if (enabled && narrow.matches && !outlineLayer) copyLayer ??= createCopyLayer(stage, flatCopies, VIEW);
+    else {
+      copyLayer?.dispose();
+      copyLayer = null;
+    }
+    show.classList.toggle('has-copy-layer', !!(copyLayer || outlineLayer));
+  }
 
   // Allow for the widest body and the head swinging sideways about the foot.
   function onScreen(x: number) {
@@ -561,12 +604,10 @@ onPage(signal => {
       for (const copy of scene.copies) {
         const follower = following.get(copy.svg)!;
         if (follow(follower, scene.yaw, dt, snap)) moving = true;
-        if (!data?.length || Math.abs(follower.yaw - follower.drawn) < minTurn) continue;
-        if (compact) {
-          if (scene === bass && (copy.rank === 1 ? reveals[1] === 0 : reveals[1]! < .25)) continue;
-          const offset = scene === bass ? dealt(copy) : reach;
-          if (!onScreen(travel + copy.slot.x + offset)) continue;
-        }
+        if (outlineLayer || !data?.length || Math.abs(follower.yaw - follower.drawn) < minTurn) continue;
+        if (scene === bass && !bassOpacity(copy.rank)) continue;
+        const offset = scene === bass ? dealt(copy) : reach;
+        if (!onScreen(travel + copy.slot.x + offset)) continue;
         follower.drawn = follower.yaw;
         if (copyLayer) {
           copyLayer.outline(copy.svg, shapeAt(data, follower.yaw, scratch[0], stride));
@@ -587,8 +628,8 @@ onPage(signal => {
       let target = bass.yaw + apart * item.t;
       if (!Number.isNaN(item.turn.yaw)) target = item.turn.yaw + (((target - item.turn.yaw) % 360 + 540) % 360 - 180);
       if (follow(item.turn, target, dt, snap)) moving = true;
-      if (Math.abs(item.turn.yaw - item.turn.drawn) < minTurn) continue;
-      if (compact && (reveals[item.rank] === 0 || !onScreen(travel + blue.slot.x + (item.rank - blue.rank) * bridgeSpacing + dealt(item)))) continue;
+      if (outlineLayer || Math.abs(item.turn.yaw - item.turn.drawn) < minTurn) continue;
+      if (reveals[item.rank] === 0 || !onScreen(travel + blue.slot.x + (item.rank - blue.rank) * bridgeSpacing + dealt(item))) continue;
       item.turn.drawn = item.turn.yaw;
       const from = shapeAt(outlines.get(bass)!, item.turn.yaw, scratch[0], stride);
       const to = shapeAt(outlines.get(guitar)!, item.turn.yaw, scratch[1], stride);
@@ -621,12 +662,9 @@ onPage(signal => {
   function draw(at: number) {
     const move = clamp((at - span.moveAt) / MOVE); // 0 to 1
     const bassProgress = bassAt();
-    // The guitar begins to turn as it glides into place, keeping some motion through the handover.
-    const overlap = narrow.matches ? MOVE * .32 : 0;
-    const guitarProgress = clamp((at - span.guitarAt + overlap) / (span.guitar + overlap));
     // The bass is dealt out and turned through its chapter; the guitar's line-up is whole from the move on.
     // Every piece of the row leans on its foot as the rack sways.
-    if (!copyLayer) {
+    if (!copyLayer && !outlineLayer) {
       deal(bass);
       for (const copy of guitar.copies) copy.svg.style.transform = leaning(copy.svg);
       for (const item of steps) {
@@ -638,19 +676,17 @@ onPage(signal => {
     // The bass's line-up is off the screen's left edge after the slide, all but the in-between copies
     // nearest the guitar, which stay; so it is never hidden.
     guitar.element.style.visibility = move <= 0 ? 'hidden' : '';
-    const arrival = clamp((move - .6) / .4);
     // The slide: the row travels left by the distance between the two line-ups.
     const e = smooth(move);
     bass.element.style.transform = `translate3d(${(-reach * e).toFixed(2)}px,0,0)`;
     guitar.element.style.transform = `translate3d(${(reach * (1 - e)).toFixed(2)}px,0,0)`;
-    // The bass turns as the fan opens. The guitar holds that angle through the slide,
-    // then turns face-on while the reader scrolls through its own text.
-    turn(bass, smooth(clamp((bassProgress - .02) / (narrow.matches ? .96 : .58))));
-    turn(guitar, 1 - smooth(guitarProgress), 1 - smooth(arrival));
+    const bassSway = (lean.get(bass.canvas) ?? 0) * RACK.yaw;
+    turn(bass, (THREE_QUARTER_YAW + bassSway) * smooth(bassProgress));
+    turn(guitar, THREE_QUARTER_YAW);
 
     // The hand: a scene's instrument is free when its turn is complete.
     stand(bass, bassProgress > .995 && move <= 0);
-    stand(guitar, guitarProgress > .995);
+    stand(guitar, move === 1);
   }
 
   // Use native detail while the phone keeps pace. Sustained late frames lower only the moving
@@ -679,6 +715,16 @@ onPage(signal => {
     return motionPixelRatio;
   }
 
+  // Resample the hand at display time. With fewer pointer events than refreshes, draw the
+  // intermediate positions too. A paused finger lands on its last sample without extrapolation.
+  function dragFrame(scene: Scene, now: number) {
+    const drag = scene.drag;
+    if (!drag?.decided) return false;
+    const sampleTime = now - drag.interval;
+    scene.angle = drag.from + (scene.pointer.at(sampleTime) - drag.x) * scene.perPixel;
+    return sampleTime < drag.lastSample;
+  }
+
   let queued = 0;
   let last = 0;
   function tick(now: number) {
@@ -688,36 +734,33 @@ onPage(signal => {
     last = now;
     let moving = false;
     if (enabled && near) {
-      const raw = Math.max(0, stage.getBoundingClientRect().top - show.getBoundingClientRect().top) / line;
-      if (narrow.matches || raw >= headingFill.length) void load(bass);
-      // Give the bass the loading budget during its entrance.
-      if (raw >= introEnd + span.bass * .5) void load(guitar);
+      const raw = Math.min(span.end, Math.max(0, (scrollY - pinStart) / line));
       const snap = shown < 0;
       const repaintIntro = snap || shown < introEnd;
-      for (const scene of scenes) loadOutlines(scene);
-      if (narrow.matches) {
-        if (snap) touchScroll.set(raw);
-        touchScroll.to(raw);
-        moving = !touchScroll.step(dt);
-        shown = touchScroll.value;
-      } else {
-        if (snap) shown = raw;
-        else shown += (raw - shown) * (1 - Math.exp(-dt / FOLLOW));
-        if (Math.abs(raw - shown) < .0005) shown = raw;
-        else moving = true;
+      for (const scene of scenes) if (!outlines.has(scene)) void loadOutlines(scene);
+      if (snap) scrollPosition.set(raw);
+      if (!bass.loading) void load(bass);
+      if (!guitar.loading && raw >= introEnd + span.bass * .5) void load(guitar);
+      scrollPosition.to(raw);
+      moving = !scrollPosition.step(dt);
+      shown = scrollPosition.value;
+      for (const scene of scenes) {
+        if (dragFrame(scene, now) || stepSpring(scene, dt)) moving = true;
       }
-      for (const scene of scenes) if (stepSpring(scene, dt)) moving = true;
       if (repaintIntro || shown < introEnd) paintIntro(shown);
       updateDeal(bassAt());
       if (sway(dt)) moving = true;
       draw(shown);
       if (turnCopies(dt, snap)) moving = true;
-      const { y, size } = bass.centre;
-      copyLayer?.paint(y, size, size * (.5 + .5 / FRAME_WIDTH));
+      outlineLayer?.paint();
+      if (copyLayer) {
+        const { y, size } = bass.centre;
+        copyLayer.paint(y, size, size * (.5 + .5 / FRAME_WIDTH));
+      }
       const centre = bass.centre.x + rowX();
       const pixelRatio = renderPixelRatio(elapsed, moving);
-      if (!narrow.matches || onScreen(centre)) renderInstrument(bass, pixelRatio);
-      if (!narrow.matches || onScreen(centre + reach)) renderInstrument(guitar, pixelRatio);
+      if (onScreen(centre)) renderInstrument(bass, pixelRatio);
+      if (onScreen(centre + reach)) renderInstrument(guitar, pixelRatio);
     }
     // Leaving a chapter mid-turn can already have queued the settling spring for the next frame.
     if (moving) request();
@@ -732,7 +775,8 @@ onPage(signal => {
       if (!scene.standing || scene.drag || event.button > 0) return; // one finger at a time
       scene.spring = null; // caught mid-spin: from where it is on screen
       scene.velocity = 0;
-      scene.drag = { id: event.pointerId, x: event.clientX, y: event.clientY, from: scene.angle, decided: event.pointerType === 'mouse', history: [{ t: event.timeStamp, x: event.clientX }] };
+      scene.pointer.reset(event.clientX, event.timeStamp);
+      scene.drag = { id: event.pointerId, x: event.clientX, y: event.clientY, from: scene.angle, decided: event.pointerType === 'mouse', lastSample: event.timeStamp, interval: 0 };
       grab.setPointerCapture(event.pointerId);
       if (event.pointerType === 'mouse') element.classList.add('is-turning');
     }, { signal });
@@ -745,11 +789,16 @@ onPage(signal => {
         if (Math.abs(dx) < 8) return;
         drag.decided = true;
         drag.x += Math.sign(dx) * 8; // no jump when the turn takes over
+        scene.pointer.reset(drag.x, drag.lastSample);
         element.classList.add('is-turning');
       }
-      scene.angle = drag.from + (event.clientX - drag.x) * scene.perPixel;
-      drag.history.push({ t: event.timeStamp, x: event.clientX });
-      while (drag.history.length > 2 && event.timeStamp - drag.history[0]!.t > 100) drag.history.shift();
+      const interval = event.timeStamp - drag.lastSample;
+      if (interval > 0) {
+        const period = Math.min(34, interval);
+        drag.interval = drag.interval ? (drag.interval + period) / 2 : period;
+      }
+      drag.lastSample = event.timeStamp;
+      scene.pointer.push(event.clientX, event.timeStamp);
       request();
     }, { signal });
     const release = (event: PointerEvent, cancelled: boolean) => {
@@ -758,11 +807,9 @@ onPage(signal => {
       scene.drag = null;
       element.classList.remove('is-turning');
       if (!drag.decided) return;
-      const first = drag.history[0]!, end = drag.history[drag.history.length - 1]!;
-      const time = (end.t - first.t) / 1000;
-      const fresh = event.timeStamp - end.t < 60;
-      const velocity = !cancelled && fresh && time > .008 ? ((end.x - first.x) / time) * scene.perPixel : 0;
-      scene.rest = Math.round((scene.angle + project(velocity)) / 360) * 360;
+      const velocity = cancelled ? 0 : scene.pointer.velocity(event.timeStamp) * scene.perPixel;
+      const endAngle = drag.from + (scene.pointer.at(drag.lastSample) - drag.x) * scene.perPixel;
+      scene.rest = Math.round((endAngle + project(velocity)) / 360) * 360;
       scene.velocity = velocity;
       scene.spring = Math.abs(velocity) > 60 ? { damping: .8, response: .55 } : { damping: 1, response: .45 };
       request();
@@ -782,10 +829,17 @@ onPage(signal => {
 
   const watch = new IntersectionObserver(entries => {
     for (const entry of entries) if (entry.target === show) near = entry.isIntersecting;
-    if (!near) { shown = -1; still(); }
+    if (near) locatePin();
+    else { shown = -1; still(); }
     request();
   }, { rootMargin: '64px 0px' }); // Warm the bass just before the title comes into view.
   watch.observe(show);
+  // The record shelf above can change height after its fonts or artwork arrive.
+  const layout = new ResizeObserver(() => {
+    locatePin();
+    if (near) request();
+  });
+  layout.observe(document.body);
 
   let size = '';
   function resized() {
@@ -803,6 +857,8 @@ onPage(signal => {
     stopped = true;
     cancelAnimationFrame(queued);
     watch.disconnect();
+    layout.disconnect();
+    outlineLayer?.dispose();
     copyLayer?.dispose();
     for (const scene of scenes) scene.instrument?.dispose();
   });

@@ -10,7 +10,7 @@
  *     As the reader scrolls, the copies fan out from behind it like a hand of cards, and it turns three quarters on;
  *   - then the screen slides along the row to the guitar's line-up, past copies of the blue bass that turn,
  *     step by step, into the green guitar;
- *   - the guitar: its line-up arrives three quarters on, then turns to face the reader during its chapter.
+ *   - the guitar: its line-up holds the same 50-degree pose as it arrives and while the reader scrolls.
  *   Everything on the row has weight and leans against its own motion (lineup.ts).
  *
  * Behaviour lives in lineup.ts. Without the script, or with reduced motion: lit text and the stills.
@@ -57,7 +57,7 @@ const copies = [
               </svg>
             ))}
             <img class="lu__still" loading="lazy" decoding="async" alt="" width="960" height="960"
-              src={`/music/instruments/${instrument}/rest.webp`} />
+              src={`/music/instruments/${instrument}/${noun === 'guitar' ? 'rest-50' : 'rest'}.webp`} />
             <canvas class="lu__frame" width="1" height="1"></canvas>
           </div>
           <div class="lu__grab" role="slider" tabindex="-1" aria-label={`Turn the ${noun}`}

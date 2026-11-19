@@ -231,7 +231,8 @@ function init(root: HTMLElement, track: HTMLElement, signal: AbortSignal) {
 
   function draw(y: number) {
     if (still.matches) return;
-    const top = trackTop - y;
+    // Once the shelf has left the screen its final pose also serves the entire instrument section.
+    const top = clamp(trackTop - y, -run, lead);
     if (top === drawn) return;
     drawn = top;
 
