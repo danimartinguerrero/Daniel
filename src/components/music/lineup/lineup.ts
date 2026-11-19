@@ -49,7 +49,7 @@ const VIEW = 1600; // the outlines' frame, silhouettes.ts
 // The outlines as the instrument turns (scripts/instrument-outlines.mjs): every TURN_STEP degrees about its
 // long axis, POINTS points each, matched part to part, Uint16 coordinates times 16.
 const TURN_STEP = 10, POINTS = 720, UNITS = 16;
-const FOLLOW_TURN = [.14, .22, .3]; // s: how closely the copies follow the real one's turn, nearest first
+const FOLLOW_TURN = [.1, .16, .22]; // s: how closely the copies follow the real one's turn, nearest first
 
 const clamp = (t: number) => Math.min(1, Math.max(0, t));
 const smooth = (t: number) => t * t * (3 - 2 * t);
@@ -173,7 +173,7 @@ onPage(signal => {
       path.setAttribute('fill', fromLab(blueLab.map((value, i) => value + (greenLab[i]! - value) * t) as Lab));
       svg.append(path);
       bass.cam.append(svg);
-      return { svg, path, t, side: 1, rank: blue.rank + index + 1, turn: { yaw: NaN, speed: 0, response: .3 + .03 * index, drawn: NaN } };
+      return { svg, path, t, side: 1, rank: blue.rank + index + 1, turn: { yaw: NaN, speed: 0, response: .22 + .02 * index, drawn: NaN } };
     });
   })();
   // Every copy follows its instrument's turn: a critically damped spring each (Apple's default when nothing
@@ -217,7 +217,7 @@ onPage(signal => {
     const decay = Math.exp(-omega * dt);
     follower.yaw = target + (offset + slope * dt) * decay;
     follower.speed = (follower.speed - omega * slope * dt) * decay;
-    if (Math.abs(follower.yaw - target) < .02 && Math.abs(follower.speed) < .5) { follower.yaw = target; follower.speed = 0; return false; }
+    if (Math.abs(follower.yaw - target) < .12 && Math.abs(follower.speed) < 1.5) { follower.yaw = target; follower.speed = 0; return false; }
     return true;
   }
   // How far the guitar's line-up waits to the right: its green copy STEPS + 1 steps after the blue bass.
@@ -230,7 +230,7 @@ onPage(signal => {
   let near = false;
   let stopped = false;
   // The timeline, in lines of scroll from where the screen is first held.
-  const span = { bass: 1, moveAt: 1, end: 1 };
+  const span = { entrance: BASS_ENTRANCE, bass: 1, moveAt: 1, move: MOVE, end: 1 };
   let shown = -1; // where the screen is on the timeline, following the scroll
   let pinStart = 0;
   const scrollPosition = new Spring(0, { response: .21, damping: 1 }, .0002);
@@ -252,8 +252,9 @@ onPage(signal => {
     try {
       const folder = scene.model.replace(/\.glb$/, '');
       const initialYaw = scene === bass ? 0 : THREE_QUARTER_YAW;
+      const warmTiles = scene === bass ? [1, 2, 3, 4] : [];
       const instrument = mobileView.matches
-        ? await createTurntable(scene.canvas, folder, initialYaw, request).catch(() => liveInstrument(scene))
+        ? await createTurntable(scene.canvas, folder, initialYaw, scene.centre.size, request, warmTiles).catch(() => liveInstrument(scene))
         : await liveInstrument(scene);
       if (stopped) return instrument.dispose();
       scene.instrument = instrument;
@@ -343,7 +344,10 @@ onPage(signal => {
   function measure() {
     // The outline sampling density can change when crossing the mobile breakpoint.
     invalidateOutlines();
-    line = measureFillLine(root!);
+    const baseLine = measureFillLine(root!);
+    line = narrow.matches ? baseLine * .8 : baseLine;
+    scrollPosition.response = mobileView.matches ? .13 : .21;
+    scrollPosition.precision = mobileView.matches ? .0008 : .0002;
     enabled = allowed.matches;
     configureCopyLayer();
     show.classList.toggle('statement', enabled);
@@ -359,7 +363,6 @@ onPage(signal => {
       return;
     }
     headingFill = headingRows.flatMap(measureTextFill);
-    introEnd = headingFill.length + BASS_ENTRANCE;
     // Measure captions at their CSS baseline before applying any tall-phone vertical centring shift.
     show.style.removeProperty('--words-shift');
     const wordsBottom = Math.max(...scenes.map(({ words }) => words.offsetTop + words.offsetHeight));
@@ -367,12 +370,25 @@ onPage(signal => {
     for (const scene of scenes) place(scene, metrics);
     resizeCopyLayer();
     bass.cam.style.transformOrigin = `${bass.centre.x}px ${bass.centre.y}px`;
-    const chapterLines = (scene: Scene) => Array.from(scene.words.children).reduce((sum, el) => sum + lineCount(el), 0);
-    // Allow the stagger to overlap while keeping the final guitar caption on screen.
-    const guitarHold = chapterLines(guitar) / 2;
-    span.bass = .9 * (chapterLines(bass) + guitarHold);
-    span.moveAt = introEnd + span.bass + HOLD;
-    span.end = span.moveAt + MOVE + guitarHold + FILL_HOLD;
+    if (narrow.matches) {
+      // Keep the mobile story crisp (~2.8 screens total) instead of multiplying wrapped text lines.
+      span.entrance = 1.4;
+      introEnd = headingFill.length + span.entrance;
+      span.bass = 2.6;
+      span.moveAt = introEnd + span.bass + .55;
+      span.move = 2.0;
+      span.end = span.moveAt + span.move + 1.2;
+    } else {
+      span.entrance = BASS_ENTRANCE;
+      introEnd = headingFill.length + span.entrance;
+      const chapterLines = (scene: Scene) => Array.from(scene.words.children).reduce((sum, el) => sum + lineCount(el), 0);
+      // Allow the stagger to overlap while keeping the final guitar caption on screen.
+      const guitarHold = chapterLines(guitar) / 2;
+      span.bass = .9 * (chapterLines(bass) + guitarHold);
+      span.moveAt = introEnd + span.bass + HOLD;
+      span.move = MOVE;
+      span.end = span.moveAt + span.move + guitarHold + FILL_HOLD;
+    }
     show.style.height = `${(stage.offsetHeight + span.end * line).toFixed(1)}px`;
     // Every piece of the row leans on its foot.
     for (const element of [...pieces, bass.still, guitar.still]) element.style.transformOrigin = `50% ${(50 + 50 / 1.1).toFixed(2)}%`;
@@ -515,7 +531,7 @@ onPage(signal => {
   // one to the next): underdamped, so the swing shows, but damped enough to come to rest in a beat or two.
   const RACK = { perSpeed: 10.5, most: 10, mostNarrow: 5.5, smoothing: .06, yaw: 3.2 };
   type Piece = { element: SVGSVGElement | HTMLCanvasElement; at: () => number; lean: number; speed: number; x: number; moving: number; response: number; damping: number };
-  const rowX = () => -reach * smooth(clamp((shown - span.moveAt) / MOVE)); // the bass's row; the guitar's moves with it
+  const rowX = () => -reach * smooth(clamp((shown - span.moveAt) / span.move)); // the bass's row; the guitar's moves with it
   const bassAt = () => clamp((shown - introEnd) / span.bass);
   const sources: [Piece['element'], () => number][] = [
     ...[...bass.copies, ...steps].map(copy => [copy.svg, () => rowX() + dealt(copy)] as [Piece['element'], () => number]),
@@ -734,7 +750,7 @@ onPage(signal => {
   // Use the same smoothed playhead for the lettering, instrument and caption on the way back.
   function paintIntro(at: number) {
     paintTextFill(headingFill, at);
-    const t = clamp((at - headingFill.length) / BASS_ENTRANCE);
+    const t = clamp((at - headingFill.length) / span.entrance);
     const upperExit = smooth(clamp((t - .08) / .72));
     const lowerExit = smooth(clamp((t - .16) / .72));
     upper.style.transform = `translate3d(${-75 * upperExit}%,0,0)`;
@@ -742,15 +758,15 @@ onPage(signal => {
     heading.style.opacity = String(1 - smooth(clamp((t - .36) / .45)));
 
     const rise = easeOut(clamp((t - .09) / .85));
-    bass.cam.style.transform = rise === 1 ? '' : `translate3d(0,${(1 - rise) * 48}%,0) rotate(${(1 - rise) * -16}deg)`;
+    bass.cam.style.transform = rise === 1 ? 'translate3d(0,0,0)' : `translate3d(0,${(1 - rise) * 48}%,0) rotate(${(1 - rise) * -16}deg)`;
     bass.cam.style.opacity = String(smooth(clamp((t - .12) / .32)));
-    const caption = smooth(clamp((t - .64) / .36));
-    bass.words.style.transform = caption === 1 ? '' : `translateY(${16 * (1 - caption)}px)`;
+    const caption = smooth(clamp((t - .48) / .42));
+    bass.words.style.transform = caption === 1 ? 'translate3d(0,0,0)' : `translate3d(0,${(16 * (1 - caption)).toFixed(2)}px,0)`;
     bass.words.style.opacity = String(caption);
   }
 
   function draw(at: number) {
-    const move = clamp((at - span.moveAt) / MOVE); // 0 to 1
+    const move = clamp((at - span.moveAt) / span.move); // 0 to 1
     const bassProgress = bassAt();
     // The bass is dealt out and turned through its chapter; the guitar's line-up is whole from the move on.
     // Every piece of the row leans on its foot as the rack sways.
@@ -847,8 +863,10 @@ onPage(signal => {
       draw(shown);
       const turning = turnCopies(dt, snap);
       if (turning) moving = true;
-      showSlideStrip(!!slideStrip && !turning && shown >= introEnd + span.bass
-        && bass.yaw === THREE_QUARTER_YAW && guitar.yaw === THREE_QUARTER_YAW);
+      const canStrip = !!slideStrip && bass.angle === 0 && guitar.angle === 0
+        && bass.yaw === THREE_QUARTER_YAW && guitar.yaw === THREE_QUARTER_YAW
+        && (shown >= span.moveAt || (!turning && shown >= introEnd + span.bass));
+      showSlideStrip(canStrip);
       if (usingStrip && slideStrip) {
         const tilt = lean.get(bass.canvas) ?? 0;
         slideStrip.style.transform = `translate3d(${rowX().toFixed(2)}px,0,0) skewX(${(-tilt).toFixed(3)}deg)`;
@@ -932,12 +950,21 @@ onPage(signal => {
     }, { signal });
   }
 
+  let stillsWarmed = false;
   const watch = new IntersectionObserver(entries => {
     for (const entry of entries) if (entry.target === show) near = entry.isIntersecting;
-    if (near) locatePin();
-    else { shown = -1; still(); }
+    if (near) {
+      locatePin();
+      if (!stillsWarmed) {
+        stillsWarmed = true;
+        for (const scene of scenes) {
+          scene.still.loading = 'eager';
+          void scene.still.decode?.().catch(() => {});
+        }
+      }
+    } else { shown = -1; still(); }
     request();
-  }, { rootMargin: '64px 0px' }); // Warm the bass just before the title comes into view.
+  }, { rootMargin: '40% 0px' }); // Warm the bass, outlines and guitar still well before the title arrives.
   watch.observe(show);
   // The record shelf above can change height after its fonts or artwork arrive.
   const layout = new ResizeObserver(() => {
