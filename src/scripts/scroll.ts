@@ -89,24 +89,15 @@ export function initScroll(signal: AbortSignal) {
     steps.forEach((li, i) => li.classList.toggle('is-on', i === step));
   }
 
-  // Separation pages: the name fills with light from left to right while its page is held on screen,
-  // and is lit before the page leaves. Where the browser runs this as a scroll-driven animation (see
-  // .divider__lit), there is nothing to do here; otherwise the script moves the same two layers.
-  // Set on the elements themselves, never inherited through a parent.
-  const dividers = [...document.querySelectorAll<HTMLElement>('[data-divider]')].map((section) => {
-    const lit = section.querySelector<HTMLElement>('.divider__lit')!;
-    return {
-      section,
-      pin: section.querySelector<HTMLElement>('.divider__pin')!,
-      lit,
-      words: lit.firstElementChild as HTMLElement,
-      // The site's soft edge (--fill-edge in global.css), as a share of the name.
-      edge: parseFloat(getComputedStyle(root).getPropertyValue('--fill-edge')) || 0.25,
-      pinH: 0,
-      fill: -1,
-    };
-  });
-  const cssDividers = () => !!dividers[0]?.lit.getAnimations().some((a) => (a as CSSAnimation).animationName === 'divider-window');
+  // Move the gradient across stationary type when native scroll timelines are unavailable.
+  const dividers = [...document.querySelectorAll<HTMLElement>('[data-divider]')].map((section) => ({
+    section,
+    pin: section.querySelector<HTMLElement>('.divider__pin')!,
+    title: section.querySelector<HTMLElement>('.divider__title')!,
+    pinH: 0,
+    fill: -1,
+  }));
+  const cssDividers = () => !!dividers[0]?.title.getAnimations().some((a) => (a as CSSAnimation).animationName === 'divider-fill');
 
   function writeDividers(rects: DOMRect[], vh: number, css: boolean) {
     if (reduce.matches || css) return;
@@ -116,8 +107,7 @@ export function initScroll(signal: AbortSignal) {
       const hold = held(rect, d.pinH);
       const fill = clamp(hold / 0.7);
       if (fill !== d.fill) {
-        d.lit.style.transform = `translate3d(${(fill - 1) * 100}%, 0, 0)`;
-        d.words.style.transform = `translate3d(${(1 - fill) * (1 + d.edge) * 100}%, 0, 0)`;
+        d.title.style.backgroundPositionX = `${(1 - fill) * 100}%`;
         d.fill = fill;
       }
     });
@@ -284,7 +274,7 @@ export function initScroll(signal: AbortSignal) {
   reduce.addEventListener('change', () => {
     root.classList.toggle('reduce', reduce.matches);
     if (reduce.matches) [reveal, tex, beam].forEach((el) => { el?.style.removeProperty('transform'); el?.style.removeProperty('opacity'); });
-    if (reduce.matches) dividers.forEach((d) => { d.lit.style.transform = ''; d.words.style.transform = ''; });
+    if (reduce.matches) dividers.forEach((d) => d.title.style.removeProperty('background-position-x'));
     if (timeline) timeline.p = -1;
     dirty = true;
     queue();

@@ -4,7 +4,7 @@ const { id, headingId, title } = Astro.props;
 ---
 <section class="divider section--dark" id={id} aria-labelledby={headingId} data-divider>
   <div class="divider__pin">
-    <h2 class="divider__title" id={headingId}>{title}<span class="divider__lit" aria-hidden="true"><span>{title}</span></span></h2>
+    <h2 class="divider__title" id={headingId}>{title}</h2>
   </div>
 </section>
 <style is:global>
@@ -22,39 +22,39 @@ const { id, headingId, title } = Astro.props;
   }
   .divider__title {
     /* The light only shows inside the box: give descenders (the j) and the last glyph room. */
-    position: relative;
     padding: 0.04em 0.06em 0.18em;
     margin-bottom: -0.14em;
     font-size: clamp(4.5rem, 17vw, 16rem); line-height: 0.95; font-weight: 600; letter-spacing: -0.05em;
     text-wrap: balance;
   }
-  /* The name is set twice: dim, and lit on top, inside a window wider than the name by the soft edge,
-     whose right edge fades out over it. The window slides in from the left while the lit name inside slides back by as much,
-     so the words stand still and the soft edge of light crosses them. Transforms only: the browser runs
-     it on the scrolling thread (a background repainted from the script every frame lagged behind the
-     scroll, and the page could leave before its name had filled). */
-  .divider__lit { display: none; }
-  html.js:not(.reduce) .divider__title { color: var(--fill-dim); }
-  html.js:not(.reduce) .divider__lit {
-    display: block; position: absolute; inset: 0 calc(var(--fill-edge) * -100%) 0 0;
-    overflow: hidden; pointer-events: none;
-    -webkit-mask-image: linear-gradient(90deg, #000 calc(100% / (1 + var(--fill-edge))), transparent); mask-image: linear-gradient(90deg, #000 calc(100% / (1 + var(--fill-edge))), transparent);
-    transform: translateX(-100%);
-  }
-  html.js:not(.reduce) .divider__lit > span {
-    display: block; width: calc(100% / (1 + var(--fill-edge))); padding: 0.04em 0.06em 0.18em;
-    color: var(--on-dark);
-    transform: translateX(calc((1 + var(--fill-edge)) * 100%));
+  /* One stationary set of glyphs. The gradient has a title-width of solid colour
+     on each side of the soft edge so both ends of the scroll are uniform. */
+  @media (forced-colors: none) {
+    html.js:not(.reduce) .divider__title {
+      --fill-band: calc(2 + var(--fill-edge));
+      background-image: linear-gradient(90deg,
+        var(--on-dark) calc(100% / var(--fill-band)),
+        var(--fill-dim) calc(100% - 100% / var(--fill-band)));
+      background-size: calc(100% * var(--fill-band)) 100%;
+      background-position: 100% 0;
+      background-repeat: no-repeat;
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
+    }
   }
   @supports (animation-timeline: view()) {
     .divider { view-timeline-name: --divider; view-timeline-axis: block; view-timeline-inset: 0; }
-    html.js:not(.reduce) .divider__lit { animation: divider-window linear both; }
-    html.js:not(.reduce) .divider__lit > span { animation: divider-words linear both; }
-    /* The timelines in rules of their own (see .tl__fill): the first 70% of the hold fills the name. */
-    html.js:not(.reduce) .divider__title > .divider__lit,
-    html.js:not(.reduce) .divider__title > .divider__lit > span { animation-duration: auto; animation-timeline: --divider; animation-range: contain 0% contain 70%; }
-    @keyframes divider-window { from { transform: translateX(-100%); } to { transform: none; } }
-    @keyframes divider-words { from { transform: translateX(calc((1 + var(--fill-edge)) * 100%)); } to { transform: none; } }
+    html.js:not(.reduce) .divider__title {
+      animation: divider-fill linear both;
+      animation-duration: auto;
+      animation-timeline: --divider;
+      animation-range: contain 0% contain 70%;
+    }
+    @keyframes divider-fill {
+      from { background-position-x: 100%; }
+      to { background-position-x: 0%; }
+    }
   }
   html:not(.js) .divider, html.reduce .divider { height: auto; }
   html:not(.js) .divider__pin, html.reduce .divider__pin { position: static; min-height: calc(100svh - var(--nav-h)); }
