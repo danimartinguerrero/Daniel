@@ -20,7 +20,7 @@ import type { Instrument, SurroundPose } from './instrument';
      green guitar stand STEPS more copies, each a step further from the bass and nearer the guitar, in
      outline and in colour: a flip book laid out along the row. The screen travels the row, eased in and
      out (smoothstep, the page's curve for scrubbed motion), the words travelling half as far, as if
-     nearer the glass. The in-between copies appear with the first bass copies and keep their places on the row.
+     nearer the glass. The in-between copies fan out behind the blue bass in order and stay on the row.
    - The instruments have weight. Whatever moves them across the screen (a card slid out in the deal, the
      row sliding along), they lean back against the motion, the more the faster it goes, and when it slows
      they swing past upright, rock and settle, each at its own pace (a spring each, Apple's damping ratio
@@ -157,7 +157,7 @@ onPage(signal => {
       path.setAttribute('fill', fromLab(blueLab.map((value, i) => value + (greenLab[i]! - value) * t) as Lab));
       svg.append(path);
       bass.cam.append(svg);
-      return { svg, path, t, turn: { yaw: NaN, speed: 0, response: .3 + .03 * index, drawn: NaN } };
+      return { svg, path, t, side: 1, rank: blue.rank + index + 1, turn: { yaw: NaN, speed: 0, response: .3 + .03 * index, drawn: NaN } };
     });
   })();
   // Every copy follows its instrument's turn: a critically damped spring each (Apple's default when nothing
@@ -198,6 +198,7 @@ onPage(signal => {
   }
   // How far the guitar's line-up waits to the right: its green copy STEPS + 1 steps after the blue bass.
   let reach = 0;
+  let spacing = 0;
 
   let line = 1;
   let enabled = false;
@@ -294,7 +295,7 @@ onPage(signal => {
     // Every piece of the row leans on its foot.
     for (const element of pieces) element.style.transformOrigin = `50% ${(50 + 50 / 1.1).toFixed(2)}%`;
     still();
-    const spacing = (blue.slot.x - bass.centre.x) / blue.rank;
+    spacing = (blue.slot.x - bass.centre.x) / blue.rank;
     reach = blue.slot.x + (STEPS + 1) * spacing - green.slot.x;
     steps.forEach(({ svg }, index) => {
       const frame = blue.slot.size;
@@ -317,20 +318,22 @@ onPage(signal => {
   // The hand of cards: on each side, copy by copy from the nearest, each slides one step out from behind
   // the one before it, which carries it along: a copy's place is the sum of its own step and those of the
   // copies nearer the middle. Each starts while the one before is still moving.
-  const stepOut = (progress: number, rank: number) => easeOut(clamp((progress - .02 - (rank - 1) * .1) / .3));
+  function stepOut(progress: number, rank: number) {
+    const start = .02 + (rank - 1) * .1;
+    return easeOut(clamp((progress - start) / Math.min(.3, 1 - start)));
+  }
   // How far a card is from its place (px, along the row) at this point of the deal.
-  function dealt(scene: Scene, copy: Scene['copies'][number], progress: number) {
+  function dealt(copy: { rank: number; side: number }, progress: number) {
     let out = 0;
     for (let rank = 1; rank <= copy.rank; rank++) out += stepOut(progress, rank);
     // `out` steps from the middle; at home it is `rank` steps.
-    return copy.side * (out - copy.rank) * Math.abs(copy.slot.x - scene.centre.x) / copy.rank;
+    return copy.side * (out - copy.rank) * spacing;
   }
   function deal(scene: Scene, progress: number) {
     const first = stepOut(progress, 1);
     const opacity = clamp(first * 4).toFixed(3);
-    scene.cam.style.setProperty('--transition-opacity', opacity);
     for (const copy of scene.copies) {
-      copy.svg.style.transform = `translate3d(${dealt(scene, copy, progress).toFixed(2)}px,0,0)`;
+      copy.svg.style.transform = `translate3d(${dealt(copy, progress).toFixed(2)}px,0,0)`;
       // Only the first card, out from behind the turned instrument, fades up; the others are switched on
       // once it is opaque, while still exactly behind it.
       copy.svg.style.opacity = copy.rank === 1 ? opacity : (first >= .25 ? '1' : '0');
@@ -392,7 +395,7 @@ onPage(signal => {
     const dealtScene = scene === bass;
     for (let i = 0; i < scene.copies.length; i++) {
       const copy = scene.copies[i]!;
-      const offset = dealtScene ? dealt(scene, copy, progress) : 0;
+      const offset = dealtScene ? dealt(copy, progress) : 0;
       const step = dealtScene ? stepOut(progress, copy.rank) : 1;
       const out = scene.lights[i]!;
       out.x = (copy.slot.x + offset - scene.centre.x) * scale;
@@ -418,8 +421,7 @@ onPage(signal => {
   const rowX = () => -reach * smooth(clamp((shown - span.moveAt) / MOVE)); // the bass's row; the guitar's moves with it
   const bassAt = () => clamp(shown / span.bass);
   const sources: [Piece['element'], () => number][] = [
-    ...bass.copies.map(copy => [copy.svg, () => rowX() + dealt(bass, copy, bassAt())] as [Piece['element'], () => number]),
-    ...steps.map(item => [item.svg, rowX] as [Piece['element'], () => number]),
+    ...[...bass.copies, ...steps].map(copy => [copy.svg, () => rowX() + dealt(copy, bassAt())] as [Piece['element'], () => number]),
     ...guitar.copies.map(copy => [copy.svg, rowX] as [Piece['element'], () => number]),
     [bass.canvas, rowX], [guitar.canvas, rowX],
   ];
@@ -510,7 +512,10 @@ onPage(signal => {
     deal(bass, bassProgress);
     for (const copy of bass.copies) copy.svg.style.transform += leaning(copy.svg);
     for (const copy of guitar.copies) copy.svg.style.transform = leaning(copy.svg);
-    for (const item of steps) item.svg.style.transform = leaning(item.svg);
+    for (const item of steps) {
+      item.svg.style.transform = `translate3d(${dealt(item, bassProgress).toFixed(2)}px,0,0)${leaning(item.svg)}`;
+      item.svg.style.opacity = clamp(stepOut(bassProgress, item.rank) * 4).toFixed(3);
+    }
     for (const scene of scenes) scene.canvas.style.transform = leaning(scene.canvas);
     // The bass's line-up is off the screen's left edge after the slide, all but the in-between copies
     // nearest the guitar, which stay; so it is never hidden.
