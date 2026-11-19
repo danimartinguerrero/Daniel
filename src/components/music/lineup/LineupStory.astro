@@ -15,16 +15,16 @@
  *
  * Behaviour lives in lineup.ts. Without the script, or with reduced motion: lit text and the stills.
  */
+import '../v4/text-fill.css';
 import './lineup.css';
 import '@/styles/statement.css';
 import { VIEW, silhouettes } from './silhouettes';
 
-const heading = 'I play a few instruments, too.';
 // The rainbow of "music." (listening-bar.css, .v4-music__rainbow), in its order.
 const rainbow = ['#61bb46', '#fdb827', '#f5821f', '#e03a3e', '#963d97', '#009ddc'];
 const chapters = [
   {
-    noun: 'bass', instrument: 'pj-bass', paint: 'BodyMaterial',
+    noun: 'bass', instrument: 'pj-bass', mobileModel: 'pj-bass-mobile', paint: 'BodyMaterial',
     title: 'My dad taught me to play bass.',
     body: 'I used to play bass in my school band. At home I could stop and ask my dad to show me a part again. At school I had to keep an ear on the drums and stay with everyone else.',
   },
@@ -41,14 +41,15 @@ const copies = [
 ];
 ---
 <div class="lu" data-lu>
-  <section class="lu__show" id="instruments" aria-labelledby="part-instruments" data-lu-show>
+  <section id="instruments" class="lu__show" aria-labelledby="part-instruments" data-lu-show>
     <div class="lu__stage statement__slide" data-lu-stage>
-      <div class="lu__intro-stage">
-        <h2 class="lu__heading" id="part-instruments">{heading}</h2>
-      </div>
-      {chapters.map(({ noun, instrument, paint, title, body }) => (
+      <h2 class="lu__heading" id="part-instruments">
+        <span class="lu__heading-line"><span data-w>I play a few</span></span>
+        <span class="lu__heading-line"><span data-w>instruments, too.</span></span>
+      </h2>
+      {chapters.map(({ noun, instrument, mobileModel, paint, title, body }) => (
         <div class="lu__scene" data-lu-scene data-model={`/music/instruments/${instrument}.glb`} data-paint={paint}
-          data-outline={silhouettes[instrument]}>
+          data-mobile-model={mobileModel && `/music/instruments/${mobileModel}.glb`} data-outline={silhouettes[instrument]}>
           <div class="lu__cam" aria-hidden="true" data-lu-cam>
             {copies.map(({ colour, side, rank }) => (
               <svg class="lu__copy" viewBox={`0 0 ${VIEW} ${VIEW}`} style={`--c:${colour}`} data-side={side} data-rank={rank} data-lu-copy>

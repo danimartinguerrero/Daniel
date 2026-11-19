@@ -9,7 +9,7 @@ The neck textures incorporate luminance detail from Poly Haven’s [White Maple 
 
 The environment lighting comes from Sergej Majboroda’s [Studio Small 09](https://polyhaven.com/a/studio_small_09), licensed under [CC0](https://polyhaven.com/license). The page uses a 512 × 256 HDR copy of the 1K Radiance panorama. An 85 mm camera, a shadow-casting key light, two rim lights and a feathered front strip complete the setup. The environment is visible in the reflections while the background stays black.
 
-The live models use meshopt compression and WebP textures. The upright stills are captures from the same WebGL renderer and are shown with reduced motion or when 3D is unavailable.
+The live models use meshopt compression and WebP textures. Mobile uses a turntable photographed in the same studio, blending neighbouring views as the instrument rotates. The upright stills are shown with reduced motion or while the renderer loads.
 
 ### Reproducing the assets
 
@@ -19,5 +19,13 @@ Export each source with `python scripts/export-instruments.py NAME SOURCE.glb NA
 gltf-transform optimize pj-bass.raw.glb public/music/instruments/pj-bass.glb --compress meshopt --simplify-error 0.00006 --simplify-ratio 0.3 --texture-compress webp --texture-size 2048
 gltf-transform optimize les-paul.raw.glb public/music/instruments/les-paul.glb --compress meshopt --simplify false --texture-compress webp --texture-size 2048
 ```
+
+Generate the lighter mobile bass from the finished model with gltfpack 1.3. It shares the desktop textures and outline data.
+
+```sh
+gltfpack -i public/music/instruments/pj-bass.glb -o public/music/instruments/pj-bass-mobile.glb -si 0.18 -sp -sv -sa -km -cc -ce ext
+```
+
+Regenerate both mobile turntables with `node scripts/instrument-turntables.mjs` from the repo root. Set `CHROME_PATH` to a Chromium executable and make `playwright-core` available through `NODE_PATH`. Each transparent WebP contains 90 studio views, packed into 15 columns and six rows.
 
 For each still, call the live renderer’s `resize(1624, 1)` and set the pose with `pose(0)` for the guitar or `pose(1)` for the bass. Capture its canvas in the same frame, then downsample to 960 × 960 and save as WebP. These tools are only used when regenerating the assets.

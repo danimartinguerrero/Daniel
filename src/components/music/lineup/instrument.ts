@@ -90,17 +90,18 @@ export async function createInstrument(
   renderer.outputColorSpace = SRGBColorSpace;
   renderer.toneMapping = AgXToneMapping;
   renderer.toneMappingExposure = .92;
-  renderer.shadowMap.enabled = true;
+  // On phones rely on the contact shading in the materials and render each mesh once.
+  renderer.shadowMap.enabled = !compact;
   renderer.shadowMap.type = PCFSoftShadowMap;
 
   const scene = new Scene();
   const key = new DirectionalLight(0xfff2e2, .72);
   key.position.set(-.48, 1.22, 1);
-  key.castShadow = true;
+  key.castShadow = !compact;
   // A tight frustum resolves the narrow shadows under the strings and bridge saddles.
   Object.assign(key.shadow.camera, { left: -.21, right: .21, top: .51, bottom: -.51, near: .65, far: 2.35 });
   key.shadow.camera.updateProjectionMatrix();
-  key.shadow.mapSize.setScalar(compact ? 512 : 1024);
+  key.shadow.mapSize.setScalar(1024);
   key.shadow.autoUpdate = false;
   key.shadow.normalBias = .00022;
   key.shadow.bias = -.00012;
@@ -211,7 +212,7 @@ export async function createInstrument(
         spec.light.intensity = spec.intensity * exposure * (.68 + .32 * spread);
       }
       const ratio = Math.min(devicePixelRatio || 1, pixelRatio);
-      if (ratio !== renderer.getPixelRatio() && (dirty || ratio > renderer.getPixelRatio())) {
+      if (Number.isNaN(shown) || (ratio !== renderer.getPixelRatio() && (dirty || ratio > renderer.getPixelRatio()))) {
         renderer.setDrawingBufferSize(width, size, ratio);
         dirty = true;
       }
@@ -220,29 +221,27 @@ export async function createInstrument(
       holder.rotation.y = MathUtils.degToRad(degrees);
       // The coloured lights and the CSS sway do not move the model relative to the shadow caster.
       // Reuse the depth pass until the body has moved by about one shadow texel.
-      if (!Number.isFinite(shadowYaw) || Math.abs(degrees - shadowYaw) >= .2) {
+      if (renderer.shadowMap.enabled && (!Number.isFinite(shadowYaw) || Math.abs(degrees - shadowYaw) >= .2)) {
         key.shadow.needsUpdate = true;
         shadowYaw = degrees;
       }
       renderer.render(scene, camera);
     },
     resize(css, compact) {
-      const ratio = Math.min(devicePixelRatio || 1, compact ? 3 : 2);
-      const shadowSize = compact ? 512 : 1024;
-      if (css === size && ratio === renderer.getPixelRatio() && key.shadow.mapSize.x === shadowSize) return;
+      if (css === size && key.castShadow === !compact) return;
       size = css;
+      key.castShadow = renderer.shadowMap.enabled = !compact;
       threshold = compact ? mobileThreshold : desktopThreshold;
-      if (key.shadow.mapSize.x !== shadowSize) {
+      if (compact && key.shadow.map) {
         key.shadow.dispose();
         key.shadow.map = null;
-        key.shadow.mapSize.setScalar(shadowSize);
       }
       // Keep the square camera framing, but only allocate the strip containing the turning model.
       width = compact ? css * .32 : css;
       camera.setViewOffset(css, css, (css - width) / 2, 0, width, css);
       canvas.style.width = `${width}px`;
       canvas.style.height = `${css}px`;
-      renderer.setDrawingBufferSize(width, css, ratio);
+      // Allocate once, when the next visible pose supplies its actual pixel ratio.
       shown = shadowYaw = NaN;
       lastSurround.fill(NaN);
     },
