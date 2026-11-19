@@ -84,6 +84,7 @@ function init(root: HTMLElement, signal: AbortSignal) {
 
   const HOME = 4000; // the track's resting scroll offset (see the CSS)
   const ROT = 60; // how far the neighbours turn away, in degrees
+  const RING_STACK_AT = 0.91; // the sleeves have cleared their neighbours before settling onto the floor
   const TUCK = 0.6; // how far, in spacings, the pile at each end reaches past the third record
   const MAX_SPEED = 12; // records per second a swipe turns the row at most: kept up for longer, they strobe
   const MAX_THROW = 5; // records a single throw travels at most (half the ring)
@@ -169,18 +170,24 @@ function init(root: HTMLElement, signal: AbortSignal) {
     const across = g.x + (R * Math.sin(th) - g.x) * w;
     const toward = R * Math.cos(th) * w;
     const k = (far / (far - toward * Math.cos(a))) * (1 + (zoom - 1) * w); // nearer is larger; from above, all smaller
+    // Open a gap between the corners before laying alternate sleeves on top. Move
+    // their centres apart and bring the covers slightly in, then close the gap
+    // as they settle. Both the shelf and floor retain their original geometry.
+    const t = Math.min(w / RING_STACK_AT, (1 - w) / (1 - RING_STACK_AT));
+    const clearance = 0.15 * t * t * (3 - 2 * t);
+    const spacing = k * (1 + clearance);
     const ad = Math.abs(d);
     return {
-      x: across * k,
+      x: across * spacing,
       // Looked down on, what is nearer is lower on the screen.
-      y: y * w + toward * Math.sin(a) * k,
+      y: y * w + toward * Math.sin(a) * spacing,
       k,
       pitch: tilt * w,
       // In the row a neighbour is turned in towards the middle; in the ring it faces out, so that lying
       // back its top points at the centre.
       yaw: g.rot + ((d * 360) / n - g.rot) * w,
       lay: 90 * w,
-      s: g.s + (1 - g.s) * w,
+      s: (g.s + (1 - g.s) * w) * (1 - clearance),
       // From above the whole ring is seen: nothing is in the dark at the ends, only a little dimmer
       // away from the front.
       shade: g.shade + (Math.min(ad, 1) * 0.14 + Math.max(0, ad - 1) * 0.045 - g.shade) * w,
@@ -258,7 +265,7 @@ function init(root: HTMLElement, signal: AbortSignal) {
         : `translate3d(${x.toFixed(2)}px,0,0) perspective(${P.toFixed(0)}px) rotateY(${g.rot.toFixed(3)}deg) scale(${g.s.toFixed(4)})`);
       css(shades[i]!, 'opacity', shade.toFixed(3));
       // On the floor every other sleeve rests on both neighbours, wherever the ring turns.
-      css(b, 'zIndex', String(view && view.w > 0.5 ? 1000 + i % 2 : g.z));
+      css(b, 'zIndex', String(view && view.w >= RING_STACK_AT ? 1000 + i % 2 : g.z));
       css(b, 'opacity', alpha.toFixed(3));
       css(b, 'pointerEvents', alpha < 0.2 ? 'none' : ''); // nothing to press on the far side
     }
