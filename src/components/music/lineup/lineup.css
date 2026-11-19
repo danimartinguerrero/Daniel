@@ -50,6 +50,8 @@
 .is-scrubbed .lu__stage { display: block; padding: 0; }
 .is-scrubbed .lu__scene { position: absolute; inset: 0; display: block; }
 .is-scrubbed .lu__words { position: absolute; left: 50%; translate: -50% 0; top: max(5.25rem, 10svh); width: min(100% - 2 * var(--gutter), 60rem); }
+.is-scrubbed .lu__stage:not(.at-guitar) .lu__scene:last-child .lu__words,
+.is-scrubbed .lu__stage.at-guitar .lu__scene:first-child .lu__words { visibility: hidden; }
 .is-scrubbed .lu__cam { position: absolute; inset: 0; height: auto; z-index: 1; transform-origin: 0 0; }
 .is-scrubbed .lu__still { display: none; }
 .is-scrubbed .lu__frame {

@@ -19,15 +19,14 @@ import type { Instrument, SurroundPose } from './instrument';
    - The slide: the guitar's line-up waits to the right of the bass's, and between the blue bass and the
      green guitar stand STEPS more copies, each a step further from the bass and nearer the guitar, in
      outline and in colour: a flip book laid out along the row. The screen travels the row, eased in and
-     out (smoothstep, the page's curve for scrubbed motion), the words travelling half as far, as if
-     nearer the glass. The in-between copies fan out behind the blue bass in order and stay on the row.
+     out (smoothstep, the page's curve for scrubbed motion). The bass text stays in place until the
+     guitar arrives. The in-between copies fan out behind the blue bass in order and stay on the row.
    - The instruments have weight. Whatever moves them across the screen (a card slid out in the deal, the
      row sliding along), they lean back against the motion, the more the faster it goes, and when it slows
      they swing past upright, rock and settle, each at its own pace (a spring each, Apple's damping ratio
      and response, a little different from one to the next). The real ones turn on their axis with it.
      It is driven by how things actually move, not by where the scroll is, so it is never quite the same
      twice; scrolling back sways them the other way.
-   - Words cross with a 4 px blur so the two never read as two things overlapping.
 
    The in-between outlines: both outlines sampled into the same number of points, matched part to part
    (body, waist, neck, head), and moved between; the colours through OKLab, so blue reaches green through
@@ -45,7 +44,6 @@ const BODY = .27; // a body's width, in frame widths (the outlines in silhouette
 const HOLD = .8; // lines of scroll the lit bass waits before the move
 const MOVE = 4.2; // lines of scroll the slide takes
 const STEPS = 5; // copies between the blue bass and the green guitar
-const BLUR = 4; // px: words crossing blur this much at most
 const VIEW = 1600; // the outlines' frame, silhouettes.ts
 // The outlines as the instrument turns (scripts/instrument-outlines.mjs): every TURN_STEP degrees about its
 // long axis, POINTS points each, matched part to part, Uint16 coordinates times 16.
@@ -279,11 +277,7 @@ onPage(signal => {
     }
     introLines = introTexts.flatMap(text => measureTextFill(text));
     intro.style.height = `${(introStage.offsetHeight + (introLines.length + FILL_HOLD) * line).toFixed(1)}px`;
-    for (const scene of scenes) {
-      // Measured at rest, so the words' size is the real one.
-      scene.words.style.transform = '';
-      scene.lines = scene.texts.flatMap(text => measureTextFill(text));
-    }
+    for (const scene of scenes) scene.lines = scene.texts.flatMap(text => measureTextFill(text));
     const stageTop = stage.getBoundingClientRect().top;
     const wordsBottom = Math.max(...scenes.map(scene => scene.words.getBoundingClientRect().bottom - stageTop));
     for (const scene of scenes) place(scene, wordsBottom);
@@ -309,7 +303,6 @@ onPage(signal => {
   }
   function reset(scene: Scene) {
     scene.cam.style.transform = scene.cam.style.opacity = '';
-    scene.words.style.transform = scene.words.style.opacity = scene.words.style.filter = '';
     scene.element.style.visibility = scene.element.style.clipPath = scene.element.style.transform = '';
     for (const copy of scene.copies) { copy.svg.style.transform = copy.svg.style.opacity = ''; copy.svg.style.visibility = ''; }
     scene.canvas.style.transform = scene.canvas.style.opacity = scene.canvas.style.visibility = '';
@@ -320,7 +313,9 @@ onPage(signal => {
   // copies nearer the middle. Each starts while the one before is still moving.
   function stepOut(progress: number, rank: number) {
     const start = .02 + (rank - 1) * .1;
-    return easeOut(clamp((progress - start) / Math.min(.3, 1 - start)));
+    const t = clamp((progress - start) / Math.min(.3, 1 - start));
+    // A bridge copy already moves with its neighbour. Ease their separation in from zero velocity.
+    return rank > blue.rank ? smooth(t) : easeOut(t);
   }
   // How far a card is from its place (px, along the row) at this point of the deal.
   function dealt(copy: { rank: number; side: number }, progress: number) {
@@ -462,13 +457,6 @@ onPage(signal => {
     return Math.abs(degrees) < .001 ? '' : ` rotate(${degrees.toFixed(3)}deg)`;
   };
 
-  // Words leaving and arriving: up and out, up and in, each through a slight blur.
-  function words(scene: Scene, shown: number, rise: number) {
-    scene.words.style.opacity = shown.toFixed(3);
-    scene.words.style.transform = `translate3d(0,${rise.toFixed(2)}px,0)`;
-    scene.words.style.filter = shown > .999 ? '' : `blur(${(BLUR * (1 - shown)).toFixed(2)}px)`;
-  }
-
   // The copies' outlines, turned as their instrument is (each through its follower), and the in-between
   // copies', bass to guitar at their step. A path is rewritten only when its turn has changed.
   function turnCopies(dt: number, snap: boolean) {
@@ -514,23 +502,18 @@ onPage(signal => {
     for (const copy of guitar.copies) copy.svg.style.transform = leaning(copy.svg);
     for (const item of steps) {
       item.svg.style.transform = `translate3d(${dealt(item, bassProgress).toFixed(2)}px,0,0)${leaning(item.svg)}`;
-      item.svg.style.opacity = clamp(stepOut(bassProgress, item.rank) * 4).toFixed(3);
+      item.svg.style.opacity = smooth(clamp(stepOut(bassProgress, item.rank) * 4)).toFixed(3);
     }
     for (const scene of scenes) scene.canvas.style.transform = leaning(scene.canvas);
     // The bass's line-up is off the screen's left edge after the slide, all but the in-between copies
     // nearest the guitar, which stay; so it is never hidden.
     guitar.element.style.visibility = move <= 0 ? 'hidden' : '';
-    const leave = easeOut(clamp(move / .3)); // the bass's words going
+    stage.classList.toggle('at-guitar', at >= span.guitarAt);
     const arrival = clamp((move - .6) / .4);
-    const come = easeOut(arrival); // the guitar's words arriving
-    words(bass, 1 - leave, -14 * leave);
-    words(guitar, come, 14 * (1 - come));
     // The slide: the row travels left by the distance between the two line-ups.
     const e = smooth(move);
     bass.cam.style.transform = `translate3d(${(-reach * e).toFixed(2)}px,0,0)`;
     guitar.cam.style.transform = `translate3d(${(reach * (1 - e)).toFixed(2)}px,0,0)`;
-    bass.words.style.transform += ` translate3d(${(-reach * .5 * e).toFixed(2)}px,0,0)`;
-    guitar.words.style.transform += ` translate3d(${(reach * .5 * (1 - e)).toFixed(2)}px,0,0)`;
     // The bass turns as the fan opens. The guitar holds that angle through the slide,
     // then turns face-on while the reader scrolls through its own text.
     turn(bass, smooth(clamp((bassProgress - .02) / .58)));
