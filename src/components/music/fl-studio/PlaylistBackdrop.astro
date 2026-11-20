@@ -1,0 +1,62 @@
+---
+// Bar positions are one-based, as in FL Studio's Playlist ruler.
+const tracks = [
+  { name: 'FL Keys', color: '#83aa8f', clips: [[1, 4], [5, 4], [9, 4], [13, 4]], pattern: 'melody' },
+  { name: 'Pad', color: '#9790ad', clips: [[1, 8], [9, 8]], pattern: 'chords' },
+  { name: '808', color: '#bf9c6a', clips: [[3, 2], [5, 4], [11, 2], [13, 4]], pattern: 'bass' },
+  { name: 'Kick', color: '#a27c79', clips: [[5, 4], [9, 2], [13, 4]], pattern: 'drums' },
+  { name: 'Snare', color: '#aa909b', clips: [[5, 4], [9, 4], [13, 4]], pattern: 'drums' },
+  { name: 'Hi-hat', color: '#829cae', clips: [[3, 2], [5, 4], [9, 4], [13, 4]], pattern: 'hats' },
+];
+---
+<div class="playlist" aria-hidden="true">
+  <div class="titlebar">▸　 Playlist - Arrangement</div>
+  <div class="lane ruler"><span></span><div class="timeline">{Array.from({ length: 16 }, (_, i) => <b>{i + 1}</b>)}</div></div>
+  {tracks.map(({ name, color, clips, pattern }) => (
+    <div class="lane" style={`--color:${color}`}>
+      <span class="track">{name}<i></i></span>
+      <div class="timeline">
+        {clips.map(([start, bars]) => (
+          <div class="clip" style={`grid-column:${start} / span ${bars}`}>
+            <strong>▸ {name}</strong><div class:list={['pattern', pattern]}></div>
+          </div>
+        ))}
+      </div>
+    </div>
+  ))}
+</div>
+<style>
+  .playlist {
+    position: absolute; z-index: -1; inset: 0; overflow: hidden; pointer-events: none;
+    background: #35464f; color: #e6ecef; font: 12px/1.2 'Segoe UI', system-ui, sans-serif;
+    text-align: left; letter-spacing: normal;
+    mask-image: linear-gradient(to bottom, transparent, #0005 24%, #000b 62%, #0008 86%, transparent);
+  }
+  .titlebar { padding: 8px 12px; background: #505a60; border-bottom: 1px solid #212b32; }
+  .lane { display: grid; grid-template-columns: clamp(68px, 10vw, 152px) 1fr; border-bottom: 2px solid #26363f; }
+  .track {
+    padding: 7px; position: relative; background: color-mix(in srgb, var(--color) 64%, #39474f);
+    box-shadow: inset 1px 1px #ffffff21; border-right: 3px solid #27353c;
+  }
+  .track i { position: absolute; right: 7px; bottom: 5px; width: 7px; height: 7px; border-radius: 50%; background: #b9e872; border: 1px solid #465747; }
+  .timeline {
+    min-width: 800px; display: grid; grid-template-columns: repeat(16, 1fr);
+    background: repeating-linear-gradient(90deg, #25353e 0 1px, transparent 1px 6.25%),
+      repeating-linear-gradient(90deg, #364851 0 1px, transparent 1px 1.5625%), #42545f;
+  }
+  .ruler .timeline, .ruler > span { background: #303e47; }
+  .ruler b { padding: 4px; border-left: 1px solid #526068; }
+  .clip {
+    min-width: 0; height: clamp(68px, 15svh, 160px); display: grid; grid-template-rows: 17px 1fr;
+    color: var(--color); border: 1px solid #26343b; border-radius: 3px;
+    background: color-mix(in srgb, var(--color) 28%, transparent); overflow: hidden;
+  }
+  .clip strong { font-size: 11px; padding-left: 4px; color: #f2f3f3; background: var(--color); }
+  .pattern { --marks: linear-gradient(currentColor, currentColor); opacity: .85; }
+  .melody { background: var(--marks) 0 38% / 25% 2px, var(--marks) 30% 58% / 23% 2px, var(--marks) 64% 26% / 18% 2px, var(--marks) 100% 42% / 24% 2px; background-repeat: no-repeat; }
+  .chords { background: repeating-linear-gradient(transparent 0 6px, currentColor 6px 8px) center / 100% 26px no-repeat; }
+  .bass { background: var(--marks) left 63% / 48% 3px no-repeat, var(--marks) right 73% / 46% 3px no-repeat; }
+  .drums, .hats { background: repeating-linear-gradient(90deg, currentColor 0 6px, transparent 6px 12.5%) left center / 100% 3px no-repeat; }
+  .hats { background-size: 50% 2px; background-repeat: repeat-x; }
+  @media (forced-colors: active) { .playlist { display: none; } }
+</style>

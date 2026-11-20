@@ -7,6 +7,7 @@
  * it back and it goes back sealed, ready to be unwrapped again.
  * Behaviour lives in components/music/v4/listening-bar.ts.
  */
+import StudioStory from '@/components/music/fl-studio/StudioStory.astro';
 import LineupStory from '@/components/music/lineup/LineupStory.astro';
 import MusicShell from '@/components/music/MusicShell.astro';
 import { musicCopy } from '@/data/music';
@@ -55,6 +56,7 @@ import '@/components/music/v4/listening-bar.css';
         </div>
       </section>
       <LineupStory />
+      <StudioStory />
     </div>
 
     <OpenRecord />
