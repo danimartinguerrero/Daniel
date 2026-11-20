@@ -179,13 +179,13 @@ const CHEVRON = 'M15.6 8.4 9.9 14.5 15.6 20.6';
     gap: clamp(2rem, 5svh, 3.5rem); padding-top: max(5.25rem, 10svh);
     overflow: clip; isolation: isolate;
   }
-  .studio[data-held] { height: 250svh; }
+  .studio[data-held] { height: max(250svh, calc(100svh + var(--studio-fill-travel, 0px))); }
   .studio[data-held] .studio__stage {
     position: sticky; top: 0; height: 100svh; min-height: 0; grid-template-rows: auto minmax(0, 1fr); align-content: stretch;
   }
   .studio__words {
     width: calc(100% - 2 * var(--gutter));
-    isolation: isolate; --on-dark-2: #e0e5e9; --fill-dim: #c5ced4;
+    isolation: isolate; --on-dark-2: #e0e5e9;
     text-shadow: 0 1px 3px #10161d;
   }
   .studio__words::before {

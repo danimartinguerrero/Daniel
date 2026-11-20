@@ -1,6 +1,6 @@
 import { onPage } from '@/scripts/page';
 import { clamp, Spring } from '../v4/physics';
-import { clearTextFill, measureTextFill, paintTextFill, type LitLine } from '../v4/text-fill';
+import { FILL_HOLD, clearTextFill, measureFillLine, measureTextFill, paintTextFill, type LitLine } from '../v4/text-fill';
 
 const ease = (n: number) => {
   const t = clamp(n, 0, 1);
@@ -8,7 +8,6 @@ const ease = (n: number) => {
 };
 
 /* The held scroll, 0 to 1: the story lights up, the window arrives, the notes are drawn, the velocities rise. */
-const FILL_END = .3;
 const ARRIVE = { start: .12, each: .16 };
 const WRITE = { start: .3, sweep: .42, each: .06 };
 const STEMS = { start: .78, sweep: .09, each: .08 };
@@ -33,7 +32,8 @@ onPage(signal => {
   }));
   const motion = matchMedia('(prefers-reduced-motion: no-preference) and (min-height: 580px) and (forced-colors: none)');
   const progress = new Spring(0, { response: .19, damping: 1 }, .0002);
-  let lines: LitLine[][] = [];
+  let lines: LitLine[] = [];
+  let lineDistance = 1;
   let nearby = false;
   let frame = 0;
   let lastFrame = 0;
@@ -41,9 +41,17 @@ onPage(signal => {
   let lead = 0;
 
   function measure() {
+    if (motion.matches) {
+      lines = passages.flatMap(measureTextFill);
+      lineDistance = measureFillLine(stage);
+      section!.style.setProperty('--studio-fill-travel', `${(lines.length + FILL_HOLD) * lineDistance}px`);
+    } else {
+      passages.forEach(clearTextFill);
+      lines = [];
+      section!.style.removeProperty('--studio-fill-travel');
+    }
     travel = section!.offsetHeight - stage.offsetHeight;
     lead = Math.min(innerHeight * .66, stage.offsetHeight * .66);
-    lines = motion.matches ? passages.map(measureTextFill) : (passages.forEach(clearTextFill), []);
     for (const stem of stems) {
       stem.height = stem.el.offsetHeight;
       stem.shown = -1;
@@ -55,12 +63,9 @@ onPage(signal => {
   }
 
   function paint(p: number) {
-    // The title and the story fill as one passage, line after line.
-    let filled = p / FILL_END * lines.reduce((sum, passage) => sum + passage.length, 0);
-    for (const passage of lines) {
-      paintTextFill(passage, filled);
-      filled -= passage.length;
-    }
+    // The roll starts arriving on approach. The text starts filling when the stage pins.
+    const pinnedScroll = p * (lead + travel) - lead;
+    paintTextFill(lines, pinnedScroll / lineDistance);
     // The window arrives as a thing: a little smaller and lower, growing into its place as it fades in.
     const here = ease((p - ARRIVE.start) / ARRIVE.each);
     fl.style.opacity = String(here);
