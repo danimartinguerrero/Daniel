@@ -1,62 +1,153 @@
 ---
-// Bar positions are one-based, as in FL Studio's Playlist ruler.
-const tracks = [
-  { name: 'FL Keys', color: '#83aa8f', clips: [[1, 4], [5, 4], [9, 4], [13, 4]], pattern: 'melody' },
-  { name: 'Pad', color: '#9790ad', clips: [[1, 8], [9, 8]], pattern: 'chords' },
-  { name: '808', color: '#bf9c6a', clips: [[3, 2], [5, 4], [11, 2], [13, 4]], pattern: 'bass' },
-  { name: 'Kick', color: '#a27c79', clips: [[5, 4], [9, 2], [13, 4]], pattern: 'drums' },
-  { name: 'Snare', color: '#aa909b', clips: [[5, 4], [9, 4], [13, 4]], pattern: 'drums' },
-  { name: 'Hi-hat', color: '#829cae', clips: [[3, 2], [5, 4], [9, 4], [13, 4]], pattern: 'hats' },
+import { flIcons } from './fl-icons';
+
+const tools = ['magnet','pencil','brush','erase','mute','interpolate','slice','select','zoom','playback'] as const;
+const clipTypes = [
+  ['pattern', 'M2 4h3v8h2V4h2v8h2V4h3v10H2z'],
+  ['audio', 'M0 8l3-1 1-4 2 5 2-8 2 6 2-3 1 4 3 1-3 1-1 4-2-3-2 6-2-8-2 5-1-4z'],
+  ['automation', 'M2 11a2.4 2.4 0 1 0 2.3 3l7.5-7.5a2.5 2.5 0 1 0-1-1l-7.3 7.2Q3 11 2 11zm0 1a1.4 1.4 0 1 1 0 2.8 1.4 1.4 0 0 1 0-2.8zm11-9a1.4 1.4 0 1 1 0 2.8 1.4 1.4 0 0 1 0-2.8z'],
 ];
+const picker = ['Closed Hat #4','Open Hat','SFX Disto','FLS_Gun 001','Toy Scratch SFX','Crash','Crash #2','SFX Cym Noisy','SFX Cym Noisy #2','SFX 8bit Drop','Smigen Whistle SFX','MA Constellations','Toy Rip SFX','Stomper Lazer SFX','Linn Tom'];
+const vocals = [2,6,10,14,18,22,24,28,42,44,48,52,56,60,62,64,66];
+const slices = [34,38,50,54,58,62];
+const tracks = [
+  {name:'Vocal', type:'audio', clips:vocals.map(start=>[start,2])},
+  {name:'Vocal Dist', type:'audio', clips:slices.map(start=>[start,1])},
+  {name:'Vocal Delay Vol', type:'automation', clips:[[0,68]]},
+  {name:'Vocal Dist Pan', type:'automation', clips:slices.map(start=>[start,2])},
+  {name:'Kick', type:'pattern', clips:[[10,23],[34,14],[50,7],[58,8]]},
+  {name:'Sidechain Trigger', type:'pattern', clips:[[10,23],[34,14],[50,7],[58,8]]},
+  {name:'Clap', type:'pattern', clips:[[10,23],[34,14],[50,7],[58,8]]},
+  {name:'Noise Hat', type:'pattern', clips:[[10,24],[50,1],[52,1],[54,1],[56,1],[58,1],[60,1],[62,1],[64,1]]},
+  {name:'Open Hat', type:'pattern', clips:[[34,14],[50,16]]},
+];
+// Maximizing the Playlist exposes more of the same project below the hi-hats.
+const percussion = [
+  {name:'Break Kick', clips:[[34,14],[50,16]]},
+  {name:'Ride', clips:[[18,16],[50,16]]},
+  {name:'Crash', clips:[[0,2],[10,2],[34,2],[50,2]]},
+  {name:'SFX Disto', clips:[[8,2],[32,2],[48,2]]},
+];
+const arrangement = [...tracks, ...percussion.map(({name, clips}, i) => ({
+  name, clips, type: i < 2 ? 'pattern' : 'audio',
+}))];
+const emptyTracks = Array.from({length:32}, (_, i) => arrangement.length + i + 1);
+const measures = Array.from({length:34},(_,i)=>i*2+1);
 ---
-<div class="playlist" aria-hidden="true">
-  <div class="titlebar">▸　 Playlist - Arrangement</div>
-  <div class="lane ruler"><span></span><div class="timeline">{Array.from({ length: 16 }, (_, i) => <b>{i + 1}</b>)}</div></div>
-  {tracks.map(({ name, color, clips, pattern }) => (
-    <div class="lane" style={`--color:${color}`}>
-      <span class="track">{name}<i></i></span>
-      <div class="timeline">
-        {clips.map(([start, bars]) => (
-          <div class="clip" style={`grid-column:${start} / span ${bars}`}>
-            <strong>▸ {name}</strong><div class:list={['pattern', pattern]}></div>
-          </div>
-        ))}
-      </div>
+<div class="playlist" aria-hidden="true" inert>
+  <div class="titlebar"><span>▸</span><div class="tools">{tools.map(name=><i style={`clip-path:path('${flIcons[name]}')`}></i>)}</div><b>◀</b><strong>Playlist - Arrangement</strong><span class="instrument">› Open Hat</span><span class="controls">−　▫　×</span></div>
+  <div class="picker-head">
+    {clipTypes.map(([type, path]) => <i class:list={['clip-icon', {active:type==='audio'}]} style={`clip-path:path(evenodd, '${path}')`}></i>)}
+  </div>
+  <div class="clip-focus">
+    {[clipTypes[1],clipTypes[2],clipTypes[0]].map(([type, path]) => <i class:list={['clip-icon', {active:type==='audio'}]} style={`clip-path:path(evenodd, '${path}')`}></i>)}
+    <small>Z-CROSS ▢　STRETCH ▢</small>
+  </div>
+  <div class="timeline-head">
+    <div class="overview">
+      <span class="scroll-arrow">‹</span>
+      <div class="miniature">{tracks.map(({type, clips}) => <div class:list={['mini-lane', type]}>
+        {clips.map(([start, bars]) => <i style={`left:${start / 68 * 100}%;width:${bars / 68 * 100}%`}></i>)}
+      </div>)}</div>
+      <span class="scroll-arrow">›</span>
     </div>
-  ))}
+    <div class="numbers">{measures.map(n=><span>{n}</span>)}</div>
+    <div class="markers"><b>Intro ◷ 4/4</b><b>Verse</b><b>Chorus</b></div>
+  </div>
+  <div class="picker">{picker.map((name,i)=><div class:list={['pick', {hat:i<2}]}><span>{name}</span><i></i></div>)}</div>
+  <div class="lanes">
+    {arrangement.map(({name,type,clips},i)=><div class:list={['lane',type]}>
+      <div class="track-name">{name}<span class="track-controls">{type==='audio'?'◈':type==='automation'?'♧':'◧'}　<i></i></span></div>
+      <div class="timeline">
+        {clips.map(([start,bars])=><div class="clip" style={`left:calc(${start} * var(--bar));width:calc(${bars} * var(--bar))`}>
+          <span class="clip-name">{type==='automation'?'♧':'▸'} {name}</span>
+          {type==='audio' && <i class="wave"></i>}
+          {type==='automation' && <i class:list={['envelope',{long:i===2}]}></i>}
+        </div>)}
+      </div>
+    </div>)}
+    {emptyTracks.map(number => <div class="lane empty">
+      <div class="track-name">Track {number}<span class="track-controls"><i></i></span></div>
+      <div class="timeline"></div>
+    </div>)}
+    <i class="playhead"></i>
+  </div>
 </div>
 <style>
   .playlist {
-    position: absolute; z-index: -1; inset: 0; overflow: hidden; pointer-events: none;
-    background: #35464f; color: #e6ecef; font: 12px/1.2 'Segoe UI', system-ui, sans-serif;
-    text-align: left; letter-spacing: normal;
-    mask-image: linear-gradient(to bottom, transparent, #0005 24%, #000b 62%, #0008 86%, transparent);
+    --picker:clamp(102px,10vw,152px); --track:clamp(84px,7vw,108px);
+    --rail:14px; --row:26px; --bar-height:26px; --lane-height:clamp(42px,5.4svh,62px);
+    --edge:#344047; --chrome:#4f585d;
+    position:absolute; inset:0; z-index:-1; overflow:hidden; container-type:inline-size;
+    display:grid; grid-template-columns:var(--picker) var(--track) minmax(0,1fr) var(--rail);
+    grid-template-rows:var(--bar-height) 48px minmax(0,1fr);
+    border:1px solid var(--edge); background:#3a4a54; color:#d6e3ea;
+    text-align:left; font:400 12px/1.12 'Avenir Next Condensed','Arial Narrow','Segoe UI',sans-serif;
+    letter-spacing:.015em; pointer-events:none; user-select:none;
   }
-  .titlebar { padding: 8px 12px; background: #505a60; border-bottom: 1px solid #212b32; }
-  .lane { display: grid; grid-template-columns: clamp(68px, 10vw, 152px) 1fr; border-bottom: 2px solid #26363f; }
-  .track {
-    padding: 7px; position: relative; background: color-mix(in srgb, var(--color) 64%, #39474f);
-    box-shadow: inset 1px 1px #ffffff21; border-right: 3px solid #27353c;
+  /* A narrow viewport shows fewer measures at the same zoom. All three timelines share that zoom. */
+  .timeline-head,.lanes { --bar:max(13px, calc((100cqw - var(--picker) - var(--track) - var(--rail)) / 68)); }
+  .titlebar { grid-column:1/-1; display:flex; gap:.4em; align-items:center; padding:0 .55em; min-width:0; overflow:hidden; background:var(--chrome); color:#aebbc1; white-space:nowrap; }
+  .playlist::after { content:''; position:absolute; inset:var(--bar-height) 0 0 auto; width:var(--rail); border-left:1px solid #344047; background:linear-gradient(#748087 0 4%,#48565e 4% 6%,#666f76 6% 19%,#49565e 19% 96%,#667179 96%); }
+  .titlebar b { color:#92b65e; } .titlebar strong { font-weight:600; } .controls { margin-left:auto; }
+  .tools { display:flex; align-items:center; gap:1px; } .tools i { width:80px; height:80px; zoom:.25; background:#b7c5ce; }
+  .tools i:nth-child(3) { background:#83bcdb; }
+  .picker-head { grid-area:2/1; } .clip-focus { grid-area:2/2; }
+  .picker-head,.clip-focus { background:#50595e; border:1px solid #364147; display:flex; align-items:end; justify-content:space-evenly; padding-bottom:.3em; color:#bacbd5; }
+  .clip-icon { flex:0 0 16px; height:16px; background:#91a0ab; }
+  .clip-icon.active { background:#e2edf2; }
+  .clip-focus { position:relative; align-items:start; justify-content:end; gap:2px; padding:.2em .22em 0 0; text-align:right; font-size:.95em; background:linear-gradient(115deg,#465056 15%,#505a60 15.5%); }
+  .clip-focus small { position:absolute; bottom:3px; right:1px; font-size:.55em; white-space:nowrap; }
+  .timeline-head { grid-area:2/3; min-width:0; overflow:hidden; display:grid; grid-template-rows:34% 36% 30%; background:#29363e; }
+  .overview { display:flex; margin-top:1px; border:1px solid #364248; background:#465056; }
+  .scroll-arrow { width:var(--rail); display:grid; place-items:center; color:#29333a; background:#636e74; }
+  .miniature { position:relative; flex:1; display:grid; grid-template-rows:repeat(9,1fr); overflow:hidden; background:#39434d; }
+  .miniature::after { content:''; position:absolute; inset:0 57% 0 0; border:1px solid #89939b; background:#c8d7e118; }
+  .mini-lane { position:relative; } .mini-lane i { position:absolute; height:100%; background:#696887; }
+  .mini-lane.audio i,.mini-lane.automation i { background:#88657e; }
+  .numbers,.markers { position:relative; display:flex; align-items:center; white-space:nowrap; overflow:hidden; }
+  .numbers { background:#2c3941; border-top:1px solid #19272f; }
+  .numbers span { flex:0 0 calc(2 * var(--bar)); font-size:.72em; padding-left:2px; }
+  .markers { background:#35444d; border-block:1px solid #25343d; font-size:.92em; }
+  .markers b { position:absolute; font-weight:500; border-left:1px solid #a6b3bc; padding:0 .22em; background:#49545a; }
+  .markers b:nth-child(2) { left:calc(10 * var(--bar)); } .markers b:nth-child(3) { left:calc(50 * var(--bar)); }
+  .picker { grid-area:3/1; overflow:hidden; padding:2px 10% 0 3px; background:#414a50; border-right:3px solid #677278; }
+  .pick { position:relative; height:var(--row); margin:0 0 2px; display:flex; align-items:center; padding-left:.36em; overflow:hidden; white-space:nowrap; color:#eef4f8; background:linear-gradient(#838499,#66677c); border:1px solid #40414d; border-left:3px solid #a5a2bf; box-shadow:inset 0 1px #ffffff2b; }
+  .pick:nth-child(n+11) { background:linear-gradient(#64638d,#555684); } .pick.hat { background:linear-gradient(#74a5c1,#5c8baa); border-left-color:#9ed3ef; }
+  .pick span,.pick i { z-index:1; }
+  .pick:not(.hat)::after { content:''; position:absolute; inset:12% 10% 10% 14%; background:#434356; opacity:.75; clip-path:polygon(0 47%,8% 46%,11% 38%,14% 46%,19% 32%,25% 44%,28% 40%,33% 17%,36% 39%,40% 2%,44% 26%,48% 15%,52% 31%,56% 19%,59% 35%,65% 29%,68% 36%,75% 32%,78% 42%,90% 43%,93% 48%,100% 49%,100% 52%,81% 58%,72% 66%,68% 61%,64% 73%,61% 66%,55% 76%,51% 63%,46% 86%,42% 72%,39% 95%,35% 69%,31% 78%,25% 62%,21% 71%,15% 57%,8% 53%,0 52%); }
+  .pick:nth-child(3n)::after { transform:scaleX(-1) scaleY(.7); } .pick:nth-child(4n)::after { transform:scaleY(.4); }
+  .pick i { margin-left:auto; margin-right:.35em; width:.7em; height:.9em; background:#d8e7ec; clip-path:polygon(50% 0,75% 27%,60% 65%,86% 80%,100% 86%,55% 83%,50% 100%,45% 83%,0 86%,14% 80%,40% 65%,25% 27%); }
+  .lanes { grid-area:3/2/4/4; position:relative; display:grid; align-content:start; grid-auto-rows:var(--lane-height); overflow:hidden; }
+  .lane { display:grid; grid-template-columns:var(--track) minmax(0,1fr); --cap:#5351ad; --body:#2b3356; --ink:#bec3ff; --label:#44417d; overflow:hidden; }
+  .lane.empty { --label:#4e5b64; }
+  .lane.audio,.lane.automation { --cap:#803c70; --body:#513750; --ink:#efafde; --label:#703661; }
+  .track-name { position:relative; padding:.22em .38em; overflow:hidden; white-space:nowrap; background:var(--label); color:#e8e5f2; border-inline:1px solid #324048; box-shadow:inset 1px 0 #ffffff20; }
+  .track-controls { position:absolute; right:.35em; bottom:.18em; display:flex; align-items:center; color:#e4d9ed; }
+  .track-controls i { width:.67em; height:.67em; margin-left:.4em; border-radius:50%; background:radial-gradient(#dbfe9e,#a9dd53 58%,#718f4b); box-shadow:0 0 0 1px #42483e; }
+  .timeline { position:relative; overflow:hidden; border-bottom:1px solid #25343d; background:repeating-linear-gradient(90deg,#293943 0 1px,transparent 1px var(--bar)),repeating-linear-gradient(90deg,#40505a 0 calc(4 * var(--bar)),#3a4a54 calc(4 * var(--bar)) calc(8 * var(--bar))); }
+  .clip { position:absolute; inset-block:0; overflow:hidden; border:1px solid #302c42; background:repeating-linear-gradient(90deg,#0002 0 1px,transparent 1px var(--bar)),var(--body); color:var(--ink); }
+  .clip-name { display:block; height:clamp(9px,.8vw,13px); overflow:hidden; white-space:nowrap; padding:0 1px; background:linear-gradient(#ffffff12,transparent),var(--cap); font-size:.85em; }
+  .pattern .clip { background:repeating-linear-gradient(90deg,#202746 0 1px,transparent 1px var(--bar)),linear-gradient(transparent 89%,#565983 90%,transparent 95%),var(--body); }
+  .pattern .clip-name { color:transparent; background:repeating-linear-gradient(90deg,#36345f 0 1px,transparent 1px var(--bar)),var(--cap); }
+
+  .pattern .clip-name::after { content:''; position:absolute; inset:2px 0 auto; height:6px; background:repeating-linear-gradient(90deg,transparent 0 2px,#cfcdff 2px 6px,transparent 6px var(--bar)); mask:repeating-linear-gradient(0deg,#000 0 1px,transparent 1px 2px); }
+  .wave { position:absolute; inset:30% 0 8%; background:var(--ink); clip-path:polygon(0 40%,6% 29%,9% 37%,14% 13%,19% 31%,24% 17%,28% 32%,36% 10%,44% 26%,50% 8%,57% 23%,60% 13%,66% 29%,72% 19%,79% 31%,85% 17%,92% 35%,100% 43%,100% 61%,94% 53%,86% 70%,80% 61%,75% 75%,68% 64%,63% 86%,57% 73%,50% 92%,44% 76%,38% 89%,32% 68%,26% 84%,18% 73%,14% 86%,8% 69%,4% 76%,0 59%); }
+  .audio .clip:nth-child(3n) .wave { transform:scaleX(-1) scaleY(.82); }
+  .audio .clip:nth-child(4n) .wave { transform:scaleY(.68); }
+  .envelope { position:absolute; inset:30% 0 0; background:#cfa4ca; clip-path:polygon(0 97%,24% 97%,53% 8%,100% 8%,100% 10%,56% 10%,28% 100%,0 100%); }
+  .envelope.long { clip-path:polygon(0 0,60% 0,62% 95%,95% 95%,97% 0,100% 0,100% 3%,97.3% 3%,95.3% 99%,61.8% 99%,59.8% 3%,0 3%); }
+  .pattern .clip::after { content:''; position:absolute; bottom:2px; left:0; right:0; height:2px; background:repeating-linear-gradient(90deg,transparent 0 3px,#acaad4 3px 4px,transparent 4px var(--bar)); }
+  .lane.audio .track-name::after,.lane.automation .track-name::after,.lane.pattern .track-name::after {
+    content:''; position:absolute; right:0; inset-block:0; width:2px; background:var(--ink); opacity:.55;
   }
-  .track i { position: absolute; right: 7px; bottom: 5px; width: 7px; height: 7px; border-radius: 50%; background: #b9e872; border: 1px solid #465747; }
-  .timeline {
-    min-width: 800px; display: grid; grid-template-columns: repeat(16, 1fr);
-    background: repeating-linear-gradient(90deg, #25353e 0 1px, transparent 1px 6.25%),
-      repeating-linear-gradient(90deg, #364851 0 1px, transparent 1px 1.5625%), #42545f;
+  .playhead { position:absolute; inset-block:0; left:calc(var(--track) + 12 * var(--bar)); width:1px; background:#a1ce57; box-shadow:-2px 0 4px #94c239; }
+  .numbers::after { content:''; position:absolute; left:calc(12 * var(--bar) - 4px); top:0; border:5px solid transparent; border-top-color:#beea74; }
+  @media (max-width:640px) {
+    .playlist { --picker:0px; --track:74px; --rail:10px; --bar-height:24px; grid-template-rows:var(--bar-height) 42px minmax(0,1fr); }
+    .picker-head,.picker,.titlebar .instrument,.tools i:nth-child(n+8) { display:none; }
+    .titlebar { gap:.25em; padding-inline:.3em; }
+    .tools i { zoom:.2; }
   }
-  .ruler .timeline, .ruler > span { background: #303e47; }
-  .ruler b { padding: 4px; border-left: 1px solid #526068; }
-  .clip {
-    min-width: 0; height: clamp(68px, 15svh, 160px); display: grid; grid-template-rows: 17px 1fr;
-    color: var(--color); border: 1px solid #26343b; border-radius: 3px;
-    background: color-mix(in srgb, var(--color) 28%, transparent); overflow: hidden;
-  }
-  .clip strong { font-size: 11px; padding-left: 4px; color: #f2f3f3; background: var(--color); }
-  .pattern { --marks: linear-gradient(currentColor, currentColor); opacity: .85; }
-  .melody { background: var(--marks) 0 38% / 25% 2px, var(--marks) 30% 58% / 23% 2px, var(--marks) 64% 26% / 18% 2px, var(--marks) 100% 42% / 24% 2px; background-repeat: no-repeat; }
-  .chords { background: repeating-linear-gradient(transparent 0 6px, currentColor 6px 8px) center / 100% 26px no-repeat; }
-  .bass { background: var(--marks) left 63% / 48% 3px no-repeat, var(--marks) right 73% / 46% 3px no-repeat; }
-  .drums, .hats { background: repeating-linear-gradient(90deg, currentColor 0 6px, transparent 6px 12.5%) left center / 100% 3px no-repeat; }
-  .hats { background-size: 50% 2px; background-repeat: repeat-x; }
-  @media (forced-colors: active) { .playlist { display: none; } }
+  @media (forced-colors:active) { .playlist { display:none; } }
 </style>

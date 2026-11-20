@@ -85,83 +85,85 @@ const CHEVRON = 'M15.6 8.4 9.9 14.5 15.6 20.6';
       <h2 class="lu__title" id="fl-title" data-fill-text>{title.split(' ').map(word => <><span data-w>{word}</span>{' '}</>)}</h2>
       <p class="lu__body" data-fill-text>{body.split(' ').map(word => <><span data-w>{word}</span>{' '}</>)}</p>
     </header>
-    <div class="roll">
-      <div class="fl" aria-hidden="true" style={`--steps:${STEPS};--rows:${ROWS};--octaves:${octaves.join(',') || 'none'}`} data-fl>
-        <div class="fl__bar">
-          <div class="fl__tools">
-            {tools.map(({ d, tone, lead }) => (
-              <svg class:list={['fl__tool', tone && `is-${tone}`, lead && `leads-${lead}`]} viewBox="6.7 -4.4 66.6 81.6"><path fill-rule="evenodd" d={d}/></svg>
-            ))}
-            <span class="fl__name">Piano roll - FL Keys</span>
-            <svg class="fl__more" viewBox="0 0 6.5 40"><path d="M0 15 6.3 21.5 0 28Z"/></svg>
+    <div class="studio__desktop">
+      <div class="roll">
+        <div class="fl" aria-hidden="true" style={`--steps:${STEPS};--rows:${ROWS};--octaves:${octaves.join(',') || 'none'}`} data-fl>
+          <div class="fl__bar">
+            <div class="fl__tools">
+              {tools.map(({ d, tone, lead }) => (
+                <svg class:list={['fl__tool', tone && `is-${tone}`, lead && `leads-${lead}`]} viewBox="6.7 -4.4 66.6 81.6"><path fill-rule="evenodd" d={d}/></svg>
+              ))}
+              <span class="fl__name">Piano roll - FL Keys</span>
+              <svg class="fl__more" viewBox="0 0 6.5 40"><path d="M0 15 6.3 21.5 0 28Z"/></svg>
+            </div>
+            <div class="fl__window">
+              <svg class="fl__ghost" viewBox="0 0 28 40">
+                <path d="M9.6 15h5.2v3H9.6zM5.6 21h5.2v3H5.6zM1.7 27h5.2v3H1.7z"/>
+                <path class="o" d="M22.1 15.5h4.2v2h-4.2zM18.1 21.5h4.2v2h-4.2zM14.2 27.5h4.2v2h-4.2z"/>
+              </svg>
+              <svg class="fl__min" viewBox="0 0 12.4 40"><path d="M0 16h12.4v3H0z"/></svg>
+              <svg class="fl__max" viewBox="0 0 14 40"><path fill-rule="evenodd" d="M0 16h14v11H0zM1.5 19v6h11v-6z"/></svg>
+              <svg class="fl__close" viewBox="26 -3 28 80"><path fill-rule="evenodd" d={flIcons.close}/></svg>
+            </div>
           </div>
-          <div class="fl__window">
-            <svg class="fl__ghost" viewBox="0 0 28 40">
-              <path d="M9.6 15h5.2v3H9.6zM5.6 21h5.2v3H5.6zM1.7 27h5.2v3H1.7z"/>
-              <path class="o" d="M22.1 15.5h4.2v2h-4.2zM18.1 21.5h4.2v2h-4.2zM14.2 27.5h4.2v2h-4.2z"/>
+          <div class="fl__top">
+            <!-- The note-colour swatch in the corner, cut on the slant, with the portamento and slide marks in it. -->
+            <svg class="fl__swatch" viewBox="0 0 104 59" preserveAspectRatio="none">
+              <clipPath id="fl-swatch"><path d="M0 59V51L22.2 6.6A12 12 0 0 1 32.9 0H104V59Z"/></clipPath>
+              <path class="cut" d="M-3 -3H35V51H-3Z"/>
+              <path class="edge" d="M0 60V51L22.2 6.6A12 12 0 0 1 32.9 0H104"/>
+              <path class="face" clip-path="url(#fl-swatch)" d="M0 59V51L22.2 6.6A12 12 0 0 1 32.9 0H104V59Z"/>
+              <path class="mark" d="M79.3 21H84.6L90.2 10.5H96.8"/>
+              <path class="mark mark--slide" d="M80 49.5h14.6v-14H91z"/>
             </svg>
-            <svg class="fl__min" viewBox="0 0 12.4 40"><path d="M0 16h12.4v3H0z"/></svg>
-            <svg class="fl__max" viewBox="0 0 14 40"><path fill-rule="evenodd" d="M0 16h14v11H0zM1.5 19v6h11v-6z"/></svg>
-            <svg class="fl__close" viewBox="26 -3 28 80"><path fill-rule="evenodd" d={flIcons.close}/></svg>
-          </div>
-        </div>
-        <div class="fl__top">
-          <!-- The note-colour swatch in the corner, cut on the slant, with the portamento and slide marks in it. -->
-          <svg class="fl__swatch" viewBox="0 0 104 59" preserveAspectRatio="none">
-            <clipPath id="fl-swatch"><path d="M0 59V51L22.2 6.6A12 12 0 0 1 32.9 0H104V59Z"/></clipPath>
-            <path class="cut" d="M-3 -3H35V51H-3Z"/>
-            <path class="edge" d="M0 60V51L22.2 6.6A12 12 0 0 1 32.9 0H104"/>
-            <path class="face" clip-path="url(#fl-swatch)" d="M0 59V51L22.2 6.6A12 12 0 0 1 32.9 0H104V59Z"/>
-            <path class="mark" d="M79.3 21H84.6L90.2 10.5H96.8"/>
-            <path class="mark mark--slide" d="M80 49.5h14.6v-14H91z"/>
-          </svg>
-          <div class="fl__hscroll">
-            <svg class="fl__btn" viewBox="0 0 29 29"><path d={CHEVRON}/></svg>
-            <span class="fl__track"><i class="fl__thumb"></i></span>
-            <svg class="fl__btn fl__btn--right" viewBox="0 0 29 29"><path d={CHEVRON}/></svg>
-          </div>
-          <svg class="fl__btn fl__btn--dot" viewBox="0 0 29 29"><rect x="13" y="12" width="3" height="5"/></svg>
-          <div class="fl__ruler">
-            {[1, 2].map(bar => <span style={`left:${pct((bar - 1) * 16, STEPS)}`}><b>{bar}</b></span>)}
-          </div>
-          <div class="fl__vscroll">
-            <svg class="fl__btn fl__btn--up" viewBox="0 0 29 29"><path d={CHEVRON}/></svg>
-            <span class="fl__track"><i class="fl__thumb"></i></span>
-            <svg class="fl__btn fl__btn--down" viewBox="0 0 29 29"><path d={CHEVRON}/></svg>
-          </div>
-          <div class="fl__keys">
-            {whiteKeys.map(({ midi, top, height, label }) => (
-              <span class:list={['wkey', { 'wkey--c': label }]} style={`top:calc(var(--row) * ${top});height:calc(var(--row) * ${height})`} data-key={midi}>
-                {label && <b>{label}</b>}
-              </span>
-            ))}
-            {pitches.filter(isBlack).map(midi => <span class="bkey" style={`top:calc(var(--row) * ${rowOf(midi)})`} data-key={midi}></span>)}
-          </div>
-          <div class="fl__grid">
-            {pitches.filter(isBlack).map(midi => <i class="fl__shade" style={`top:calc(var(--row) * ${rowOf(midi)})`}></i>)}
-            <i class="fl__lines fl__lines--rows"></i>
-            {notes.map(({ step, length, midi }) => (
-              <span class="note" style={`left:${pct(step, STEPS)};top:calc(var(--row) * ${rowOf(midi)});width:${pct(length, STEPS)}`}
-                data-step={step} data-key={midi}><b>{nameOf(midi)}</b></span>
-            ))}
-          </div>
-        </div>
-        <div class="fl__split"><i></i></div>
-        <div class="fl__bottom">
-          <div class="fl__target"><span><b>Control</b></span><svg viewBox="0 0 6.5 13"><path d="M0 0 6.3 6.5 0 13Z"/></svg></div>
-          <div class="fl__editor">
-            <div class="fl__events">
-              <i class="fl__lines fl__lines--quarters"></i>
-              <span class="fl__lane"><b>Velocity</b></span>
-              {notes.map(({ step, length, velocity }) => (
-                <span class="vel" style={`left:${pct(step, STEPS)};width:${pct(length, STEPS)};height:${(velocity / 135 * 100).toFixed(2)}%`} data-step={step}>
-                  <i class="vel__stem"></i><i class="vel__head"></i>
+            <div class="fl__hscroll">
+              <svg class="fl__btn" viewBox="0 0 29 29"><path d={CHEVRON}/></svg>
+              <span class="fl__track"><i class="fl__thumb"></i></span>
+              <svg class="fl__btn fl__btn--right" viewBox="0 0 29 29"><path d={CHEVRON}/></svg>
+            </div>
+            <svg class="fl__btn fl__btn--dot" viewBox="0 0 29 29"><rect x="13" y="12" width="3" height="5"/></svg>
+            <div class="fl__ruler">
+              {[1, 2].map(bar => <span style={`left:${pct((bar - 1) * 16, STEPS)}`}><b>{bar}</b></span>)}
+            </div>
+            <div class="fl__vscroll">
+              <svg class="fl__btn fl__btn--up" viewBox="0 0 29 29"><path d={CHEVRON}/></svg>
+              <span class="fl__track"><i class="fl__thumb"></i></span>
+              <svg class="fl__btn fl__btn--down" viewBox="0 0 29 29"><path d={CHEVRON}/></svg>
+            </div>
+            <div class="fl__keys">
+              {whiteKeys.map(({ midi, top, height, label }) => (
+                <span class:list={['wkey', { 'wkey--c': label }]} style={`top:calc(var(--row) * ${top});height:calc(var(--row) * ${height})`} data-key={midi}>
+                  {label && <b>{label}</b>}
                 </span>
               ))}
+              {pitches.filter(isBlack).map(midi => <span class="bkey" style={`top:calc(var(--row) * ${rowOf(midi)})`} data-key={midi}></span>)}
             </div>
-            <div class="fl__zoom">
-              <svg class="fl__btn" viewBox="0 0 29 29"><rect x="13.2" y="14" width="2.6" height="1"/></svg>
-              <span class="fl__track"></span>
+            <div class="fl__grid">
+              {pitches.filter(isBlack).map(midi => <i class="fl__shade" style={`top:calc(var(--row) * ${rowOf(midi)})`}></i>)}
+              <i class="fl__lines fl__lines--rows"></i>
+              {notes.map(({ step, length, midi }) => (
+                <span class="note" style={`left:${pct(step, STEPS)};top:calc(var(--row) * ${rowOf(midi)});width:${pct(length, STEPS)}`}
+                  data-step={step} data-key={midi}><b>{nameOf(midi)}</b></span>
+              ))}
+            </div>
+          </div>
+          <div class="fl__split"><i></i></div>
+          <div class="fl__bottom">
+            <div class="fl__target"><span><b>Control</b></span><svg viewBox="0 0 6.5 13"><path d="M0 0 6.3 6.5 0 13Z"/></svg></div>
+            <div class="fl__editor">
+              <div class="fl__events">
+                <i class="fl__lines fl__lines--quarters"></i>
+                <span class="fl__lane"><b>Velocity</b></span>
+                {notes.map(({ step, length, velocity }) => (
+                  <span class="vel" style={`left:${pct(step, STEPS)};width:${pct(length, STEPS)};height:${(velocity / 135 * 100).toFixed(2)}%`} data-step={step}>
+                    <i class="vel__stem"></i><i class="vel__head"></i>
+                  </span>
+                ))}
+              </div>
+              <div class="fl__zoom">
+                <svg class="fl__btn" viewBox="0 0 29 29"><rect x="13.2" y="14" width="2.6" height="1"/></svg>
+                <span class="fl__track"></span>
+              </div>
             </div>
           </div>
         </div>
@@ -173,16 +175,29 @@ const CHEVRON = 'M15.6 8.4 9.9 14.5 15.6 20.6';
   .studio { position: relative; background: var(--dark); color: var(--on-dark); }
   .studio__stage {
     position: relative;
-    min-height: 90svh; display: grid; justify-items: center; align-content: center;
-    gap: clamp(2rem, 5svh, 3.5rem); padding: max(5.25rem, 10svh) var(--gutter) clamp(2.5rem, 6svh, 4rem);
+    min-height: 100svh; display: grid; justify-items: center; align-content: center;
+    gap: clamp(2rem, 5svh, 3.5rem); padding-top: max(5.25rem, 10svh);
     overflow: clip; isolation: isolate;
   }
   .studio[data-held] { height: 250svh; }
   .studio[data-held] .studio__stage {
     position: sticky; top: 0; height: 100svh; min-height: 0; grid-template-rows: auto minmax(0, 1fr); align-content: stretch;
   }
-  .studio__words { width: 100%; }
-
+  .studio__words {
+    width: calc(100% - 2 * var(--gutter));
+    isolation: isolate; --on-dark-2: #e0e5e9; --fill-dim: #c5ced4;
+    text-shadow: 0 1px 3px #10161d;
+  }
+  .studio__words::before {
+    content: ''; position: absolute; z-index: -1; pointer-events: none;
+    inset: -2.8rem -4rem;
+    background: radial-gradient(ellipse farthest-side, #101820f5 42%, #101820dd 66%, transparent 100%);
+  }
+  .studio__desktop {
+    position: relative; isolation: isolate; width: 100%; min-height: 0;
+    display: grid; justify-items: center; align-items: center;
+    padding: clamp(1.5rem, min(4.5vw, 6svh), 4.5rem) var(--gutter) clamp(1rem, 3svh, 2rem);
+  }
   /* The window is sized from the room it is given: all of it when the screen is held, the width otherwise. */
   .roll { width: min(100%, 62rem); display: grid; place-items: center; container-type: inline-size; }
   .studio[data-held] .roll { align-self: stretch; container-type: size; }
