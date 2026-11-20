@@ -15,6 +15,9 @@
  * drawn. Last, every note's velocity rises in the editor. The chapter is silent and there is nothing to
  * press; it moves with the scroll only, and backwards with it.
  *
+ * Where the instruments come before it, the chapter does not scroll in: FL's playhead crosses the
+ * instruments' screen and turns it into this one, and the guitars become the first notes (handoff.ts).
+ *
  * Behaviour lives in write-beat.ts. Without the script, or with reduced motion: the finished roll.
  */
 import '../v4/text-fill.css';
@@ -80,6 +83,9 @@ const CHEVRON = 'M15.6 8.4 9.9 14.5 15.6 20.6';
 ---
 <section id="fl-studio" class="studio" aria-labelledby="fl-title" data-studio>
   <div class="studio__stage">
+    <!-- A window and its content: the playhead's wipe moves them against each other (handoff.ts). -->
+    <div class="studio__wipe" data-studio-wipe>
+    <div class="studio__world" data-studio-world>
     <PlaylistBackdrop />
     <header class="lu__words studio__words">
       <h2 class="lu__title" id="fl-title" data-fill-text>{title.split(' ').map(word => <><span data-w>{word}</span>{' '}</>)}</h2>
@@ -169,30 +175,47 @@ const CHEVRON = 'M15.6 8.4 9.9 14.5 15.6 20.6';
         </div>
       </div>
     </div>
+    </div>
+    </div>
+    <i class="studio__scan" aria-hidden="true" data-studio-scan></i>
+    <canvas class="studio__flight" aria-hidden="true" width="1" height="1" data-studio-flight></canvas>
   </div>
 </section>
 <style>
   .studio { position: relative; background: var(--dark); color: var(--on-dark); }
-  .studio__stage {
-    position: relative;
-    min-height: 100svh; display: grid; justify-items: center; align-content: center;
+  .studio__stage { position: relative; min-height: 100svh; display: grid; overflow: clip; isolation: isolate; }
+  .studio__wipe { display: grid; min-width: 0; }
+  .studio__world {
+    position: relative; isolation: isolate; min-width: 0;
+    display: grid; justify-items: center; align-content: center;
     gap: clamp(2rem, 5svh, 3.5rem); padding-top: max(5.25rem, 10svh);
-    overflow: clip; isolation: isolate;
   }
-  .studio[data-held] { height: max(250svh, calc(100svh + var(--studio-fill-travel, 0px))); }
-  .studio[data-held] .studio__stage {
-    position: sticky; top: 0; height: 100svh; min-height: 0; grid-template-rows: auto minmax(0, 1fr); align-content: stretch;
+  .studio[data-held] { height: calc(max(250svh, 100svh + var(--studio-fill-travel, 0px)) + var(--studio-handoff, 0px)); }
+  .studio[data-held] .studio__stage { position: sticky; top: 0; height: 100svh; min-height: 0; }
+  .studio[data-held] .studio__wipe { overflow: hidden; min-height: 0; }
+  .studio[data-held] .studio__world { min-height: 0; grid-template-rows: auto minmax(0, 1fr); align-content: stretch; }
+  /* Joined to the instruments (handoff.ts): this stage lies over theirs, see-through until the playhead has crossed it. */
+  .studio[data-joined] { margin-top: calc(-1 * var(--studio-overlap, 0px)); background: none; }
+  .studio[data-joined]:not([data-arrived]) { pointer-events: none; }
+  .studio[data-joined] .studio__wipe, .studio[data-joined] .studio__world { will-change: transform; }
+  .studio__scan, .studio__flight { display: none; }
+  .studio[data-joined] .studio__flight { display: block; position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
+  /* FL's playhead, as in the Playlist behind (PlaylistBackdrop.astro), with the light it throws on what it has passed. */
+  .studio[data-joined] .studio__scan {
+    display: block; position: absolute; top: 0; bottom: 0; left: -1px; width: 1px; opacity: 0;
+    background: #a1ce57; box-shadow: -2px 0 4px #94c239; pointer-events: none; will-change: transform, opacity;
   }
-  .studio__words {
-    width: calc(100% - 2 * var(--gutter));
-    isolation: isolate; --on-dark-2: #e0e5e9;
-    text-shadow: 0 1px 3px #10161d;
+  .studio[data-joined] .studio__scan::before {
+    content: ''; position: absolute; inset: 0 0 0 auto; width: clamp(48px, 9vw, 140px);
+    background: linear-gradient(90deg, transparent, #b4ff9314 70%, #b4ff932e);
   }
-  .studio__words::before {
-    content: ''; position: absolute; z-index: -1; pointer-events: none;
-    inset: -2.8rem -4rem;
-    background: radial-gradient(ellipse farthest-side, #101820f5 42%, #101820dd 66%, transparent 100%);
+  /* The words stand on black, as the instruments' do; under them the Playlist comes up at half light, so the
+     piano roll is the one lit thing on the screen. One veil over the Playlist, eased with no edge to see. */
+  .studio__world::after {
+    content: ''; position: absolute; inset: 0; z-index: -1; pointer-events: none;
+    background: linear-gradient(rgb(0 0 0 / 1.000) 14.0%, rgb(0 0 0 / 0.998) 17.4%, rgb(0 0 0 / 0.988) 20.9%, rgb(0 0 0 / 0.965) 24.3%, rgb(0 0 0 / 0.928) 27.7%, rgb(0 0 0 / 0.877) 31.1%, rgb(0 0 0 / 0.816) 34.6%, rgb(0 0 0 / 0.750) 38.0%, rgb(0 0 0 / 0.684) 41.4%, rgb(0 0 0 / 0.623) 44.9%, rgb(0 0 0 / 0.572) 48.3%, rgb(0 0 0 / 0.535) 51.7%, rgb(0 0 0 / 0.512) 55.1%, rgb(0 0 0 / 0.502) 58.6%, rgb(0 0 0 / 0.500) 62.0%);
   }
+  .studio__words { width: calc(100% - 2 * var(--gutter)); --on-dark-2: #e0e5e9; }
   .studio__desktop {
     position: relative; isolation: isolate; width: 100%; min-height: 0;
     display: grid; justify-items: center; align-items: center;
@@ -215,7 +238,7 @@ const CHEVRON = 'M15.6 8.4 9.9 14.5 15.6 20.6';
     --frame: #4e585e; --pane: #293238; --ink: #f2f8fc; --grid: #42545f;
     box-sizing: border-box; width: calc(var(--keys) + var(--step) * var(--steps) + var(--sb) + 2 * var(--rim) + 6px);
     padding: 0 var(--rim) var(--rim); border: 1px solid #374146; position: relative;
-    background: var(--frame); color: var(--ink); box-shadow: 0 30px 80px -20px #000;
+    background: var(--frame); color: var(--ink); box-shadow: 0 0 0 1px #0009, 0 2px 6px #0006, 0 50px 110px -18px #000;
     font: 400 calc(20 * var(--u)) / 1 'Segoe UI', 'Roll Sans', system-ui, sans-serif; letter-spacing: .02em;
     -webkit-text-stroke: calc(.25 * var(--u)) currentColor; text-align: left;
     transform-origin: 50% 60%; user-select: none;
@@ -416,10 +439,11 @@ const CHEVRON = 'M15.6 8.4 9.9 14.5 15.6 20.6';
   }
 
   @media (max-width: 760px) {
-    .studio__stage { gap: clamp(1.75rem, 5svh, 3rem); padding-top: max(4.5rem, 8svh); }
-    .studio[data-held] .studio__stage { padding-top: calc(env(safe-area-inset-top, 0px) + clamp(4.25rem, 7.5svh, 4.75rem)); }
+    .studio__world { gap: clamp(1.75rem, 5svh, 3rem); padding-top: max(4.5rem, 8svh); }
+    .studio[data-held] .studio__world { padding-top: calc(env(safe-area-inset-top, 0px) + clamp(4.25rem, 7.5svh, 4.75rem)); }
   }
   @media (forced-colors: active) {
+    .studio__world::after { display: none; }
     .fl { border-color: CanvasText; }
     .note { border-color: CanvasText; }
   }

@@ -5,6 +5,7 @@ import { createTurntable } from './turntable';
 import { createCopyLayer } from './copy-layer';
 import { createOutlineLayer, type TurningCopy } from './outline-layer';
 import { Spring, VelocityTracker } from '../v4/physics';
+import { handoffDistance, lineupBridge, onJoinChange, type LineupBridge, type LineupPiece } from '../fl-studio/handoff';
 
 /* The instruments on the music page (LineupStory.astro). The heading and both instruments share a
    pinned stage. The timeline is measured in the scroll a line takes to fill (text-fill.ts):
@@ -420,7 +421,8 @@ onPage(signal => {
       span.move = MOVE;
       span.end = span.moveAt + span.move + guitarHold + FILL_HOLD;
     }
-    show.style.height = `${(stage.offsetHeight + span.end * line).toFixed(1)}px`;
+    // Where FL Studio follows, the screen stays held while the row is handed over to it (fl-studio/handoff.ts).
+    show.style.height = `${(stage.offsetHeight + span.end * line + handoffDistance(stage.offsetHeight)).toFixed(1)}px`;
     // Every piece of the row leans on its foot.
     for (const element of [...pieces, bass.still, guitar.still]) element.style.transformOrigin = `50% ${(50 + 50 / 1.1).toFixed(2)}%`;
     still();
@@ -632,11 +634,14 @@ onPage(signal => {
       flatCopies.push({
         svg: copy.svg, colour: copy.colour, yaw: () => following.get(copy.svg)!.yaw, guitarShare: Number(scene === guitar),
         restX, x: () => rowX() + restX() + (scene === bass ? dealt(copy) : 0),
-        opacity: () => scene === guitar ? Number(shown > span.moveAt) : bassOpacity(copy.rank),
+        opacity: () => scene === guitar ? Number(shown > span.moveAt && !handed) : bassOpacity(copy.rank),
         lean: () => lean.get(copy.svg) ?? 0,
       });
     }
   }
+  // Handed over to FL Studio, the guitar's copies are drawn there; covered by it, nothing here is drawn at all.
+  let handed = false;
+  let covered = false;
   let copyLayer: ReturnType<typeof createCopyLayer> = null;
 
   let outlineLayer: ReturnType<typeof createOutlineLayer> = null;
@@ -856,7 +861,7 @@ onPage(signal => {
 
     // The hand: a scene's instrument is free when its turn is complete.
     stand(bass, bassProgress > .995 && move <= 0);
-    stand(guitar, move === 1);
+    stand(guitar, move === 1 && !handed);
   }
 
   // Use native detail while the phone keeps pace. Sustained late frames lower only the moving
@@ -903,7 +908,7 @@ onPage(signal => {
     const dt = elapsed ? Math.min(.05, elapsed / 1000) : 1 / 60;
     last = now;
     let moving = false;
-    if (enabled && near) {
+    if (enabled && near && !covered) {
       const raw = Math.min(span.end, Math.max(0, (scrollY - pinStart) / line));
       const snap = shown < 0;
       const repaintIntro = snap || shown < introEnd;
@@ -923,7 +928,7 @@ onPage(signal => {
       draw(shown);
       const turning = turnCopies(dt, snap);
       if (turning) moving = true;
-      const canStrip = !!slideStrip && bass.angle === 0 && guitar.angle === 0
+      const canStrip = !!slideStrip && !handed && bass.angle === 0 && guitar.angle === 0
         && bass.yaw === THREE_QUARTER_YAW && guitar.yaw === THREE_QUARTER_YAW
         && (shown >= span.moveAt || (!turning && shown >= introEnd + span.bass));
       showSlideStrip(canStrip);
@@ -951,6 +956,54 @@ onPage(signal => {
     else if (!queued) last = 0;
   }
   function request() { if (!queued) queued = requestAnimationFrame(tick); }
+
+  // The hand-off to FL Studio (fl-studio/handoff.ts): the guitar's row, left to right, as it stands now.
+  const handing = [...guitar.copies].sort((a, b) => a.side * a.rank - b.side * b.rank);
+  const lent = [...handing.slice(0, 3), null, ...handing.slice(3)].map(copy => ({
+    copy, yaw: NaN, stride: 0, buffer: new Float32Array(POINTS * 2),
+    piece: { x: 0, y: 0, size: 1, colour: copy?.colour ?? null, lean: 0, points: new Float32Array(0) } as LineupPiece,
+  }));
+  const bridge: LineupBridge = {
+    view: VIEW,
+    foot: .5 + .5 / FRAME_WIDTH,
+    near: () => near && enabled,
+    settled: () => shown >= span.end - .002,
+    pieces() {
+      const data = outlines.get(guitar);
+      if (!enabled || !data?.length) return [];
+      const travel = rowX() + reach;
+      const stride = narrow.matches ? 2 : 1;
+      return lent.map(item => {
+        const { copy, piece } = item;
+        const follower = copy && following.get(copy.svg);
+        const yaw = follower && !Number.isNaN(follower.yaw) ? follower.yaw : guitar.yaw;
+        if (yaw !== item.yaw || stride !== item.stride) {
+          item.yaw = yaw;
+          item.stride = stride;
+          piece.points = shapeAt(data, yaw, item.buffer, stride);
+        }
+        const slot = copy ? copy.slot : guitar.centre;
+        piece.x = slot.x + travel;
+        piece.y = slot.y;
+        piece.size = slot.size;
+        piece.lean = lean.get(copy ? copy.svg : guitar.canvas) ?? 0;
+        return piece;
+      });
+    },
+    take(on) {
+      if (on === handed) return;
+      handed = on;
+      guitar.element.classList.toggle('is-handed', on);
+      if (near) request();
+    },
+    cover(on) {
+      if (on === covered) return;
+      covered = on;
+      if (!on && near) request();
+    },
+  };
+  lineupBridge.current = bridge;
+  onJoinChange(() => { size = ''; resized(); }, signal);
 
   // The hand.
   for (const scene of scenes) {
@@ -1072,6 +1125,8 @@ onPage(signal => {
   mobileView.addEventListener('change', measure, { signal });
   signal.addEventListener('abort', () => {
     stopped = true;
+    if (lineupBridge.current === bridge) lineupBridge.current = null;
+    guitar.element.classList.remove('is-handed');
     clearTimeout(warmTimer);
     cancelAnimationFrame(queued);
     cancelAnimationFrame(stripTimer);

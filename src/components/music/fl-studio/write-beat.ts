@@ -1,5 +1,6 @@
 import { onPage } from '@/scripts/page';
 import { clamp, Spring } from '../v4/physics';
+import { createHandoff, handoffDistance, lineupBridge, onJoinChange } from './handoff';
 import { FILL_HOLD, clearTextFill, measureFillLine, measureTextFill, paintTextFill, type LitLine } from '../v4/text-fill';
 
 const ease = (n: number) => {
@@ -23,6 +24,14 @@ onPage(signal => {
   const notes = [...section.querySelectorAll<HTMLElement>('.note')].map(el => ({
     el, key: el.dataset.key!, start: startOf(el, WRITE), k: 1, shown: -1,
   }));
+  // Joined to the instruments, the guitar's row lands as the notes that start the melody, left to right
+  // (handoff.ts): step and key of each, the real guitar's the long note under the first three.
+  const FLOWN = [[0, 72], [3, 67], [6, 75], [0, 63], [8, 74], [12, 67], [14, 68]] as const;
+  const flown = FLOWN.map(([step, key]) => notes.find(note => Number(note.el.dataset.step) === step && Number(note.key) === key)!.el);
+  const handoff = createHandoff(stage, fl, flown);
+  let joined = 0; // the scroll the hand-off takes, px; 0 when this chapter stands alone
+  let snap = true;
+  let lit = 0; // lines of the words already lit when the chapter's own scroll begins
   const keys = [...section.querySelectorAll<HTMLElement>('.fl__keys [data-key]')]
     .map(el => ({ el, notes: notes.filter(note => note.key === el.dataset.key), down: false }))
     .filter(key => key.notes.length);
@@ -41,13 +50,31 @@ onPage(signal => {
   let lead = 0;
 
   function measure() {
+    joined = motion.matches ? handoffDistance(stage.offsetHeight) : 0;
+    section!.toggleAttribute('data-joined', joined > 0);
+    section!.style.setProperty('--studio-handoff', `${joined}px`);
+    section!.style.setProperty('--studio-overlap', `${joined ? stage.offsetHeight + joined : 0}px`);
+    // The pencil starts where the flown notes end: the rest of the two bars, over the same stretch of scroll.
+    for (const note of notes) {
+      const step = Number(note.el.dataset.step);
+      note.start = joined ? WRITE.start + Math.max(0, step - 8) / 24 * WRITE.sweep : startOf(note.el, WRITE);
+      note.shown = -1;
+      if (joined && handoff.flown.has(note.el)) { note.k = 1; note.el.style.clipPath = ''; }
+    }
+    if (joined) handoff.measure();
+    else handoff.clear();
+    snap = true;
     if (motion.matches) {
-      lines = passages.flatMap(measureTextFill);
+      const filled = passages.map(measureTextFill);
+      lines = filled.flat();
+      // Joined, the playhead lights the title as it passes it; the scroll then fills the story.
+      lit = joined ? filled[0]!.length : 0;
       lineDistance = measureFillLine(stage);
-      section!.style.setProperty('--studio-fill-travel', `${(lines.length + FILL_HOLD) * lineDistance}px`);
+      section!.style.setProperty('--studio-fill-travel', `${(lines.length - lit + FILL_HOLD) * lineDistance}px`);
     } else {
       passages.forEach(clearTextFill);
       lines = [];
+      lit = 0;
       section!.style.removeProperty('--studio-fill-travel');
     }
     travel = section!.offsetHeight - stage.offsetHeight;
@@ -58,20 +85,36 @@ onPage(signal => {
     }
   }
 
+  // Joined, the screen is held from the hand-off's first frame: progress runs over the hand-off and then the chapter.
   function readProgress() {
+    if (joined) return clamp(-section!.getBoundingClientRect().top / Math.max(1, travel), 0, 1);
     return clamp((lead - section!.getBoundingClientRect().top) / Math.max(1, lead + travel), 0, 1);
   }
 
-  function paint(p: number) {
+  function paint(progress: number, dt = 0) {
+    let p = progress;
+    let moving = false;
+    if (joined) {
+      // The playhead's pass first; then the chapter as it is told alone, from the moment its screen was held.
+      const scrolled = progress * travel;
+      const t = scrolled / joined;
+      moving = handoff.paint(t, dt, snap, Math.max(0, section!.getBoundingClientRect().top));
+      section!.toggleAttribute('data-arrived', t >= 1);
+      p = (lead + scrolled - joined) / Math.max(1, lead + travel - joined);
+      fl.style.opacity = fl.style.transform = '';
+    } else {
+      // The window arrives as a thing: a little smaller and lower, growing into its place as it fades in.
+      const here = ease((p - ARRIVE.start) / ARRIVE.each);
+      fl.style.opacity = String(here);
+      fl.style.transform = here >= 1 ? '' : `translate3d(0,${((1 - here) * 28).toFixed(2)}px,0) scale(${(.955 + .045 * here).toFixed(4)})`;
+    }
+    snap = false;
     // The roll starts arriving on approach. The text starts filling when the stage pins.
-    const pinnedScroll = p * (lead + travel) - lead;
-    paintTextFill(lines, pinnedScroll / lineDistance);
-    // The window arrives as a thing: a little smaller and lower, growing into its place as it fades in.
-    const here = ease((p - ARRIVE.start) / ARRIVE.each);
-    fl.style.opacity = String(here);
-    fl.style.transform = here >= 1 ? '' : `translate3d(0,${((1 - here) * 28).toFixed(2)}px,0) scale(${(.955 + .045 * here).toFixed(4)})`;
+    const pinnedScroll = p * (lead + travel - joined) - lead;
+    paintTextFill(lines, lit + Math.max(0, pinnedScroll / lineDistance));
     // Each note is drawn from its left edge, like dragging the pencil out to its length.
     for (const note of notes) {
+      if (joined && handoff.flown.has(note.el)) continue; // the hand-off's
       const k = note.k = Math.round(ease((p - note.start) / WRITE.each) * 1000) / 1000;
       if (k === note.shown) continue;
       note.shown = k;
@@ -92,16 +135,21 @@ onPage(signal => {
       stem.stem.style.transform = k >= 1 ? '' : `scaleY(${k})`;
       stem.head.style.transform = k >= 1 ? '' : `translate3d(0,${((1 - k) * stem.height).toFixed(2)}px,0)`;
     }
+    return moving;
   }
 
   function tick(now: number) {
     frame = 0;
     const dt = lastFrame ? Math.min(.05, (now - lastFrame) / 1000) : 1 / 60;
     lastFrame = now;
-    progress.to(readProgress());
+    // Not before the instruments have come to rest on their last frame: the row is handed over standing still.
+    const bridge = joined ? lineupBridge.current : null;
+    const target = readProgress();
+    const waiting = !!bridge?.near() && !bridge.settled() && target * travel < joined;
+    progress.to(waiting ? 0 : target);
     const settled = progress.step(dt);
-    paint(progress.value);
-    if (!settled) frame = requestAnimationFrame(tick);
+    const moving = paint(progress.value, dt);
+    if (!settled || moving || waiting) frame = requestAnimationFrame(tick);
     else lastFrame = 0;
   }
 
@@ -140,7 +188,8 @@ onPage(signal => {
       await document.fonts.ready;
       requestAnimationFrame(() => {
         if (!moved && !signal.aborted && location.hash === '#fl-studio') {
-          window.scrollTo({ top: scrollY + section.getBoundingClientRect().top, behavior: 'instant' });
+          // Joined to the instruments, the chapter's own first frame is where the hand-off ends.
+          window.scrollTo({ top: scrollY + section.getBoundingClientRect().top + (joined && joined + 1), behavior: 'instant' });
         }
       });
     };
@@ -149,10 +198,12 @@ onPage(signal => {
   }
   window.addEventListener('scroll', scroll, { passive: true, signal });
   motion.addEventListener('change', reset, { signal });
+  onJoinChange(reset, signal);
   signal.addEventListener('abort', () => {
     visibility.disconnect();
     resize.disconnect();
     cancelAnimationFrame(frame);
+    handoff.clear();
     passages.forEach(clearTextFill);
   }, { once: true });
 });
