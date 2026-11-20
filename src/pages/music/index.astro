@@ -17,7 +17,12 @@ import Caption from '@/components/music/v4/Caption.astro';
 import OpenRecord from '@/components/music/v4/OpenRecord.astro';
 import '@/components/music/v4/listening-bar.css';
 ---
-<MusicShell title="Music">
+<MusicShell title="Music" shareImage={{
+  path: '/music/preview.jpg',
+  width: 1200,
+  height: 630,
+  alt: '“I love music.” above a row of vinyl sleeves, with Kendrick Lamar’s good kid, m.A.A.d city in the middle.',
+}}>
   <link slot="head" rel="license" href="/music/instruments/CREDITS.md" />
   <main id="main" class="v4" data-music-page data-intro>
     <div class="v4-page" data-v4-page>
