@@ -89,26 +89,20 @@ export function initScroll(signal: AbortSignal) {
     steps.forEach((li, i) => li.classList.toggle('is-on', i === step));
   }
 
-  const touchViewport = matchMedia('(hover: none) and (pointer: coarse)');
-  // Mobile Safari can move a sticky layer by a device pixel as the page scrolls underneath it.
+  // Sticky positioning handles the whole hold. Only the light needs a scroll-timeline fallback.
   const dividers = [...document.querySelectorAll<HTMLElement>('[data-divider]')].map((section) => ({
     section,
     pin: section.querySelector<HTMLElement>('.divider__pin')!,
     light: section.querySelector<HTMLElement>('.divider__light')!,
     pinH: 0,
-    pinTop: 0,
     fill: -1,
   }));
   let dividersCss = false;
 
-  function writeDividers(rects: DOMRect[], vh: number, css: boolean) {
-    if (reduce.matches || (css && !touchViewport.matches)) return;
-    dividers.forEach((d, i) => {
-      const rect = rects[i]!;
-      if (touchViewport.matches) {
-        d.section.toggleAttribute('data-viewport-pin', rect.top <= d.pinTop && rect.bottom >= d.pinTop + d.pinH);
-      }
-      if (css || !onScreen(rect, vh)) return;
+  function writeDividers(rects: DOMRect[], vh: number) {
+    rects.forEach((rect, i) => {
+      if (!onScreen(rect, vh)) return;
+      const d = dividers[i]!;
       const hold = held(rect, d.pinH);
       const fill = clamp(hold / 0.7);
       if (fill !== d.fill) {
@@ -204,11 +198,11 @@ export function initScroll(signal: AbortSignal) {
   // Heights the progress is measured against, read once per resize rather than every frame.
   function measure() {
     dividersCss = !!dividers[0]?.light.getAnimations().some((a) => (a as CSSAnimation).animationName === 'divider-fill');
-    for (const d of dividers) {
-      d.pinH = d.pin.getBoundingClientRect().height;
-      d.pinTop = parseFloat(getComputedStyle(d.pin).top) || 0;
-      d.fill = -1;
-      if (!touchViewport.matches || reduce.matches) d.section.removeAttribute('data-viewport-pin');
+    if (!dividersCss && !reduce.matches) {
+      for (const d of dividers) {
+        d.pinH = d.pin.getBoundingClientRect().height;
+        d.fill = -1;
+      }
     }
     // Phones pin only the sheet and the steps; there the hold runs through their run, not the section.
     const pinOnly = !!scanPinEl && getComputedStyle(scanPinEl).position === 'sticky';
@@ -267,12 +261,12 @@ export function initScroll(signal: AbortSignal) {
       return s.section.getBoundingClientRect();
     });
     const scanRead = readScan(vh);
-    const dividerRects = dividersCss && !touchViewport.matches ? [] : dividers.map((d) => d.section.getBoundingClientRect());
+    const dividerRects = dividersCss || reduce.matches ? [] : dividers.map((d) => d.section.getBoundingClientRect());
     const tl = readTimeline(vh);
     // ...then write.
     writeStatements(statementRects);
     writeScan(scanRead);
-    writeDividers(dividerRects, vh, dividersCss);
+    writeDividers(dividerRects, vh);
     writeTimeline(tl);
   }
   function queue() {
@@ -282,7 +276,6 @@ export function initScroll(signal: AbortSignal) {
   addEventListener('scroll', queue, { passive: true, signal });
   function resized() { dirty = true; queue(); }
   addEventListener('resize', resized, { signal });
-  touchViewport.addEventListener('change', resized, { signal });
   reduce.addEventListener('change', () => {
     root.classList.toggle('reduce', reduce.matches);
     if (reduce.matches) [reveal, tex, beam].forEach((el) => { el?.style.removeProperty('transform'); el?.style.removeProperty('opacity'); });
