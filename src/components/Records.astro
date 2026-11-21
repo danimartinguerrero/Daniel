@@ -12,7 +12,7 @@ const mins = (ms: number) => `${Math.floor(ms / 60000)}:${String(Math.round((ms 
 ---
 <div class="records">
   <button class="lp lp--featured" type="button" data-play-uri={f.uri} data-play-title={f.title} data-play-artist={f.artist} data-play-cover={href(f.cover ?? '')} data-record>
-    <span class="lp__stage">
+    <span class="lp__stage" data-wave="bob">
       <span class="lp__disc" aria-hidden="true"><span class="lp__label" style={`background-image: url('${href(f.cover ?? '')}')`}></span></span>
       <img class="lp__sleeve" src={href(f.cover ?? '')} alt="" width="640" height="640" loading="lazy" decoding="async" />
     </span>
@@ -28,7 +28,7 @@ const mins = (ms: number) => `${Math.floor(ms / 60000)}:${String(Math.round((ms 
     {spotify.playlists.map((p) => (
       <li>
         <button class="lp" type="button" data-play-uri={p.uri} data-play-title={p.name} data-play-artist={`Lista · ${p.count} canciones`} data-play-cover={href(p.cover ?? '')} data-record>
-          <span class="lp__stage">
+          <span class="lp__stage" data-wave="bob">
             <span class="lp__disc" aria-hidden="true"><span class="lp__label" style={`background-image: url('${href(p.cover ?? '')}')`}></span></span>
             <img class="lp__sleeve" src={href(p.cover ?? '')} alt="" width="640" height="640" loading="lazy" decoding="async" />
           </span>

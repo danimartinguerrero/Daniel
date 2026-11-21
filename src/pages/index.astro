@@ -30,6 +30,11 @@ const links = {
   tiktok: 'https://www.tiktok.com/@_.danielmg',
 };
 const recent = entries.filter((e, i, all) => e.poster && all.findIndex((o) => o.slug === e.slug) === i).slice(0, 6);
+import photosMeta from '@/data/photos.json';
+const photo = (id: keyof typeof photosMeta) => {
+  const m = photosMeta[id]; const w = m.w, big = w[w.length - 1];
+  return { src: href(`/photos/${id}-${w[0]}.webp`), srcset: w.map((x) => `${href(`/photos/${id}-${x}.webp`)} ${x}w`).join(', '), width: w[0], height: Math.round(w[0] / m.ratio), loading: 'lazy' as const, decoding: 'async' as const, 'data-zoom': true, 'data-full': href(`/photos/${id}-${big}.webp`) };
+};
 const img = (name: string) => ({
   src: href(`/notes/${name}-800.webp`),
   srcset: `${href(`/notes/${name}-800.webp`)} 800w, ${href(`/notes/${name}-1600.webp`)} 1600w`,
@@ -140,9 +145,9 @@ const img = (name: string) => ({
         <p class="body">Lo que escribo a mano en clase acaba en apuntes formales: cada definición en su caja, cada paso justificado, las figuras redibujadas. Fondo negro, azul, lavanda y dorado: el mismo estilo para toda la carrera.</p>
       </div>
       <div class="pages sec__wide">
-        <figure class="page"><img {...img('hermite-cuaderno')} sizes="(max-width: 900px) 46vw, 30vw" alt="Página manuscrita: la ecuación de Hermite resuelta por series, hasta la fórmula de Rodrigues" width="800" height="1067" loading="lazy" decoding="async" /><figcaption class="label">El cuaderno</figcaption></figure>
-        <figure class="page"><img {...img('hermite-portada')} sizes="(max-width: 900px) 46vw, 30vw" alt="Portada de los apuntes Operador de Sturm–Liouville y ecuación de Hermite, con las funciones de Hermite en un pozo parabólico" width="800" height="1132" loading="lazy" decoding="async" /><figcaption class="label">Sturm–Liouville y Hermite</figcaption></figure>
-        <figure class="page"><img {...img('hermite-oscilador')} sizes="(max-width: 900px) 46vw, 30vw" alt="Página de los apuntes con el oscilador armónico cuántico y la fórmula de Rodrigues en una caja" width="800" height="1132" loading="lazy" decoding="async" /><figcaption class="label">Página 9, el oscilador</figcaption></figure>
+        <figure class="page"><img data-wave="bob" {...img('hermite-cuaderno')} sizes="(max-width: 900px) 46vw, 30vw" alt="Página manuscrita: la ecuación de Hermite resuelta por series, hasta la fórmula de Rodrigues" width="800" height="1067" loading="lazy" decoding="async" /><figcaption class="label">El cuaderno</figcaption></figure>
+        <figure class="page"><img data-wave="bob" {...img('hermite-portada')} sizes="(max-width: 900px) 46vw, 30vw" alt="Portada de los apuntes Operador de Sturm–Liouville y ecuación de Hermite, con las funciones de Hermite en un pozo parabólico" width="800" height="1132" loading="lazy" decoding="async" /><figcaption class="label">Sturm–Liouville y Hermite</figcaption></figure>
+        <figure class="page"><img data-wave="bob" {...img('hermite-oscilador')} sizes="(max-width: 900px) 46vw, 30vw" alt="Página de los apuntes con el oscilador armónico cuántico y la fórmula de Rodrigues en una caja" width="800" height="1132" loading="lazy" decoding="async" /><figcaption class="label">Página 9, el oscilador</figcaption></figure>
       </div>
       <figure class="fig sec__wide" data-osc-root>
         <div class="fig__stage"><Oscillator /></div>
@@ -200,8 +205,6 @@ const img = (name: string) => ({
       { id: 'ds9-ngc-2275', title: 'NGC 2275 y NGC 2274', note: 'Arp 140: medir una galaxia junto a su compañera' },
       { id: 'ds9-ngc-2276', title: 'NGC 2276', note: 'Espiral Sc, con una estrella brillante al lado' },
       { id: 'ds9-ngc-3147', title: 'NGC 3147', note: 'Espiral Sb, que se aleja a 2 900 km/s' },
-      { id: 'arp-140', title: 'Arp 140', note: 'NGC 2275 y NGC 2274, dos galaxias que interactúan' },
-      { id: 'arp-94', title: 'Arp 94', note: 'NGC 3227 y NGC 3226' },
     ]} />
     <Photos label="En el laboratorio" items={[
       { id: 'laser-difraccion', title: 'Difracción de un láser', note: 'Práctica 3 · Láser y espectroscopía' },
@@ -250,19 +253,30 @@ const img = (name: string) => ({
             <span class="member__what">Miembro individual hasta septiembre de 2027 · La sociedad internacional de óptica y fotónica, fundada en 1916.</span>
           </a>
         </div>
-        <ol class="rows">
-          <li class="row"><p class="row__when">Nov 2026</p><p class="row__what">«Del bit al qubit: una nueva forma de resolver problemas»</p><p class="row__more">Taller de tres horas de Nacho Benito Fiz, director de Data, IA y Computación Cuántica en NTT DATA, en la Facultad de Ciencias: superposición, entrelazamiento e interferencia, los algoritmos de Grover y Shor, y lo que la computación cuántica puede aportar más allá del <em>hype</em>.</p></li>
-        </ol>
+      </div>
+    </div>
+    <div class="wrap sec__grid seminar">
+      <div class="seminar__text">
+        <p class="label">Taller · Nov 2026 · Facultad de Ciencias</p>
+        <h3 class="seminar__title">Del bit al qubit.</h3>
+        <p class="seminar__sub">Una nueva forma de resolver problemas</p>
+        <p class="body">Tres horas con Nacho Benito Fiz, director de Data, IA y Computación Cuántica en NTT DATA, que estudió Física en estas mismas aulas: superposición, entrelazamiento e interferencia, los algoritmos de Grover y Shor, y lo que la computación cuántica puede aportar de verdad, más allá del <em>hype</em>.</p>
         <blockquote class="feynman">
           <p>«La naturaleza no es clásica, y si quieres simularla, más vale que lo hagas de forma cuántica.»</p>
           <p class="label">Richard Feynman, 1981</p>
         </blockquote>
       </div>
+      <div class="seminar__media">
+        <figure class="seminar__a">
+          <span class="seminar__frame"><img {...photo('seminario-qubit-portada')} sizes="(max-width: 900px) 92vw, 52vw" alt="Portada del taller: Del bit al qubit, cuando cambiar las reglas cambia lo que podemos resolver" data-group="seminario" data-caption="Del bit al qubit — Universidad de Salamanca y NTT DATA" data-wave="pan" /></span>
+          <figcaption class="label">La portada</figcaption>
+        </figure>
+        <figure class="seminar__b">
+          <span class="seminar__frame"><img {...photo('seminario-qubit-grupo')} sizes="(max-width: 900px) 70vw, 30vw" alt="Nacho Benito Fiz con los estudiantes del taller, delante de la proyección" data-group="seminario" data-caption="Tras el taller, con Nacho Benito Fiz" data-wave="pan" /></span>
+          <figcaption class="label">Tras el taller</figcaption>
+        </figure>
+      </div>
     </div>
-    <Photos label="Del bit al qubit" items={[
-      { id: 'seminario-qubit-portada', title: 'Del bit al qubit', note: 'Universidad de Salamanca y NTT DATA' },
-      { id: 'seminario-qubit-grupo', title: 'Tras el taller', note: 'Con Nacho Benito Fiz, en la Facultad de Ciencias' },
-    ]} />
     <div class="wrap sec__grid">
       <figure class="fig sec__wide">
         <div class="fig__stage"><Michelson /></div>
@@ -419,7 +433,7 @@ const img = (name: string) => ({
         {recent.map((e) => (
           <li>
             <a href={e.url} class="strip__a">
-              <img {...poster(e, '(max-width: 700px) 30vw, 15vw')} alt={`${e.title}${e.year ? ` (${e.year})` : ''}`} loading="lazy" decoding="async" />
+              <img data-wave="bob" {...poster(e, '(max-width: 700px) 30vw, 15vw')} alt={`${e.title}${e.year ? ` (${e.year})` : ''}`} loading="lazy" decoding="async" />
               <span class="strip__r" aria-label={`${e.rating} de 5`}>{stars(e.rating)}</span>
             </a>
           </li>
@@ -543,6 +557,19 @@ const img = (name: string) => ({
   .member:hover .member__logo img { opacity: 1; }
   .member__what { font-size: 15px; line-height: 1.55; max-width: 40ch; }
   @media (max-width: 700px) { .members { grid-template-columns: 1fr; } }
+  .seminar { margin-top: clamp(64px, 8vw, 112px); align-items: start; row-gap: 40px; }
+  .seminar__text { grid-column: 1 / span 5; position: sticky; top: calc(var(--head) + 32px); }
+  .seminar__media { grid-column: 7 / -1; display: grid; }
+  .seminar__title { margin-top: 14px; font-family: var(--serif); font-weight: 300; font-size: clamp(2.4rem, 4.6vw, 4rem); line-height: 0.98; letter-spacing: -0.03em; }
+  .seminar__sub { margin: 8px 0 22px; font-family: var(--serif); font-style: italic; font-size: clamp(1.1rem, 1.5vw, 1.35rem); color: var(--ink-2); }
+  .seminar__media figure { margin: 0; display: grid; gap: 10px; }
+  .seminar__frame { display: block; overflow: hidden; outline: 1px solid var(--line); outline-offset: -1px; }
+  .seminar__media img { display: block; width: 100%; height: auto; cursor: zoom-in; }
+  .seminar__b { width: 64%; justify-self: end; margin-top: -14%; position: relative; z-index: 1; }
+  .seminar__b .seminar__frame { box-shadow: 0 0 0 10px var(--bg); }
+  @media (max-width: 900px) {
+    .seminar__text, .seminar__media { grid-column: 1 / -1; position: static; }
+  }
   .feynman { margin: clamp(36px, 4vw, 56px) 0 0; display: grid; gap: 12px; }
   .feynman p:first-child { font-family: var(--serif); font-weight: 300; font-style: italic; font-size: clamp(1.5rem, 2.6vw, 2.2rem); line-height: 1.2; letter-spacing: -0.01em; max-width: 30ch; }
   .sub { margin-top: clamp(72px, 9vw, 120px); }

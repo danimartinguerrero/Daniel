@@ -2,8 +2,8 @@
 /**
  * Daniel's notes and lab reports as a wave packet. The documents ride a travelling wave,
  * ψ(x, t) = e^(−x²/2σ²) sin(kx − ωt): the one at the packet's centre is large, lit and selected; the
- * envelope shrinks and dims the rest. Drag it (it carries on with some inertia), use the arrows or the
- * keyboard; left alone it drifts. Pressing the selected one opens the PDF itself — the copy the build
+ * envelope shrinks and dims the rest. Drag it (it carries on with some inertia), tap anywhere on the wave
+ * to bring the document there to the centre, or use the arrows or the keyboard; left alone it drifts. Pressing the selected one opens the PDF itself — the copy the build
  * brought from danimartinguerrero/apuntes and /fotos (scripts/apuntes.mjs), or GitHub's if it could not.
  * Without JavaScript, and for screen readers, the same documents are a plain list.
  */
@@ -56,7 +56,7 @@ const items = docs.map((i) => ({ t: i.title, s: i.subject, k: i.kind === 'inform
   .pkt__big { font-family: var(--serif); font-size: 1.6rem; color: var(--ink); font-variant-numeric: lining-nums; }
   .pkt__eq { font-family: var(--serif); font-style: italic; font-size: 1.05rem; color: var(--ink-3); }
 
-  .pkt__stage { position: relative; height: clamp(400px, 58vh, 600px); overflow: hidden; cursor: grab; touch-action: pan-y; user-select: none; -webkit-user-select: none; display: none; }
+  .pkt__stage { position: relative; height: clamp(400px, 58vh, 600px); overflow: hidden; cursor: pointer; touch-action: pan-y; user-select: none; -webkit-user-select: none; display: none; }
   .pkt__stage.is-dragging { cursor: grabbing; }
   .pkt__wave { position: absolute; inset: 0; width: 100%; height: 100%; }
   .pkt__track { position: absolute; inset: 0; }
@@ -195,6 +195,14 @@ const items = docs.map((i) => ({ t: i.title, s: i.subject, k: i.kind === 'inform
       dragged += dx; pos -= dx / spacing; vel = -(dx / spacing) / dtt; lastX = e.clientX; lastT = e.timeStamp;
     });
     const release = () => { if (!dragging) return; dragging = false; stage.classList.remove('is-dragging'); vel = Math.max(-12, Math.min(12, vel)); };
+    // A tap anywhere on the wave (not a drag) sends the packet to the document under it.
+    stage.addEventListener('click', (e) => {
+      if (Math.abs(dragged) > 6 || (e.target as HTMLElement).closest('.pkt__doc')) return;
+      const r = stage.getBoundingClientRect();
+      const spacing = Math.max(140, Math.min(240, stage.clientWidth / 6));
+      const x = (e.clientX - r.left - r.width / 2) / spacing;
+      goTo(wrap(Math.round(pos + x)));
+    });
     stage.addEventListener('pointerup', release); stage.addEventListener('pointercancel', release);
     stage.addEventListener('pointerenter', () => { hover = true; });
     stage.addEventListener('pointerleave', () => { hover = false; });

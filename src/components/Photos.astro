@@ -1,10 +1,10 @@
 ---
 /**
- * Daniel's photographs as slits. Each picture is a narrow slit; the chosen one opens wide and the others
- * stay a sliver of their image. Above them, the light that comes through: the single-slit diffraction
- * pattern I(x) ∝ sinc²(πax/λL) of the open slit — the wider it opens, the narrower its central maximum,
- * as it is. It opens under the pointer, on a press or with the arrow keys, and moves on by itself while
- * no one is looking at it. Items name a file in public/photos/ (sizes in src/data/photos.json).
+ * Daniel's photographs as plates on a light table: justified rows that fill the width, each picture at
+ * its own proportions (flex-grow by aspect ratio, so no crop). Each one develops as it comes into view,
+ * like an exposed plate: light uncovers it from the centre and the overexposure settles. Under the
+ * pointer, a loupe shows it at full resolution; pressed, it opens whole (Zoom.astro). Items name a file
+ * in public/photos/ (sizes in src/data/photos.json).
  */
 import meta from '@/data/photos.json';
 import { href } from '@/lib/paths';
@@ -13,134 +13,91 @@ interface Item { id: keyof typeof meta; title: string; note?: string }
 interface Props { items: Item[]; label: string; tall?: boolean }
 const { items, label, tall = false } = Astro.props;
 const src = (id: string, w: number) => href(`/photos/${id}-${w}.webp`);
+const group = label.toLowerCase().replace(/[^a-z0-9]+/g, '-');
 ---
-<div class:list={['slits', { 'slits--tall': tall }]} data-slits>
+<div class:list={['plates', { 'plates--tall': tall }]}>
   <div class="wrap">
-    <canvas class="slits__light" data-slits-light aria-hidden="true"></canvas>
-    <ol class="slits__row" aria-label={label}>
+    <ol class="plates__grid" aria-label={label}>
       {items.map((it, i) => {
         const m = meta[it.id];
+        const big = m.w[m.w.length - 1];
         return (
-          <li class:list={['slit', { 'is-open': i === 0 }]} data-slit data-title={it.title} data-note={it.note ?? ''}>
-            <button class="slit__btn" type="button" aria-label={`${it.title}${it.note ? `. ${it.note}` : ''}`} aria-pressed={i === 0 ? 'true' : 'false'}>
-              <img src={src(it.id, m.w[0])} srcset={m.w.map((w) => `${src(it.id, w)} ${w}w`).join(', ')}
-                sizes="(max-width: 700px) 80vw, 60vw" alt="" width={m.w[0]} height={Math.round(m.w[0] / m.ratio)}
-                loading="lazy" decoding="async" />
-            </button>
+          <li class="plate" style={`--r: ${m.ratio}`} data-plate>
+            <figure>
+              <span class="plate__frame">
+                <img src={src(it.id, m.w[0])} srcset={m.w.map((w) => `${src(it.id, w)} ${w}w`).join(', ')}
+                  sizes={`(max-width: 700px) 92vw, ${Math.round(Math.min(1, m.ratio / 3) * 100)}vw`} alt={it.title}
+                  width={m.w[0]} height={Math.round(m.w[0] / m.ratio)} loading="lazy" decoding="async" data-wave="pan"
+                  data-zoom data-full={src(it.id, big)} data-full-w={big} data-group={group} data-caption={`${it.title}${it.note ? ` — ${it.note}` : ''}`} />
+              </span>
+              <figcaption><span class="plate__n">{String(i + 1).padStart(2, '0')}</span><span class="plate__t">{it.title}</span>{it.note && <span class="plate__note">{it.note}</span>}</figcaption>
+            </figure>
           </li>
         );
       })}
+      <li class="plates__end" aria-hidden="true"></li>
     </ol>
-    <div class="slits__cap">
-      <p class="slits__n" data-slits-n>01 / {String(items.length).padStart(2, '0')}</p>
-      <p class="slits__t" data-slits-t>{items[0].title}</p>
-      <p class="slits__note" data-slits-note>{items[0].note}</p>
-      <a class="slits__full link" data-slits-full href={src(items[0].id, meta[items[0].id].w[meta[items[0].id].w.length - 1])} target="_blank" rel="noopener">Ver a tamaño completo</a>
-      <span hidden data-slits-urls>{JSON.stringify(items.map((it) => src(it.id, meta[it.id].w[meta[it.id].w.length - 1])))}</span>
-    </div>
   </div>
 </div>
 
 <style>
-  .slits { margin-top: clamp(40px, 5vw, 64px); }
-  .slits__light { display: block; width: 100%; height: 56px; }
-  .slits__row { --h: clamp(300px, 52vh, 560px); display: flex; gap: 3px; height: var(--h); }
-  .slits--tall .slits__row { --h: clamp(340px, 62vh, 660px); }
-  .slit { position: relative; flex: 1 1 0; min-width: 6px; transition: flex-grow 900ms var(--ease); }
-  .slit.is-open { flex-grow: 22; }
-  .slit__btn { display: block; width: 100%; height: 100%; padding: 0; border: 0; background: #000; cursor: pointer; overflow: hidden; position: relative; }
-  .slit__btn img { width: 100%; height: 100%; object-fit: cover; filter: grayscale(1) brightness(0.55) contrast(1.1); transition: filter 900ms var(--ease), transform 1400ms var(--ease); transform: scale(1.04); }
-  .slit.is-open .slit__btn img { filter: none; transform: scale(1); }
-  .slit:not(.is-open):hover .slit__btn img { filter: grayscale(0.4) brightness(0.8); }
-  /* The jaws of each slit: two hairlines, gold on the open one. */
-  .slit__btn::before, .slit__btn::after { content: ''; position: absolute; top: 0; bottom: 0; width: 1px; background: var(--line-2); z-index: 1; transition: background-color 600ms var(--ease); }
-  .slit__btn::before { left: 0; } .slit__btn::after { right: 0; }
-  .slit.is-open .slit__btn::before, .slit.is-open .slit__btn::after { background: var(--gold); }
-  .slits__cap { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: baseline; gap: 4px 20px; padding-top: 16px; }
-  .slits__n { font-family: var(--mono); font-size: 11.5px; color: var(--gold); font-variant-numeric: tabular-nums; grid-row: span 2; }
-  .slits__t { font-family: var(--serif); font-weight: 300; font-size: clamp(1.3rem, 2.2vw, 1.8rem); line-height: 1.15; letter-spacing: -0.01em; }
-  .slits__note { grid-column: 2; font-size: 14px; color: var(--ink-3); }
-  .slits__full { grid-column: 3; grid-row: 1; font-family: var(--mono); font-size: 11.5px; white-space: nowrap; }
-  @media (max-width: 700px) {
-    .slit { min-width: 4px; }
-    .slit.is-open { flex-grow: 40; }
-    .slits__cap { grid-template-columns: auto minmax(0, 1fr); }
-    .slits__full { grid-column: 2; grid-row: auto; }
+  .plates { margin-top: clamp(40px, 5vw, 64px); }
+  /* Justified rows: every plate grows in proportion to its aspect ratio from a base height, so a row's
+     plates share one height and keep their shape; the last row doesn't stretch (the filler soaks it up). */
+  .plates__grid { --h: clamp(200px, 26vw, 330px); display: flex; flex-wrap: wrap; gap: clamp(10px, 1.2vw, 18px); }
+  .plates--tall .plates__grid { --h: clamp(220px, 30vw, 400px); }
+  .plate { flex: var(--r) var(--r) calc(var(--h) * var(--r)); min-width: 0; }
+  .plates__end { flex: 1000 1 0; height: 0; }
+  .plates__grid.is-laid .plate { flex: none; }
+  .plates__grid.is-laid .plates__end { display: none; }
+  .plate figure { margin: 0; display: grid; gap: 10px; }
+  .plate__frame { display: block; aspect-ratio: var(--r); overflow: hidden; background: #050506; outline: 1px solid var(--line); outline-offset: -1px; }
+  .plate__frame img { display: block; width: 100%; height: 100%; cursor: zoom-in; }
+  .plate figcaption { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 0 10px; align-items: baseline; font-size: 13px; line-height: 1.4; }
+  .plate__n { grid-row: span 2; font-family: var(--mono); font-size: 10.5px; color: var(--gold); }
+  .plate__t { font-family: var(--serif); font-size: 1.02rem; color: var(--ink); }
+  .plate__note { color: var(--ink-3); }
+  /* Developing: light spreads from the centre of the plate and the overexposure settles. */
+  @media (prefers-reduced-motion: no-preference) {
+    :global(html.js) .plate__frame img { clip-path: circle(0% at 50% 50%); filter: brightness(2.6) contrast(0.6) saturate(0); transition: clip-path 1500ms cubic-bezier(0.65, 0, 0.35, 1), filter 2600ms var(--ease) 300ms; }
+    :global(html.js) .plate.is-in .plate__frame img { clip-path: circle(75% at 50% 50%); filter: none; }
   }
-  @media (prefers-reduced-motion: reduce) { .slit, .slit__btn img { transition: none; } }
+  @media (max-width: 700px) {
+    .plates__grid { --h: 170px; }
+  }
 </style>
 
 <script>
-  import { reduceMotion, surface } from '@/lib/figure';
-
-  document.querySelectorAll<HTMLElement>('[data-slits]').forEach((root) => {
-    const slits = [...root.querySelectorAll<HTMLElement>('[data-slit]')];
-    const n = root.querySelector<HTMLElement>('[data-slits-n]')!, t = root.querySelector<HTMLElement>('[data-slits-t]')!;
-    const note = root.querySelector<HTMLElement>('[data-slits-note]')!, full = root.querySelector<HTMLAnchorElement>('[data-slits-full]')!;
-    const urls = JSON.parse(root.querySelector<HTMLElement>('[data-slits-urls]')!.textContent!) as string[];
-    const light = surface(root.querySelector<HTMLCanvasElement>('[data-slits-light]')!);
-    const row = root.querySelector<HTMLElement>('.slits__row')!;
-    const still = reduceMotion();
-    let open = 0, hovering = false, visible = false;
-
-    const set = (i: number) => {
-      if (i === open) return;
-      open = i;
-      slits.forEach((s, k) => { s.classList.toggle('is-open', k === i); s.querySelector('button')!.setAttribute('aria-pressed', String(k === i)); });
-      n.textContent = `${String(i + 1).padStart(2, '0')} / ${String(slits.length).padStart(2, '0')}`;
-      t.textContent = slits[i].dataset.title!; note.textContent = slits[i].dataset.note!; full.href = urls[i];
-      burst = 1.4; // redraw the light while the slit opens
+  // Justified rows, laid out properly: plates are added to a row until, scaled to fill the width, the
+  // row would be no taller than the target height; the last row keeps the target height and is not
+  // stretched. (Without the script, CSS flex-grow gives an approximation.)
+  document.querySelectorAll<HTMLElement>('.plates__grid').forEach((grid) => {
+    const plates = [...grid.querySelectorAll<HTMLElement>('[data-plate]')];
+    const ratios = plates.map((p) => parseFloat(p.style.getPropertyValue('--r')));
+    const layout = () => {
+      const cs = getComputedStyle(grid);
+      const W = grid.clientWidth, gap = parseFloat(cs.columnGap) || 12;
+      const probe = document.createElement('div'); probe.style.height = 'var(--h)'; grid.append(probe);
+      const target = probe.getBoundingClientRect().height || 280; probe.remove();
+      let row: number[] = [], sum = 0;
+      const place = (idx: number[], h: number) => idx.forEach((i) => { plates[i].style.width = `${Math.floor(ratios[i] * h)}px`; });
+      ratios.forEach((r, i) => {
+        row.push(i); sum += r;
+        const h = (W - gap * (row.length - 1)) / sum;
+        if (h <= target) { place(row, h); row = []; sum = 0; }
+      });
+      if (row.length) place(row, Math.min(target, (W - gap * (row.length - 1)) / sum));
+      grid.classList.add('is-laid');
     };
-    slits.forEach((s, i) => {
-      const b = s.querySelector('button')!;
-      b.addEventListener('click', () => set(i));
-      if (matchMedia('(hover: hover) and (pointer: fine)').matches) s.addEventListener('pointerenter', () => set(i));
-    });
-    row.addEventListener('pointerenter', () => { hovering = true; });
-    row.addEventListener('pointerleave', () => { hovering = false; });
-    root.addEventListener('keydown', (e) => {
-      if (e.key === 'ArrowRight') { set((open + 1) % slits.length); slits[open].querySelector('button')!.focus(); e.preventDefault(); }
-      if (e.key === 'ArrowLeft') { set((open - 1 + slits.length) % slits.length); slits[open].querySelector('button')!.focus(); e.preventDefault(); }
-    });
-
-    // The diffraction pattern of the open slit, centred on it: I(x) ∝ sinc²(π a x / λL), drawn as a line
-    // whose central lobe narrows as the slit widens (λL fixed for the whole row).
-    let burst = 1.4;
-    const draw = () => {
-      const { ctx, w, h } = light;
-      ctx.clearRect(0, 0, w, h);
-      const c = light.ctx.canvas.getBoundingClientRect();
-      const sr = slits[open].getBoundingClientRect();
-      const a = sr.width, x0 = sr.left - c.left + a / 2;
-      const lambdaL = 9000; // px², sets how wide the light spreads
-      ctx.strokeStyle = 'rgba(236,235,230,0.12)'; ctx.lineWidth = 1;
-      ctx.beginPath(); ctx.moveTo(0, h - 0.5); ctx.lineTo(w, h - 0.5); ctx.stroke();
-      ctx.beginPath();
-      for (let x = 0; x <= w; x += 2) {
-        const u = (Math.PI * a * (x - x0)) / lambdaL;
-        const I = u === 0 ? 1 : (Math.sin(u) / u) ** 2;
-        const y = h - 1 - I * (h - 8);
-        x ? ctx.lineTo(x, y) : ctx.moveTo(x, y);
-      }
-      const g = ctx.createLinearGradient(0, 0, w, 0);
-      g.addColorStop(0, 'rgba(226,194,125,0.15)'); g.addColorStop(Math.max(0, Math.min(1, x0 / w)), 'rgba(226,194,125,0.95)'); g.addColorStop(1, 'rgba(226,194,125,0.15)');
-      ctx.strokeStyle = g; ctx.lineWidth = 1.2; ctx.stroke();
-    };
-    let raf = 0, last = 0, idle = 0;
-    const tick = (now: number) => {
-      const dt = last ? Math.min((now - last) / 1000, 0.05) : 0; last = now;
-      if (burst > 0) { burst -= dt; draw(); }
-      // Moves on by itself every few seconds while nobody is pointing at it.
-      if (!still && !hovering && visible && !root.contains(document.activeElement)) { idle += dt; if (idle > 5) { idle = 0; set((open + 1) % slits.length); } }
-      else idle = 0;
-      raf = requestAnimationFrame(tick);
-    };
-    new IntersectionObserver(([e]) => {
-      visible = e.isIntersecting;
-      if (visible && !raf) { last = 0; burst = 1.4; raf = requestAnimationFrame(tick); }
-      if (!visible && raf) { cancelAnimationFrame(raf); raf = 0; }
-    }).observe(root);
-    new ResizeObserver(() => { burst = 0.3; }).observe(row);
-    draw();
+    new ResizeObserver(layout).observe(grid);
   });
+
+  // Each plate develops once, as it comes into view, a little after the one before it.
+  const io = new IntersectionObserver((entries) => {
+    entries.filter((e) => e.isIntersecting).forEach((e, k) => {
+      setTimeout(() => e.target.classList.add('is-in'), k * 140);
+      io.unobserve(e.target);
+    });
+  }, { threshold: 0.2 });
+  document.querySelectorAll('[data-plate]').forEach((p) => io.observe(p));
 </script>

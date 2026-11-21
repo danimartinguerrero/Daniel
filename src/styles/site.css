@@ -164,3 +164,42 @@ button { font: inherit; color: inherit; }
   html.js [data-reveal] { opacity: 0; transform: translateY(14px); transition: opacity 900ms var(--ease), transform 900ms var(--ease); }
   html.js [data-reveal].is-in { opacity: 1; transform: none; }
 }
+
+/* ---- The page's own physics (lib/ambient.ts) ---- */
+
+/* Dark counts: single photons detected now and then, behind everything. */
+.darkcounts { position: fixed; inset: 0; z-index: -1; width: 100vw; height: 100vh; pointer-events: none; }
+
+/* Titles come into focus: red and blue apart and blurred, then converging. */
+@media (prefers-reduced-motion: no-preference) {
+  html.js :is(.title, .display, .sub__title, .seminar__title) {
+    text-shadow: -0.06em 0 0 rgba(255, 80, 70, 0.55), 0.06em 0 0 rgba(80, 140, 255, 0.55);
+    filter: blur(6px); opacity: 0.35;
+    transition: text-shadow 1400ms var(--ease), filter 1100ms var(--ease), opacity 900ms var(--ease);
+  }
+  html.js :is(.title, .display, .sub__title, .seminar__title).is-focused { text-shadow: 0 0 0 rgba(255, 80, 70, 0), 0 0 0 rgba(80, 140, 255, 0); filter: none; opacity: 1; }
+}
+
+/* Links: under the pointer, the underline becomes a travelling sine wave. */
+@media (hover: hover) and (prefers-reduced-motion: no-preference) {
+  .link:hover {
+    text-decoration-color: transparent;
+    background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='6' viewBox='0 0 16 6'%3E%3Cpath d='M0 3 Q4 0 8 3 T16 3' fill='none' stroke='%23e2c27d' stroke-width='1.1'/%3E%3C/svg%3E") repeat-x 0 calc(100% + 0.42em) / 16px 6px;
+    animation: wave-run 700ms linear infinite;
+  }
+}
+@keyframes wave-run { to { background-position: 16px calc(100% + 0.42em); } }
+
+/* A press: a circular wavefront from where it landed. */
+.wavefront { position: absolute; width: 10px; height: 10px; margin: -5px 0 0 -5px; border-radius: 50%; border: 1px solid var(--gold); pointer-events: none; animation: wavefront 700ms var(--ease) forwards; }
+@keyframes wavefront { to { transform: scale(18); opacity: 0; } }
+:is(.ctl, .pill, .head__nav a, .contact__list a) { overflow: hidden; }
+
+/* Rows: under the pointer, a laser runs along the line beneath. */
+.row { position: relative; }
+.row::after { content: ''; position: absolute; left: 0; right: 0; bottom: -1px; height: 1px; background: linear-gradient(90deg, rgba(226, 194, 125, 0), var(--gold) 85%, #fff); box-shadow: 0 0 6px rgba(226, 194, 125, 0.7); transform: scaleX(0); transform-origin: left; transition: transform 700ms var(--ease); pointer-events: none; }
+@media (hover: hover) { .row:hover::after { transform: scaleX(1); } }
+
+/* Plates catch a little light as the wave's crest passes them (--crest, 0–1). */
+.plate__frame, .sky__frame, .seminar__frame { position: relative; }
+.plate__frame::after, .sky__frame::after, .seminar__frame::after { content: ''; position: absolute; inset: 0; pointer-events: none; background: radial-gradient(120% 80% at 30% 20%, rgba(255, 244, 220, 0.5), transparent 60%); opacity: calc(var(--crest, 0) * 0.16); mix-blend-mode: screen; }

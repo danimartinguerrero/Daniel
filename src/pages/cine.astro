@@ -66,7 +66,7 @@ const counts = [
           {entries.map((e) => (
             <li class="film">
               <a href={e.url} class="film__a">
-                {e.poster && <img {...poster(e, '(max-width: 520px) 44vw, (max-width: 1200px) 15vw, 170px')} alt="" loading="lazy" decoding="async" />}
+                {e.poster && <img data-wave="bob" {...poster(e, '(max-width: 520px) 44vw, (max-width: 1200px) 15vw, 170px')} alt="" loading="lazy" decoding="async" />}
                 <span class="film__t">{e.title}</span>
                 <span class="film__m"><span class="film__s" aria-label={`${e.rating} de 5`}>{stars(e.rating)}</span>{e.liked && <span class="film__like" aria-label="Me gusta">♥</span>}<time class="film__d" datetime={e.watched}>{date(e.watched)}</time></span>
               </a>

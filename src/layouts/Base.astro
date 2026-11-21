@@ -2,6 +2,7 @@
 import '@/styles/site.css';
 import { href } from '@/lib/paths';
 import Player from '@/components/Player.astro';
+import Zoom from '@/components/Zoom.astro';
 
 interface Props { title: string; description: string; path?: string; page?: 'home' | 'cine' }
 const { title, description, path = '/', page = 'home' } = Astro.props;
@@ -63,6 +64,7 @@ const nav = [
     </main>
 
     <Player />
+    <Zoom />
 
     <footer class="foot">
       <div class="wrap foot__in">
@@ -73,7 +75,9 @@ const nav = [
 
     <script>
       import { initWaves } from '@/lib/waves';
+      import { initAmbient } from '@/lib/ambient';
       initWaves();
+      initAmbient();
       // The header gets its surface once the page has moved off the top; the index opens on small screens.
       const head = document.querySelector<HTMLElement>('[data-head]')!;
       const menu = document.querySelector<HTMLButtonElement>('[data-menu]')!;
