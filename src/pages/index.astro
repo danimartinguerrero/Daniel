@@ -145,9 +145,9 @@ const img = (name: string) => ({
         <p class="body">Lo que escribo a mano en clase acaba en apuntes formales: cada definición en su caja, cada paso justificado, las figuras redibujadas. Fondo negro, azul, lavanda y dorado: el mismo estilo para toda la carrera.</p>
       </div>
       <div class="pages sec__wide">
-        <figure class="page"><img {...img('hermite-cuaderno')} sizes="(max-width: 900px) 46vw, 30vw" alt="Página manuscrita: la ecuación de Hermite resuelta por series, hasta la fórmula de Rodrigues" width="800" height="1067" loading="lazy" decoding="async" /><figcaption class="label">El cuaderno</figcaption></figure>
-        <figure class="page"><img {...img('hermite-portada')} sizes="(max-width: 900px) 46vw, 30vw" alt="Portada de los apuntes Operador de Sturm–Liouville y ecuación de Hermite, con las funciones de Hermite en un pozo parabólico" width="800" height="1132" loading="lazy" decoding="async" /><figcaption class="label">Sturm–Liouville y Hermite</figcaption></figure>
-        <figure class="page"><img {...img('hermite-oscilador')} sizes="(max-width: 900px) 46vw, 30vw" alt="Página de los apuntes con el oscilador armónico cuántico y la fórmula de Rodrigues en una caja" width="800" height="1132" loading="lazy" decoding="async" /><figcaption class="label">Página 9, el oscilador</figcaption></figure>
+        <figure class="page"><img data-wave="bob" {...img('hermite-cuaderno')} sizes="(max-width: 900px) 46vw, 30vw" alt="Página manuscrita: la ecuación de Hermite resuelta por series, hasta la fórmula de Rodrigues" width="800" height="1067" loading="lazy" decoding="async" /><figcaption class="label">El cuaderno</figcaption></figure>
+        <figure class="page"><img data-wave="bob" {...img('hermite-portada')} sizes="(max-width: 900px) 46vw, 30vw" alt="Portada de los apuntes Operador de Sturm–Liouville y ecuación de Hermite, con las funciones de Hermite en un pozo parabólico" width="800" height="1132" loading="lazy" decoding="async" /><figcaption class="label">Sturm–Liouville y Hermite</figcaption></figure>
+        <figure class="page"><img data-wave="bob" {...img('hermite-oscilador')} sizes="(max-width: 900px) 46vw, 30vw" alt="Página de los apuntes con el oscilador armónico cuántico y la fórmula de Rodrigues en una caja" width="800" height="1132" loading="lazy" decoding="async" /><figcaption class="label">Página 9, el oscilador</figcaption></figure>
       </div>
       <figure class="fig sec__wide" data-osc-root>
         <div class="fig__stage"><Oscillator /></div>
@@ -270,11 +270,11 @@ const img = (name: string) => ({
       </div>
       <div class="seminar__media">
         <figure class="seminar__a">
-          <img {...photo('seminario-qubit-portada')} sizes="(max-width: 900px) 92vw, 52vw" alt="Portada del taller: Del bit al qubit, cuando cambiar las reglas cambia lo que podemos resolver" data-group="seminario" data-caption="Del bit al qubit — Universidad de Salamanca y NTT DATA" />
+          <span class="seminar__frame"><img {...photo('seminario-qubit-portada')} sizes="(max-width: 900px) 92vw, 52vw" alt="Portada del taller: Del bit al qubit, cuando cambiar las reglas cambia lo que podemos resolver" data-group="seminario" data-caption="Del bit al qubit — Universidad de Salamanca y NTT DATA" data-wave="pan" /></span>
           <figcaption class="label">La portada</figcaption>
         </figure>
         <figure class="seminar__b">
-          <img {...photo('seminario-qubit-grupo')} sizes="(max-width: 900px) 70vw, 30vw" alt="Nacho Benito Fiz con los estudiantes del taller, delante de la proyección" data-group="seminario" data-caption="Tras el taller, con Nacho Benito Fiz" />
+          <span class="seminar__frame"><img {...photo('seminario-qubit-grupo')} sizes="(max-width: 900px) 70vw, 30vw" alt="Nacho Benito Fiz con los estudiantes del taller, delante de la proyección" data-group="seminario" data-caption="Tras el taller, con Nacho Benito Fiz" data-wave="pan" /></span>
           <figcaption class="label">Tras el taller</figcaption>
         </figure>
       </div>
@@ -435,7 +435,7 @@ const img = (name: string) => ({
         {recent.map((e) => (
           <li>
             <a href={e.url} class="strip__a">
-              <img {...poster(e, '(max-width: 700px) 30vw, 15vw')} alt={`${e.title}${e.year ? ` (${e.year})` : ''}`} loading="lazy" decoding="async" />
+              <img data-wave="bob" {...poster(e, '(max-width: 700px) 30vw, 15vw')} alt={`${e.title}${e.year ? ` (${e.year})` : ''}`} loading="lazy" decoding="async" />
               <span class="strip__r" aria-label={`${e.rating} de 5`}>{stars(e.rating)}</span>
             </a>
           </li>
@@ -565,9 +565,10 @@ const img = (name: string) => ({
   .seminar__title { margin-top: 14px; font-family: var(--serif); font-weight: 300; font-size: clamp(2.4rem, 4.6vw, 4rem); line-height: 0.98; letter-spacing: -0.03em; }
   .seminar__sub { margin: 8px 0 22px; font-family: var(--serif); font-style: italic; font-size: clamp(1.1rem, 1.5vw, 1.35rem); color: var(--ink-2); }
   .seminar__media figure { margin: 0; display: grid; gap: 10px; }
-  .seminar__media img { width: 100%; height: auto; outline: 1px solid var(--line); outline-offset: -1px; cursor: zoom-in; }
+  .seminar__frame { display: block; overflow: hidden; outline: 1px solid var(--line); outline-offset: -1px; }
+  .seminar__media img { display: block; width: 100%; height: auto; cursor: zoom-in; }
   .seminar__b { width: 64%; justify-self: end; margin-top: -14%; position: relative; z-index: 1; }
-  .seminar__b img { box-shadow: 0 0 0 10px var(--bg); }
+  .seminar__b .seminar__frame { box-shadow: 0 0 0 10px var(--bg); }
   @media (max-width: 900px) {
     .seminar__text, .seminar__media { grid-column: 1 / -1; position: static; }
   }

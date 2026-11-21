@@ -27,7 +27,7 @@ const group = label.toLowerCase().replace(/[^a-z0-9]+/g, '-');
               <span class="plate__frame">
                 <img src={src(it.id, m.w[0])} srcset={m.w.map((w) => `${src(it.id, w)} ${w}w`).join(', ')}
                   sizes={`(max-width: 700px) 92vw, ${Math.round(Math.min(1, m.ratio / 3) * 100)}vw`} alt={it.title}
-                  width={m.w[0]} height={Math.round(m.w[0] / m.ratio)} loading="lazy" decoding="async"
+                  width={m.w[0]} height={Math.round(m.w[0] / m.ratio)} loading="lazy" decoding="async" data-wave="pan"
                   data-zoom data-full={src(it.id, big)} data-full-w={big} data-group={group} data-caption={`${it.title}${it.note ? ` — ${it.note}` : ''}`} />
               </span>
               <figcaption><span class="plate__n">{String(i + 1).padStart(2, '0')}</span><span class="plate__t">{it.title}</span>{it.note && <span class="plate__note">{it.note}</span>}</figcaption>
