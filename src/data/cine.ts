@@ -8,6 +8,8 @@ export const letterboxd = {
   user: 'danielmtg',
   url: 'https://letterboxd.com/danielmtg/',
   bio: 'Unspoken feelings are unforgettable',
+  /** Where the bio comes from: the line from Nostalgia that changed how Daniel looks at things. */
+  bioSource: 'Nostalgia, Andréi Tarkovski',
   films: 635,
   thisYear: 38,
   lists: 2,
@@ -28,8 +30,7 @@ export const favorites: Film[] = [
   { title: 'Interstellar', year: 2014, img: '/cine/interstellar.webp' },
   { title: 'Donnie Darko', year: 2001, img: '/cine/donnie-darko.webp' },
   { title: 'Twin Peaks', img: '/cine/twin-peaks.webp' },
-  // TODO(Daniel): the fourth favourite's title (the poster with the candle burning down like a tower).
-  { title: 'Cuarta favorita', img: '/cine/fav-4.webp' },
+  { title: 'Nostalgia', year: 1983, img: '/cine/nostalgia.webp' },
 ];
 
 /** Stars out of five, halves allowed. */
