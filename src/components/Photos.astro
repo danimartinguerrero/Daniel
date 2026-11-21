@@ -1,8 +1,10 @@
 ---
 /**
- * Daniel's own photographs, in a strip that scrolls by hand (like the sky's, but lower): each image is
- * served at its native resolution and half of it, uncovers itself on arrival and drifts slightly.
- * Items name a file in public/photos/ (see src/data/photos.json for its sizes).
+ * Daniel's photographs as slits. Each picture is a narrow slit; the chosen one opens wide and the others
+ * stay a sliver of their image. Above them, the light that comes through: the single-slit diffraction
+ * pattern I(x) ∝ sinc²(πax/λL) of the open slit — the wider it opens, the narrower its central maximum,
+ * as it is. It opens under the pointer, on a press or with the arrow keys, and moves on by itself while
+ * no one is looking at it. Items name a file in public/photos/ (sizes in src/data/photos.json).
  */
 import meta from '@/data/photos.json';
 import { href } from '@/lib/paths';
@@ -12,66 +14,133 @@ interface Props { items: Item[]; label: string; tall?: boolean }
 const { items, label, tall = false } = Astro.props;
 const src = (id: string, w: number) => href(`/photos/${id}-${w}.webp`);
 ---
-<div class:list={['photos', { 'photos--tall': tall }]} data-photos>
-  <ol class="photos__strip" tabindex="0" aria-label={label}>
-    {items.map((it) => {
-      const m = meta[it.id];
-      return (
-        <li class="photos__plate" style={`--ratio: ${m.ratio}`}>
-          <a href={src(it.id, m.w[m.w.length - 1])} class="photos__frame" aria-label={`${it.title}, a tamaño completo`}>
-            <img src={src(it.id, m.w[0])} srcset={m.w.map((w) => `${src(it.id, w)} ${w}w`).join(', ')}
-              sizes="(max-width: 700px) 70vw, 30vw" alt={it.title} width={m.w[0]} height={Math.round(m.w[0] / m.ratio)}
-              loading="lazy" decoding="async" data-photo />
-          </a>
-          <p class="photos__cap"><span class="photos__t">{it.title}</span>{it.note && <span class="photos__n">{it.note}</span>}</p>
-        </li>
-      );
-    })}
-  </ol>
+<div class:list={['slits', { 'slits--tall': tall }]} data-slits>
+  <div class="wrap">
+    <canvas class="slits__light" data-slits-light aria-hidden="true"></canvas>
+    <ol class="slits__row" aria-label={label}>
+      {items.map((it, i) => {
+        const m = meta[it.id];
+        return (
+          <li class:list={['slit', { 'is-open': i === 0 }]} data-slit data-title={it.title} data-note={it.note ?? ''}>
+            <button class="slit__btn" type="button" aria-label={`${it.title}${it.note ? `. ${it.note}` : ''}`} aria-pressed={i === 0 ? 'true' : 'false'}>
+              <img src={src(it.id, m.w[0])} srcset={m.w.map((w) => `${src(it.id, w)} ${w}w`).join(', ')}
+                sizes="(max-width: 700px) 80vw, 60vw" alt="" width={m.w[0]} height={Math.round(m.w[0] / m.ratio)}
+                loading="lazy" decoding="async" />
+            </button>
+          </li>
+        );
+      })}
+    </ol>
+    <div class="slits__cap">
+      <p class="slits__n" data-slits-n>01 / {String(items.length).padStart(2, '0')}</p>
+      <p class="slits__t" data-slits-t>{items[0].title}</p>
+      <p class="slits__note" data-slits-note>{items[0].note}</p>
+      <a class="slits__full link" data-slits-full href={src(items[0].id, meta[items[0].id].w[meta[items[0].id].w.length - 1])} target="_blank" rel="noopener">Ver a tamaño completo</a>
+      <span hidden data-slits-urls>{JSON.stringify(items.map((it) => src(it.id, meta[it.id].w[meta[it.id].w.length - 1])))}</span>
+    </div>
+  </div>
 </div>
 
 <style>
-  .photos { margin-top: clamp(40px, 5vw, 64px); }
-  .photos__strip { display: flex; gap: clamp(10px, 1.4vw, 20px); overflow-x: auto; scroll-snap-type: x mandatory; padding: 0 var(--pad) 16px; scrollbar-width: thin; scrollbar-color: var(--line-2) transparent; }
-  .photos__plate { --h: clamp(240px, 40vh, 420px); flex: none; scroll-snap-align: start; height: var(--h); width: calc(var(--h) * var(--ratio)); max-width: 86vw; display: grid; grid-template-rows: minmax(0, 1fr) auto; gap: 12px; }
-  .photos--tall .photos__plate { --h: clamp(300px, 52vh, 560px); }
-  .photos__frame { display: block; overflow: hidden; outline: 1px solid var(--line); outline-offset: -1px; background: #000; }
-  .photos__frame img { width: 100%; height: 100%; object-fit: cover; transform: scale(1.06); transition: filter 400ms var(--ease); filter: saturate(0.92); }
-  .photos__frame:hover img { filter: saturate(1.05); }
-  .photos__cap { display: grid; gap: 2px; font-size: 13.5px; line-height: 1.4; max-width: 46ch; }
-  .photos__t { font-family: var(--serif); font-size: 1.08rem; color: var(--ink); }
-  .photos__n { color: var(--ink-3); }
-  @media (prefers-reduced-motion: no-preference) {
-    :global(html.js) .photos__frame { clip-path: inset(0 100% 0 0); transition: clip-path 1200ms var(--ease); }
-    :global(html.js) .photos__plate.is-in .photos__frame { clip-path: inset(0 0 0 0); }
+  .slits { margin-top: clamp(40px, 5vw, 64px); }
+  .slits__light { display: block; width: 100%; height: 56px; }
+  .slits__row { --h: clamp(300px, 52vh, 560px); display: flex; gap: 3px; height: var(--h); }
+  .slits--tall .slits__row { --h: clamp(340px, 62vh, 660px); }
+  .slit { position: relative; flex: 1 1 0; min-width: 6px; transition: flex-grow 900ms var(--ease); }
+  .slit.is-open { flex-grow: 22; }
+  .slit__btn { display: block; width: 100%; height: 100%; padding: 0; border: 0; background: #000; cursor: pointer; overflow: hidden; position: relative; }
+  .slit__btn img { width: 100%; height: 100%; object-fit: cover; filter: grayscale(1) brightness(0.55) contrast(1.1); transition: filter 900ms var(--ease), transform 1400ms var(--ease); transform: scale(1.04); }
+  .slit.is-open .slit__btn img { filter: none; transform: scale(1); }
+  .slit:not(.is-open):hover .slit__btn img { filter: grayscale(0.4) brightness(0.8); }
+  /* The jaws of each slit: two hairlines, gold on the open one. */
+  .slit__btn::before, .slit__btn::after { content: ''; position: absolute; top: 0; bottom: 0; width: 1px; background: var(--line-2); z-index: 1; transition: background-color 600ms var(--ease); }
+  .slit__btn::before { left: 0; } .slit__btn::after { right: 0; }
+  .slit.is-open .slit__btn::before, .slit.is-open .slit__btn::after { background: var(--gold); }
+  .slits__cap { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: baseline; gap: 4px 20px; padding-top: 16px; }
+  .slits__n { font-family: var(--mono); font-size: 11.5px; color: var(--gold); font-variant-numeric: tabular-nums; grid-row: span 2; }
+  .slits__t { font-family: var(--serif); font-weight: 300; font-size: clamp(1.3rem, 2.2vw, 1.8rem); line-height: 1.15; letter-spacing: -0.01em; }
+  .slits__note { grid-column: 2; font-size: 14px; color: var(--ink-3); }
+  .slits__full { grid-column: 3; grid-row: 1; font-family: var(--mono); font-size: 11.5px; white-space: nowrap; }
+  @media (max-width: 700px) {
+    .slit { min-width: 4px; }
+    .slit.is-open { flex-grow: 40; }
+    .slits__cap { grid-template-columns: auto minmax(0, 1fr); }
+    .slits__full { grid-column: 2; grid-row: auto; }
   }
+  @media (prefers-reduced-motion: reduce) { .slit, .slit__btn img { transition: none; } }
 </style>
 
 <script>
-  import { reduceMotion } from '@/lib/figure';
+  import { reduceMotion, surface } from '@/lib/figure';
 
-  document.querySelectorAll<HTMLElement>('[data-photos]').forEach((root) => {
-    const strip = root.querySelector<HTMLElement>('.photos__strip')!;
-    const plates = [...root.querySelectorAll<HTMLElement>('.photos__plate')];
-    const io = new IntersectionObserver((entries) => {
-      for (const e of entries) if (e.isIntersecting) { e.target.classList.add('is-in'); io.unobserve(e.target); }
-    }, { threshold: 0.12 });
-    plates.forEach((p) => io.observe(p));
-    if (reduceMotion()) return;
-    let queued = false;
-    const drift = () => {
-      queued = false;
-      for (const p of plates) {
-        const r = p.getBoundingClientRect();
-        if (r.right < 0 || r.left > innerWidth || r.bottom < 0 || r.top > innerHeight) continue;
-        const dx = ((r.left + r.width / 2) / innerWidth - 0.5) * -18;
-        const dy = ((r.top + r.height / 2) / innerHeight - 0.5) * -14;
-        (p.querySelector('[data-photo]') as HTMLElement).style.transform = `scale(1.06) translate(${dx}px, ${dy}px)`;
-      }
+  document.querySelectorAll<HTMLElement>('[data-slits]').forEach((root) => {
+    const slits = [...root.querySelectorAll<HTMLElement>('[data-slit]')];
+    const n = root.querySelector<HTMLElement>('[data-slits-n]')!, t = root.querySelector<HTMLElement>('[data-slits-t]')!;
+    const note = root.querySelector<HTMLElement>('[data-slits-note]')!, full = root.querySelector<HTMLAnchorElement>('[data-slits-full]')!;
+    const urls = JSON.parse(root.querySelector<HTMLElement>('[data-slits-urls]')!.textContent!) as string[];
+    const light = surface(root.querySelector<HTMLCanvasElement>('[data-slits-light]')!);
+    const row = root.querySelector<HTMLElement>('.slits__row')!;
+    const still = reduceMotion();
+    let open = 0, hovering = false, visible = false;
+
+    const set = (i: number) => {
+      if (i === open) return;
+      open = i;
+      slits.forEach((s, k) => { s.classList.toggle('is-open', k === i); s.querySelector('button')!.setAttribute('aria-pressed', String(k === i)); });
+      n.textContent = `${String(i + 1).padStart(2, '0')} / ${String(slits.length).padStart(2, '0')}`;
+      t.textContent = slits[i].dataset.title!; note.textContent = slits[i].dataset.note!; full.href = urls[i];
+      burst = 1.4; // redraw the light while the slit opens
     };
-    const ask = () => { if (!queued) { queued = true; requestAnimationFrame(drift); } };
-    strip.addEventListener('scroll', ask, { passive: true });
-    addEventListener('scroll', ask, { passive: true });
-    drift();
+    slits.forEach((s, i) => {
+      const b = s.querySelector('button')!;
+      b.addEventListener('click', () => set(i));
+      if (matchMedia('(hover: hover) and (pointer: fine)').matches) s.addEventListener('pointerenter', () => set(i));
+    });
+    row.addEventListener('pointerenter', () => { hovering = true; });
+    row.addEventListener('pointerleave', () => { hovering = false; });
+    root.addEventListener('keydown', (e) => {
+      if (e.key === 'ArrowRight') { set((open + 1) % slits.length); slits[open].querySelector('button')!.focus(); e.preventDefault(); }
+      if (e.key === 'ArrowLeft') { set((open - 1 + slits.length) % slits.length); slits[open].querySelector('button')!.focus(); e.preventDefault(); }
+    });
+
+    // The diffraction pattern of the open slit, centred on it: I(x) ∝ sinc²(π a x / λL), drawn as a line
+    // whose central lobe narrows as the slit widens (λL fixed for the whole row).
+    let burst = 1.4;
+    const draw = () => {
+      const { ctx, w, h } = light;
+      ctx.clearRect(0, 0, w, h);
+      const c = light.ctx.canvas.getBoundingClientRect();
+      const sr = slits[open].getBoundingClientRect();
+      const a = sr.width, x0 = sr.left - c.left + a / 2;
+      const lambdaL = 9000; // px², sets how wide the light spreads
+      ctx.strokeStyle = 'rgba(236,235,230,0.12)'; ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.moveTo(0, h - 0.5); ctx.lineTo(w, h - 0.5); ctx.stroke();
+      ctx.beginPath();
+      for (let x = 0; x <= w; x += 2) {
+        const u = (Math.PI * a * (x - x0)) / lambdaL;
+        const I = u === 0 ? 1 : (Math.sin(u) / u) ** 2;
+        const y = h - 1 - I * (h - 8);
+        x ? ctx.lineTo(x, y) : ctx.moveTo(x, y);
+      }
+      const g = ctx.createLinearGradient(0, 0, w, 0);
+      g.addColorStop(0, 'rgba(226,194,125,0.15)'); g.addColorStop(Math.max(0, Math.min(1, x0 / w)), 'rgba(226,194,125,0.95)'); g.addColorStop(1, 'rgba(226,194,125,0.15)');
+      ctx.strokeStyle = g; ctx.lineWidth = 1.2; ctx.stroke();
+    };
+    let raf = 0, last = 0, idle = 0;
+    const tick = (now: number) => {
+      const dt = last ? Math.min((now - last) / 1000, 0.05) : 0; last = now;
+      if (burst > 0) { burst -= dt; draw(); }
+      // Moves on by itself every few seconds while nobody is pointing at it.
+      if (!still && !hovering && visible && !root.contains(document.activeElement)) { idle += dt; if (idle > 5) { idle = 0; set((open + 1) % slits.length); } }
+      else idle = 0;
+      raf = requestAnimationFrame(tick);
+    };
+    new IntersectionObserver(([e]) => {
+      visible = e.isIntersecting;
+      if (visible && !raf) { last = 0; burst = 1.4; raf = requestAnimationFrame(tick); }
+      if (!visible && raf) { cancelAnimationFrame(raf); raf = 0; }
+    }).observe(root);
+    new ResizeObserver(() => { burst = 0.3; }).observe(row);
+    draw();
   });
 </script>

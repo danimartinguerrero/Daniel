@@ -1,8 +1,8 @@
 ---
 /**
  * The Grado en Física at Salamanca, from the faculty's study plan (240 ECTS): four years by semester.
- * The first year is done, the second under way; a subject with notes or reports on the site links down
- * to them (#pdf-<slug of the subject>).
+ * The first year is done, the second under way; a subject with notes or reports on the site brings its
+ * first document to the centre of the library (Library.astro listens for [data-subject]).
  */
 import apuntes from '@/data/apuntes.json';
 
@@ -29,7 +29,6 @@ const optativas = ['Fotónica', 'Óptica Coherente', 'Gravitación', 'Física de
 
 const count = new Map<string, number>();
 for (const i of apuntes.items) count.set(i.subject, (count.get(i.subject) ?? 0) + 1);
-const slug = (s: string) => s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, '-');
 const ects = (n: number) => String(n).replace('.', ',');
 const label = { hecho: 'Superado', ahora: 'En curso', luego: '' };
 ---
@@ -48,7 +47,7 @@ const label = { hecho: 'Superado', ahora: 'En curso', luego: '' };
                   const n = count.get(name);
                   return (
                     <li class:list={['plan__subj', { 'has-pdf': n }]}>
-                      {n ? <a href={`#pdf-${slug(name)}`}>{name}</a> : <span>{name}</span>}
+                      {n ? <a href="#biblioteca" data-subject={name}>{name}</a> : <span>{name}</span>}
                       <span class="plan__meta">{note ? <em>{note}</em> : null}{n ? <span class="plan__pdf">{n} PDF</span> : null}<span class="plan__ects">{ects(e)}</span></span>
                     </li>
                   );
