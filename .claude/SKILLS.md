@@ -48,3 +48,14 @@ Component libraries without a skill of their own. For each, a short reference sk
 |---|---|---|
 | https://github.com/heydamir/unslop (CC-BY-4.0, credit Damir Sokolovsky) | a6f121e | 1 (`unslop`), project scope. Its optional `scripts/` need Playwright; `story.mjs` also needs ffmpeg. |
 | https://github.com/emilkowalski/skills (MIT) | f1090be | 16 (`emil-design-eng`, `animate`, `review-animations`, `improve-animations`, `animation-performance`, `break-ui`, `mobile-native`, `remove-animations`, …). Installed twice: in Claude's **user scope** (`~/.claude/skills/`, updating the 12 installed there on 2026-09-04) and copied here so Codex gets them through `.agents/skills` (a symlink to this folder). Claude's user copy takes precedence over the project one; re-copy both when updating. |
+
+## Daniel's set (2026-11-21)
+
+A reduced, coherent set for adapting this site to Daniel (physics, philosophy, Letterboxd). All MIT; each folder carries the source licence as `LICENSE.source`. Unlike the batches above, these are committed (see the `!.claude/skills/...` exceptions in `.gitignore`), except `design-taste-frontend`, whose 40 MB of bundled stock assets stay out of git.
+
+| Source | Commit | Skills |
+|---|---|---|
+| https://github.com/Leonxlnx/taste-skill | f6b7657 | `design-taste-frontend` (folder `skills/taste-skill`; **not committed**, reinstall: `git clone https://github.com/Leonxlnx/taste-skill /tmp/ts && cp -r /tmp/ts/skills/taste-skill .claude/skills/design-taste-frontend`) |
+| https://github.com/madebymustafa/design-taste | c4a6bff | `design-taste` (core), `taste-typography`, `taste-color`, `editorial-minimal`, `dark-tech` (only one genre pack will be kept once the direction is chosen) |
+| https://github.com/emilkowalski/skills | 64eb3de | `emil-design-eng`, `review-animations` |
+| https://github.com/marvkr/better-design | 175e7ba | `animate-text` |

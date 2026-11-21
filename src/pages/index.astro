@@ -2,38 +2,33 @@
 import '@/styles/global.css';
 import ScrollStatement from '@/components/ScrollStatement.astro';
 import { ClientRouter } from 'astro:transitions';
-import NotesScan from '@/components/NotesScan.astro';
-import NotesPipeline from '@/components/NotesPipeline.astro';
 import Island from '@/components/Island.astro';
 import PartDivider from '@/components/PartDivider.astro';
 import { helloStrokes, helloStrokeWidth, helloViewBox } from '@/data/hello';
-import { sources, universities } from '@/data/papertok';
+import { favorites, letterboxd } from '@/data/cine';
+import { cinePath, href } from '@/lib/paths';
 
-const title = 'Nicolás Muñoz García';
-const description = 'Hey! I’m Nico, a physics student at the University of Salamanca. I build software and explore ideas that spark my curiosity.';
-const email = 'nicomg60@gmail.com';
+const title = 'Daniel Martín Guerrero';
+const description = 'Hola, soy Daniel: estudio Física en la Universidad de Salamanca y me pregunto qué significa todo eso para nosotros. Divulgación, filosofía y cine.';
+// Contact address for the "Escríbeme" bubble, as it appears on Daniel's CV. If it is ever emptied,
+// the exchange is left out and the contact links stand on their own.
+const email = 'daniel.martgue@usal.es';
+const github = 'https://github.com/danimartinguerrero';
+const tiktok = 'https://www.tiktok.com/@_.danielmg';
+const linkedin = 'https://www.linkedin.com/in/daniel-mart%C3%ADn-guerrero-b05b67448/';
+// Published at Daniel's request (21 Nov 2026), as on his CV.
+const phone = { label: '+34 644 41 93 65', tel: '+34644419365' };
 
-const statement = 'I’m driven by curiosity and a desire to make useful things. I turn ideas into tools and learn something new with every project.';
+const statement = 'Me mueven dos preguntas: cómo funciona el universo y qué significa para nosotros, aquí abajo. La física me da el método; la filosofía, el porqué.';
 
-// Daily people on papertok.app (PostHog, 15 Oct to 2 Nov 2026), drawn as a sparkline behind the 748.
-const daily = [55, 50, 21, 30, 28, 30, 430, 1061, 166, 87, 87, 98, 46, 49, 146, 122, 39, 38, 39];
-// The chart's viewBox is 190×40 (uniform scale, so the dot stays round); 2 units of air above the peak.
-const sparkPath = daily
-  .map((v, i) => `${i === 0 ? 'M' : 'L'}${((i / (daily.length - 1)) * 190).toFixed(1)} ${(38.7 - (Math.log1p(v) / Math.log1p(1061)) * 36).toFixed(1)}`)
-  .join(' ');
-// Commits per day on PaperTok's main branch (GitHub, weeks from 14 June to 1 November 2026, Sunday first),
-// drawn as GitHub draws its contribution graph: four greens by quartile of the busy days. Weeks run
-// downwards, the newest last; the tile shows as many whole weeks as its height allows.
-const activity = [[34, 52, 71, 43, 27, 0, 0], [0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0, 0], [3, 0, 0, 0, 1, 15, 39], [20, 13, 22, 16, 18, 3, 5], [0, 18, 0, 6, 7, 0, 0], [12, 22, 17, 8, 0, 0, 4], [2, 0, 0, 0, 0, 0, 1], [1, 0, 7, 2, 4, 2, 0], [0, 0, 0, 17, 16, 15, 26], [21, 18, 1, 4, 3, 54, 56], [2, 5, 19, 48, 74, 39, 51], [30, 27, 5, 5, 19, 109, 40], [1, 0, 1, 13, 25, 59, 1], [0, 6, 11, 8, 27, 10, 2], [0, 0, 0, 1, 4, 0, 3], [0, 0, 2, 2, 3, 4, 0], [7, 0, 10, 11, 31, 25, 19], [7, 16, 56, 48, 19, 13, 31], [41, 31, 9, 11, 0, 7, 5], [1, 2, 13, 0, 0, 0, 0]];
-const busy = activity.flat().filter((n) => n > 0).sort((a, b) => a - b);
-const q = (f: number) => busy[Math.min(busy.length - 1, Math.floor(busy.length * f))]!;
-const level = (n: number) => (n === 0 ? 0 : n <= q(0.25) ? 1 : n <= q(0.5) ? 2 : n <= q(0.75) ? 3 : 4);
-const sparkEnd = `190 ${(38.7 - (Math.log1p(daily[daily.length - 1]!) / Math.log1p(1061)) * 36).toFixed(1)}`;
-// PaperTok figures, as of 3 November 2026: people from PostHog (last 30 days, internal accounts excluded),
-// commits from GitHub (main, 3 November 2026), libraries and sources from the 0.3 release notes and the README.
+// Pages Daniel signs as author, counted from his PDFs (21 Nov 2026): Mecánica I, temas 1-3 (107) and its
+// formulario (1) in danimartinguerrero/Hermite; capítulo 8 (19), tema 4 parte 1 (31) and tema 5 parte 1 (29)
+// in danimartinguerrero/classical-mechanics; Sturm–Liouville y Hermite (14), sent by Daniel. The temas 1-3
+// in classical-mechanics are not his and are not counted.
+const notePages = 201;
 ---
 <!doctype html>
-<html lang="en" transition:animate="none">
+<html lang="es" transition:animate="none">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
@@ -43,28 +38,29 @@ const sparkEnd = `190 ${(38.7 - (Math.log1p(daily[daily.length - 1]!) / Math.log
     <meta property="og:title" content={title} />
     <meta property="og:description" content={description} />
     <meta property="og:type" content="website" />
-    <meta property="og:url" content={new URL('/', Astro.site)} />
-    <meta property="og:image" content={new URL('/og.jpg', Astro.site)} />
+    <meta property="og:locale" content="es_ES" />
+    <meta property="og:url" content={new URL(href('/'), Astro.site)} />
+    <meta property="og:image" content={new URL(href('/og.jpg'), Astro.site)} />
     <meta property="og:image:width" content="1200" />
     <meta property="og:image:height" content="630" />
-    <meta property="og:image:alt" content="hello, I’m Nicolás. Second-year physics student at the University of Salamanca." />
+    <meta property="og:image:alt" content="hello, soy Daniel. Estudiante de Física en la Universidad de Salamanca." />
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:title" content={title} />
     <meta name="twitter:description" content={description} />
-    <meta name="twitter:image" content={new URL('/og.jpg', Astro.site)} />
-    <meta name="twitter:image:alt" content="hello, I’m Nicolás. Second-year physics student at the University of Salamanca." />
-    <link rel="icon" href="/favicon.ico" sizes="48x48" />
-    <link rel="icon" href="/favicon.svg" type="image/svg+xml" sizes="any" />
-    <link rel="icon" href="/favicon-32.png" type="image/png" sizes="32x32" />
-    <link rel="icon" href="/favicon-192.png" type="image/png" sizes="192x192" />
-    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    <meta name="twitter:image" content={new URL(href('/og.jpg'), Astro.site)} />
+    <meta name="twitter:image:alt" content="hello, soy Daniel. Estudiante de Física en la Universidad de Salamanca." />
+    <link rel="icon" href={href('/favicon.ico')} sizes="48x48" />
+    <link rel="icon" href={href('/favicon.svg')} type="image/svg+xml" sizes="any" />
+    <link rel="icon" href={href('/favicon-32.png')} type="image/png" sizes="32x32" />
+    <link rel="icon" href={href('/favicon-192.png')} type="image/png" sizes="192x192" />
+    <link rel="apple-touch-icon" href={href('/apple-touch-icon.png')} />
     <script is:inline>document.documentElement.classList.add('js');</script>
-    <!-- The site changes page without leaving the document, so the island and its song carry on
+    <!-- The site changes page without leaving the document, so the island carries on
          (scripts/page.ts). No animation between pages: the page cuts, the island stays put. -->
     <ClientRouter />
   </head>
   <body>
-    <a class="skip sr-only" href="#main">Skip to content</a>
+    <a class="skip sr-only" href="#main">Saltar al contenido</a>
 
     <Island />
 
@@ -73,212 +69,159 @@ const sparkEnd = `190 ${(38.7 - (Math.log1p(daily[daily.length - 1]!) / Math.log
         <canvas class="hero__waves" data-waves aria-hidden="true"></canvas>
         <div class="hero__copy container">
           <h1 class="hero__title" id="hero-title">
-            <span class="sr-only">Hello, I’m Nicolás.</span>
+            <span class="sr-only">Hola, soy Daniel.</span>
             <svg class="hello" viewBox={helloViewBox} aria-hidden="true" data-hello>
               <g stroke-width={helloStrokeWidth}>{helloStrokes.map((s) => <path d={s.d} pathLength="1" data-delay={s.delay} data-duration={s.duration} />)}</g>
             </svg>
-            <span class="hero__name" aria-hidden="true" data-after>I’m Nicolás.</span>
+            <span class="hero__name" aria-hidden="true" data-after>Soy Daniel.</span>
           </h1>
-          <p class="hero__lede" data-after>Second-year physics student at the University of Salamanca.</p>
+          <p class="hero__lede" data-after>Estudio segundo de Física en la Universidad de Salamanca: óptica, astrofísica, cuántica y divulgación. <strong>Y no dejo de preguntarme por qué.</strong></p>
           <p class="hero__cta">
-            <a class="pill" href="#projects" data-after>See the work</a>
-            <a class="pill pill--glass" href="#contact" data-after>Get in touch</a>
+            <a class="pill" href="#divulgacion" data-after>Ver lo que hago</a>
+            <a class="pill pill--glass" href="#contacto" data-after>Escríbeme</a>
           </p>
         </div>
       </section>
 
-      <ScrollStatement label="In short" text={statement} />
+      <ScrollStatement label="En pocas palabras" text={statement} />
 
-      <PartDivider id="projects" headingId="part-projects" title="Projects." />
+      <PartDivider id="divulgacion" headingId="part-divulgacion" title="Divulgación." />
 
-      <section class="section section--alt" aria-labelledby="pt-title">
+      <section class="section section--alt" aria-labelledby="cosmo-title">
         <header class="intro container--wide">
-          <p class="pt-brand"><img src="/img/papertok/logo.svg" alt="" width="40" height="40" />PaperTok</p>
-          <h2 class="headline" id="pt-title">Scientific papers, in one feed.</h2>
-          <p class="lede">For when you don’t know what to search for. <strong>Pick your fields and scroll</strong>, and the feed learns from what you read, like, save, skip and follow, while leaving room for the unexpected.</p>
+          <p class="brand"><span class="brand__mark" aria-hidden="true">✦</span>Cosmosofía</p>
+          <h2 class="headline" id="cosmo-title">Qué hay ahí arriba, y qué significa aquí abajo.</h2>
+          <p class="lede">Soy guionista y locutor en <em>Eureka</em>, el programa de divulgación científica de Radio Universidad de Salamanca, con Supernova, la asociación astronómica de la universidad. Allí creé Cosmosofía, la sección que cierra <em>Radioacción Cósmica</em> y une astrofísica y filosofía de la ciencia. <strong>La escribo y la presento.</strong></p>
           <p class="intro__cta">
-            <a class="pill" href="https://papertok.app">Open PaperTok</a>
-            <a class="more" href="https://github.com/mugar123/papertok">Source on GitHub</a>
+            <a class="pill" href={href('/docs/cosmosofia-episodio-1.pdf')}>Leer el guion del episodio I</a>
           </p>
         </header>
 
         <div class="bento container--wide">
-          <figure class="tile tile--full tile--shot">
-            <figcaption class="sr-only">PaperTok 0.3: the feed and search</figcaption>
-            <div class="devices">
-              <div class="device"><div class="device__frame">
-                <div class="device__screen">
-                  <div class="device__status" aria-hidden="true"><span>9:41</span><i class="device__island"></i><span class="device__icons"><svg viewBox="0 0 18 12"><rect x="0" y="8" width="3" height="4" rx="1" /><rect x="5" y="5" width="3" height="7" rx="1" /><rect x="10" y="2.5" width="3" height="9.5" rx="1" /><rect x="15" y="0" width="3" height="12" rx="1" /></svg><svg viewBox="0 0 26 12"><rect x="0.5" y="0.5" width="22" height="11" rx="3.5" fill="none" stroke="currentColor" opacity=".4" /><rect x="2" y="2" width="16" height="8" rx="2" /><rect x="23.5" y="4" width="1.8" height="4" rx="1" opacity=".4" /></svg></span></div>
-                  <img src="/img/papertok/feed@4x.png" alt="The PaperTok feed: one paper per screen, with its field, title, authors and abstract, and a rail to like, save, explore connections and find similar papers" width="1560" height="3376" decoding="async" />
-                </div>
-              </div></div>
-              <div class="device"><div class="device__frame">
-                <div class="device__screen">
-                  <div class="device__status" aria-hidden="true"><span>9:41</span><i class="device__island"></i><span class="device__icons"><svg viewBox="0 0 18 12"><rect x="0" y="8" width="3" height="4" rx="1" /><rect x="5" y="5" width="3" height="7" rx="1" /><rect x="10" y="2.5" width="3" height="9.5" rx="1" /><rect x="15" y="0" width="3" height="12" rx="1" /></svg><svg viewBox="0 0 26 12"><rect x="0.5" y="0.5" width="22" height="11" rx="3.5" fill="none" stroke="currentColor" opacity=".4" /><rect x="2" y="2" width="16" height="8" rx="2" /><rect x="23.5" y="4" width="1.8" height="4" rx="1" opacity=".4" /></svg></span></div>
-                  <img src="/img/papertok/search@4x.png" alt="PaperTok search, with suggestions for a topic, an institution, papers, an author and a project" width="1560" height="3376" decoding="async" />
-                </div>
-              </div></div>
-            </div>
-          </figure>
-
-          <article class="tile tile--half tile--dark tile--people">
-  <p class="tile__big">748<span> people</span></p>
-  <p class="tile__text">used PaperTok in the last 30 days. It is free, open source and under active development.</p>
-  <figure class="people-chart" role="img" aria-label="People per day from 15 October to 2 November on a log scale, peaking at 1,061 on 22 October." data-draw>
-    <div class="people-chart__plot">
-      <svg class="spark" viewBox="0 0 190 40" style={`--path: path('${sparkPath}')`}>
-        <defs><linearGradient id="spark-fill" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#30d158" stop-opacity="0.14" /><stop offset="1" stop-color="#30d158" stop-opacity="0" /></linearGradient></defs>
-        <line class="spark__base" x1="0" y1="40" x2="190" y2="40" />
-        <path class="spark__area" d={`${sparkPath} L190 40 L0 40 Z`} fill="url(#spark-fill)" />
-        <path class="spark__line" d={sparkPath} pathLength="1" />
-        <circle class="spark__peak" cx="73.9" cy="2.7" r="2" />
-        <circle class="spark__halo" cx={sparkEnd.split(' ')[0]} cy={sparkEnd.split(' ')[1]} r="5.5" />
-        <circle class="spark__dot" cx={sparkEnd.split(' ')[0]} cy={sparkEnd.split(' ')[1]} r="3" />
-      </svg>
-      <p class="people-chart__peak">1,061<span>22 Oct</span></p>
-    </div>
-    <p class="people-chart__axis"><span>15 Oct</span><span>2 Nov</span></p>
-  </figure>
-</article>
-          <article class="tile tile--half tile--marquee tile--unis">
-  <p class="tile__num">398</p>
-  <p class="tile__text">university libraries it can open papers through. Verify a university email and PaperTok uses your library’s own access.</p>
-  <div class="unis">
-    <p class="unis__head"><span id="unis-label">Some of the universities</span><span class="unis__count">25 of 398</span></p>
-    <div class="marquee" aria-labelledby="unis-label">
-      <ul class="marquee__track">
-        {[...universities, ...universities].map((u, i) => (
-          <li class="logo-pill" aria-hidden={i >= universities.length ? 'true' : undefined}><img src={u.src} alt="" width="24" height="24" />{u.name}</li>
-        ))}
-      </ul>
-      <ul class="marquee__track unis__row2" aria-hidden="true">
-        {[...universities, ...universities].map((u) => (
-          <li class="logo-pill"><img src={u.src} alt="" width="24" height="24" />{u.name}</li>
-        ))}
-      </ul>
-    </div>
-  </div>
-</article>
-
-          <article class="tile tile--stat">
-  <div class="trail" role="img" aria-label="Commits per day in recent weeks, newest at the bottom, one square per day, greener the busier.">
-    <div class="trail__weeks">
-      {[...activity].reverse().map((week) => (
-        <div class="trail__week">{week.map((n) => <span class={`trail__day trail__day--${level(n)}`} />)}</div>
-      ))}
-    </div>
-  </div>
-  <div class="stat">
-    <p class="stat__num">1,898</p>
-    <p class="stat__label"><svg class="stat__mark" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 .297c-6.63 0-12 5.373-12 12 0 5.303 3.438 9.8 8.205 11.385.6.113.82-.258.82-.577 0-.285-.01-1.04-.015-2.04-3.338.724-4.042-1.61-4.042-1.61C4.422 18.07 3.633 17.7 3.633 17.7c-1.087-.744.084-.729.084-.729 1.205.084 1.838 1.236 1.838 1.236 1.07 1.835 2.809 1.305 3.495.998.108-.776.417-1.305.76-1.605-2.665-.3-5.466-1.332-5.466-5.93 0-1.31.465-2.38 1.235-3.22-.135-.303-.54-1.523.105-3.176 0 0 1.005-.322 3.3 1.23.96-.267 1.98-.399 3-.405 1.02.006 2.04.138 3 .405 2.28-1.552 3.285-1.23 3.285-1.23.645 1.653.24 2.873.12 3.176.765.84 1.23 1.91 1.23 3.22 0 4.61-2.805 5.625-5.475 5.92.42.36.81 1.096.81 2.22 0 1.606-.015 2.896-.015 3.286 0 .315.21.69.825.57C20.565 22.092 24 17.592 24 12.297c0-6.627-5.373-12-12-12" /></svg>Commits on GitHub</p>
-  </div>
-</article>
-          <article class="tile tile--key">
-  <h3 class="tile__title">All of science, one key.</h3>
-  <p class="tile__text">Press <kbd>/</kbd> anywhere for papers, authors, topics, institutions and research projects.</p>
-  <div class="palette" aria-hidden="true">
-    <p class="palette__field"><svg viewBox="0 0 16 16"><circle cx="7" cy="7" r="4.75"/><path d="m10.5 10.5 3.25 3.25"/></svg><span class="palette__q">Cosmol<i class="palette__caret"></i></span><kbd>/</kbd></p>
-    <ul class="palette__list">
-      <li class="is-on"><svg viewBox="0 0 16 16"><path d="M6 11.25v-.6c0-.75-.45-1.35-.95-1.9a4.25 4.25 0 1 1 5.9 0c-.5.55-.95 1.15-.95 1.9v.6Z"/><path d="M6.25 13.25h3.5M7 15h2"/></svg><span>Cosmology</span><em>Topic</em></li>
-      <li class="palette__extra"><svg viewBox="0 0 16 16"><path d="M6 11.25v-.6c0-.75-.45-1.35-.95-1.9a4.25 4.25 0 1 1 5.9 0c-.5.55-.95 1.15-.95 1.9v.6Z"/><path d="M6.25 13.25h3.5M7 15h2"/></svg><span>Cosmological constant</span><em>Topic</em></li>
-      <li><svg viewBox="0 0 16 16"><circle cx="8" cy="5.25" r="2.75"/><path d="M2.75 14.25c.55-2.75 2.7-4.5 5.25-4.5s4.7 1.75 5.25 4.5"/></svg><span>Planck Collaboration</span><em>Author</em></li>
-    </ul>
-  </div>
-</article>
-          <article class="tile tile--half tile--marquee">
-            <h3 class="tile__title">One feed, one format.</h3>
-            <p class="tile__text">Papers from every source are normalised before they are ranked. PaperTok links to them; it doesn’t host them.</p>
-            <div class="marquee marquee--slow" aria-label="The sources PaperTok reads from">
-              <ul class="marquee__track">
-                {[...sources, ...sources].map((src, i) => (
-                  <li class="logo-pill" aria-hidden={i >= sources.length ? 'true' : undefined}><img src={src.src} alt="" width="24" height="24" />{src.name}</li>
-                ))}
-              </ul>
-              {[2, 3].map((row) => (
-                <ul class={`marquee__track marquee__row${row}`} aria-hidden="true">
-                  {[...sources, ...sources].map((src) => (
-                    <li class="logo-pill"><img src={src.src} alt="" width="24" height="24" />{src.name}</li>
-                  ))}
-                </ul>
-              ))}
-            </div>
+          <article class="tile tile--half tile--dark tile--sky">
+            <p class="tile__kicker">Episodio I · Un mar de cuatrocientos mil millones de soles</p>
+            <p class="tile__big">4 × 10<sup>11</sup><span> estrellas</span></p>
+            <p class="tile__text">en nuestra galaxia. Dos billones de galaxias. Un planeta. Y tú.</p>
           </article>
 
-          <article class="tile tile--half tile--read">
-  <h3 class="tile__title">Any paper, at your level.</h3>
-  <p class="tile__text">AI rewrites the full text for a beginner, a university student or a researcher. Highlight, take notes, ask about a passage, then export it all as LaTeX.</p>
-  <div class="reader" data-reader>
-    <div class="segmented" role="group" aria-label="Reading level" data-on="0">
-      <span class="segmented__thumb" aria-hidden="true"></span><button type="button" class="is-on" aria-pressed="true" data-level="0">Beginner</button><button type="button" aria-pressed="false" data-level="1">University</button><button type="button" aria-pressed="false" data-level="2">Researcher</button>
-    </div>
-    <div class="reader__page">
-      <div class="reader__body" aria-live="polite">
-        <p class="reader__text" data-level-text="0">Black holes bend light so much that nothing nearby can escape. When two of them spiral together, they <mark>shake space itself</mark>, and we can now hear that shaking.</p>
-        <p class="reader__text" data-level-text="1" hidden>Two black holes in a tight orbit lose energy as <mark>gravitational waves</mark>. The merger emits a chirp whose frequency rises until the horizons meet; LIGO measured the strain.</p>
-        <p class="reader__text" data-level-text="2" hidden>The inspiral is modelled to 3.5PN order; the ringdown by quasinormal modes of the remnant Kerr black hole. Matched filtering against the template bank recovered <mark><i>h</i>&nbsp;≈&nbsp;10⁻²¹</mark>.</p>
-      </div>
-      <div class="reader__rail">
-        <p class="reader__note"><span class="reader__tag">Your note</span>Gravitational waves, 2015.</p>
-        <span class="reader__export" aria-hidden="true">Export .tex</span>
-      </div>
-    </div>
-  </div>
-</article>
-          <article class="tile tile--map">
-            <h3 class="tile__title">Follow the trail.</h3>
-            <p class="tile__text">What a paper cites and what cites it, re-centred on any paper, with references as BibTeX.</p>
-            <div class="cites" aria-hidden="true" data-trail>
-              <svg class="cites__map" viewBox="0 0 240 192">
-                <line class="cites__axis" x1="44" y1="96" x2="196" y2="96" />
-                <path class="cites__ticks" d="M58 94v4M78 94v4M96 94v4M112 94v4M128 94v4M150 94v4M170 94v4M188 94v4" />
-                <g class="cites__edges">
-                  <path d="M120 96C120 58 58 58 58 20" /><path d="M120 96C120 58 96 58 96 20" /><path d="M120 96C120 58 112 58 112 20" />
-                  <path d="M120 96C120 134 128 134 128 172" /><path d="M120 96C120 134 170 134 170 172" /><path d="M120 96C120 134 188 134 188 172" />
-                  <path class="cites__came" d="M150 172C150 134 120 134 120 96" pathLength="1" />
-                  <path class="cites__go" d="M120 96C120 58 78 58 78 20" pathLength="1" />
-                </g>
-                <g class="cites__nodes">
-                  <circle cx="58" cy="20" r="5" /><circle cx="96" cy="20" r="3.5" /><circle cx="112" cy="20" r="5" />
-                  <circle cx="128" cy="172" r="5" /><circle cx="170" cy="172" r="7" /><circle cx="188" cy="172" r="3.5" />
-                </g>
-                <circle class="cites__next" cx="78" cy="20" r="7" />
-                <circle class="cites__seen" cx="150" cy="172" r="4.5" />
-                <circle class="cites__ring" cx="120" cy="96" r="12.5" />
-                <circle class="cites__me" cx="120" cy="96" r="8" />
-              </svg>
-              <span class="cites__label cites__label--up">cites</span>
-              <span class="cites__label cites__label--from">2015</span>
-              <span class="cites__label cites__label--to">2026</span>
-              <span class="cites__label cites__label--down">cited by</span>
-              <span class="cites__bib">BibTeX</span>
-            </div>
+          <article class="tile tile--half tile--index">
+            <h3 class="tile__title">Cuatro paradas, unos ocho minutos.</h3>
+            <ol class="stops">
+              <li><span class="stops__n">0</span><span class="stops__name">Presentación</span><span class="stops__sub">Abrir la ventana</span></li>
+              <li><span class="stops__n">1</span><span class="stops__name">Coordenadas</span><span class="stops__sub">Dónde estamos</span></li>
+              <li><span class="stops__n">2</span><span class="stops__name">Polvo de estrellas</span><span class="stops__sub">De qué estamos hechos</span></li>
+              <li><span class="stops__n">3</span><span class="stops__name">¿Por qué no?</span><span class="stops__sub">La frontera de lo conocido</span></li>
+              <li><span class="stops__n">4</span><span class="stops__name">Un punto azul pálido</span><span class="stops__sub">Lo que nos debemos</span></li>
+              <li><span class="stops__n">5</span><span class="stops__name">Epílogo</span><span class="stops__sub">Mirar arriba</span></li>
+            </ol>
           </article>
-          <article class="tile tile--mail">
-  <h3 class="tile__title">Every Monday.</h3>
-  <p class="tile__text">New papers from the authors, topics and institutions you follow, by email.</p>
-  <div class="mail" aria-hidden="true">
-    <div class="mail__card">
-      <div class="mail__head">
-        <span class="mail__icon"><img src="/img/papertok/logo.svg" alt="" width="32" height="32" /></span>
-        <p class="mail__from"><span>The PaperTok Weekly</span><time>Mon 9:41</time></p>
-      </div>
-      <p class="mail__subject">5 new papers from Planck Collaboration, Cosmology and 3 more</p>
-      <p class="mail__preview">Hi there, welcome to your weekly selection of papers.</p>
-    </div>
-  </div>
-</article>
+
+          <article class="tile tile--half tile--word">
+            <p class="word" lang="grc"><span>κόσμος</span> <i aria-hidden="true">+</i> <span>σοφία</span></p>
+            <p class="tile__text"><strong>Kósmos</strong>, orden y también belleza; <strong>sophía</strong>, sabiduría. La que el cosmos nos devuelve cuando nos atrevemos a mirarlo de verdad.</p>
+          </article>
+
+          <article class="tile tile--half tile--night">
+            <p class="tile__kicker"><time datetime="2026-09-25">25 de septiembre de 2026</time> · Noche Europea de los Investigadores</p>
+            <h3 class="tile__title">«Houston, tenemos un telescopio».</h3>
+            <p class="tile__text">Organicé y dirigí esta actividad de astronomía de tres horas, abierta al público, dentro de la Noche Europea de los Investigadores Marie Skłodowska-Curie, con la UCC+i de la Universidad de Salamanca.</p>
+          </article>
         </div>
       </section>
 
-      <NotesScan />
-      <NotesPipeline />
+      <section class="section section--dark notes" aria-labelledby="notes-title">
+        <header class="intro container--wide">
+          <p class="eyebrow">Apuntes formalizados</p>
+          <h2 class="headline" id="notes-title">Del cuaderno a LaTeX.</h2>
+          <p class="lede">Lo que escribo a mano en clase termina en apuntes formales: definiciones en cajas, cada paso justificado, figuras redibujadas. <strong>Fondo negro, azul, lavanda y dorado</strong>: el mismo estilo para toda la carrera.</p>
+          <p class="intro__cta">
+            <a class="more" href={`${github}/Hermite`}>Mecánica I en GitHub</a>
+            <a class="more" href={`${github}/classical-mechanics`}>Más temas</a>
+          </p>
+        </header>
 
-      <PartDivider id="studies" headingId="part-studies" title="Studies." />
+        <div class="notes__stage container--wide">
+          <figure class="notes__page notes__page--paper">
+            <img src={href('/notes/hermite-cuaderno.webp')} alt="Página manuscrita: la ecuación de Hermite resuelta por series, con la fórmula de Rodrigues al final" width="900" height="1200" loading="lazy" decoding="async" />
+            <figcaption>El cuaderno · ecuación de Hermite</figcaption>
+          </figure>
+          <span class="notes__arrow" aria-hidden="true">→</span>
+          <figure class="notes__page">
+            <img src={href('/notes/hermite-portada.webp')} alt="Portada de los apuntes formalizados Operador de Sturm–Liouville y ecuación de Hermite, sobre fondo negro, con las funciones de Hermite dibujadas en colores dentro de un pozo parabólico" width="910" height="1287" loading="lazy" decoding="async" />
+            <figcaption>Los apuntes · Sturm–Liouville y Hermite</figcaption>
+          </figure>
+          <figure class="notes__page notes__page--tilt">
+            <img src={href('/notes/hermite-oscilador.webp')} alt="Página de los apuntes con el oscilador armónico cuántico: los primeros niveles de energía y sus funciones de onda, y la fórmula de Rodrigues en una caja" width="910" height="1287" loading="lazy" decoding="async" />
+            <figcaption>El oscilador armónico, página 9</figcaption>
+          </figure>
+        </div>
+
+        <dl class="notes__figures container--wide">
+          <div><dt>páginas en LaTeX, firmadas</dt><dd>{notePages}</dd></div>
+          <div><dt>páginas de Mecánica I, temas 1 a 3</dt><dd>107</dd></div>
+          <div><dt>páginas de Sturm–Liouville y Hermite</dt><dd>14</dd></div>
+        </dl>
+
+        <div class="clips container--wide">
+          <div class="clips__copy">
+            <h3 class="clips__title">Y en vertical, sin sonido.</h3>
+            <p class="clips__text">De ahí salen mis vídeos de física y matemáticas en TikTok, hechos con ayuda de la IA: un concepto por clip, de la astrofísica y el electromagnetismo a la ley de inercia de Sylvester o el teorema de Stokes generalizado. <strong>Formales, pero claros a la primera.</strong></p>
+            <p class="intro__cta"><a class="pill pill--glass" href={tiktok}>@_.danielmg en TikTok</a></p>
+          </div>
+          <ul class="chips chips--dark" aria-label="Algunos temas">
+            <li>Delta de Dirac</li><li>Función de Green</li><li>Sturm–Liouville</li><li>Polinomios de Hermite</li><li>Desarrollo multipolar</li><li>Ley de inercia de Sylvester</li><li>Formas diferenciales</li><li>Teorema de Stokes generalizado</li><li>Termodinámica</li>
+          </ul>
+        </div>
+      </section>
+
+      <PartDivider id="filosofia" headingId="part-filosofia" title="Filosofía." />
+
+      <section class="section section--alt" aria-labelledby="philo-title">
+        <header class="intro container--wide">
+          <h2 class="headline" id="philo-title">La física responde cómo. La filosofía insiste en por qué.</h2>
+          <p class="lede">No quiero elegir entre las dos. <strong>Cosmosofía nació de ahí</strong>, y también lo que escribo y defiendo en voz alta.</p>
+        </header>
+
+        <div class="bento container--wide">
+          <article class="tile tile--full tile--talk">
+            <p class="tile__kicker"><time datetime="2026-02-27">27 de febrero de 2026</time> · XXI Olimpiada Filosófica de Castilla y León · Conferenciante</p>
+            <blockquote class="talk">
+              <p class="talk__title">El naufragio de la luz.</p>
+              <p class="talk__sub">Disertación filosófica acerca de la lucidez del delirio. Don Quijote, Myshkin y la estética de la bondad.</p>
+            </blockquote>
+            <p class="tile__text">Ponencia y mesa redonda en la jornada dedicada a <em>La locura. Don Quijote en el mundo actual</em>, en Salamanca. Dos locos buenos, Cervantes y Dostoyevski, y una pregunta: ¿y si la bondad solo se deja ver desde fuera de la cordura?</p>
+          </article>
+
+          <article class="tile tile--half tile--rain">
+            <p class="tile__kicker"><time datetime="2025-11">19–21 de noviembre de 2025</time> · XXX Congreso Internacional de la Sociedad Castellano-Leonesa de Filosofía</p>
+            <h3 class="tile__title">«Como lágrimas en la lluvia».</h3>
+            <p class="tile__text">Ponente en la sesión <em>Antropocentrismo y androcentrismo como límite de la compasión</em>, coordinada por la profesora Angélica Velasco Sesma, en el congreso <em>Límites del presente</em>.</p>
+          </article>
+
+          <article class="tile tile--half tile--book">
+            <p class="tile__kicker"><time datetime="2026-06-05">5 de junio de 2026</time> · Librería Víctor Jara, Salamanca</p>
+            <h3 class="tile__title">Conversando con Eduardo Infante sobre <cite>Salvar a Sócrates</cite>.</h3>
+            <p class="tile__text">En la presentación de su novela para aprender a filosofar (Ariel), junto a Pablo Beato Andrés, Isabel Briones González y David Criado García.</p>
+          </article>
+
+          <article class="tile tile--half tile--finals">
+            <p class="tile__num">XIX <span>y</span> XX</p>
+            <p class="tile__text">Dos veces finalista de la Olimpiada Filosófica de Castilla y León con una disertación filosófica, en 2024 y en 2025. Después volví como conferenciante.</p>
+          </article>
+
+          <article class="tile tile--full tile--dark tile--motto">
+            <p class="motto" lang="la">Per aspera ad astra.</p>
+            <p class="tile__text">A las estrellas, por el camino difícil. Así se despide Cosmosofía, y así entiendo estudiar Física.</p>
+          </article>
+        </div>
+      </section>
+
+      <PartDivider id="estudios" headingId="part-estudios" title="Estudios." />
 
       <section class="section section--alt" aria-labelledby="studies-title">
         <header class="intro container--wide">
-          <h2 class="headline" id="studies-title">Physics at Salamanca, class of 2029.</h2>
-          <p class="lede">Upper secondary education in science and technology, then a BSc in Physics at the University of Salamanca. <strong>Now in second year.</strong></p>
+          <h2 class="headline" id="studies-title">Física en Salamanca, promoción de 2029.</h2>
+          <p class="lede">Bachillerato de Ciencias y Tecnología y después el Grado en Física de la Universidad de Salamanca. <strong>Ahora, en segundo.</strong></p>
         </header>
         <div class="tl container--wide" data-timeline="rail">
           <div class="tl__rail" aria-hidden="true"><div class="tl__fill"></div></div>
@@ -287,41 +230,42 @@ const sparkEnd = `190 ${(38.7 - (Math.log1p(daily[daily.length - 1]!) / Math.log
               <p class="ms__when"><time datetime="2023">2023</time></p>
               <span class="ms__dot" data-dot aria-hidden="true"></span>
               <div class="ms__body">
-                <h3 class="ms__title">Upper secondary education, science and technology.</h3>
-                <p class="ms__meta">2023-2025</p>
+                <h3 class="ms__title">Bachillerato de Ciencias y Tecnología.</h3>
+                <p class="ms__meta">IES Federico García Bernalt, Salamanca. 2023–2025.</p>
               </div>
             </li>
             <li class="ms" data-ms>
               <p class="ms__when"><time datetime="2024">2024</time></p>
               <span class="ms__dot" data-dot aria-hidden="true"></span>
               <div class="ms__body">
-                <h3 class="ms__title">Spanish Physics Olympiad.</h3>
-                <p class="ms__meta">Physics Olympiad, in the first year of upper secondary education.</p>
+                <h3 class="ms__title">Finalista de la XIX Olimpiada Filosófica de Castilla y León.</h3>
+                <p class="ms__meta">Disertación filosófica, en primero de Bachillerato.</p>
               </div>
             </li>
             <li class="ms" data-ms>
               <p class="ms__when"><time datetime="2025">2025</time></p>
               <span class="ms__dot" data-dot aria-hidden="true"></span>
               <div class="ms__body">
-                <h3 class="ms__title">Spanish Physics Olympiad, again.</h3>
-                <p class="ms__meta">In the second year of upper secondary education. Two consecutive editions.</p>
+                <h3 class="ms__title">Finalista otra vez, en la XX.</h3>
+                <p class="ms__meta">Y Talking Hands, un guante que traduce el alfabeto dactilológico a texto.</p>
               </div>
             </li>
             <li class="ms ms--figures" data-ms>
               <p class="ms__when"><time datetime="2025-06">Jun 2025</time></p>
               <span class="ms__dot" data-dot aria-hidden="true"></span>
               <div class="ms__body">
-                <h3 class="ms__title">Upper secondary education, finished.</h3>
+                <h3 class="ms__title">Bachillerato, con Matrícula de Honor.</h3>
                 <dl class="ms__figures">
                   <div class="ms__figure">
-                    <dt>University entrance exam (PAU)</dt>
-                    <dd>12.501<span>/14</span></dd>
+                    <dt>Nota media de Bachillerato</dt>
+                    <dd>9,88<span>/10</span></dd>
                   </div>
                   <div class="ms__figure">
-                    <dt>Upper secondary education average</dt>
-                    <dd>9.06<span>/10</span></dd>
+                    <dt>Prueba de Acceso a la Universidad (PAU)</dt>
+                    <dd>13,378<span>/14</span></dd>
                   </div>
                 </dl>
+                <p class="ms__meta">Premio de Acceso a la Universidad de la USAL: entre las cien mejores notas de la fase general de la PAU 2024/25, con la matrícula de primero gratuita.</p>
               </div>
             </li>
             <li class="ms ms--anchor" data-ms>
@@ -330,150 +274,186 @@ const sparkEnd = `190 ${(38.7 - (Math.log1p(daily[daily.length - 1]!) / Math.log
               <div class="ms__body">
                 <div class="ms__card">
                   <div>
-                    <h3 class="ms__title">BSc in Physics.</h3>
-                    <p class="ms__meta">University of Salamanca, class of 2029. Member of Supernova, the university’s astronomy association.</p>
+                    <h3 class="ms__title">Grado en Física.</h3>
+                    <p class="ms__meta">Universidad de Salamanca, promoción de 2029. Matemáticas, mecánica clásica, ondas y óptica, electromagnetismo, termodinámica y técnicas computacionales.</p>
                   </div>
-                  <img class="ms__logo" src="/studies/usal-color.svg" alt="University of Salamanca" width="428" height="155" decoding="async" />
+                  <img class="ms__logo" src={href('/studies/usal-color.svg')} alt="Universidad de Salamanca" width="428" height="155" decoding="async" />
                 </div>
               </div>
             </li>
             <li class="ms" data-ms>
-              <p class="ms__when"><time datetime="2026-09">Sep–Oct 2026</time></p>
+              <p class="ms__when"><time datetime="2026">2026</time></p>
               <span class="ms__dot" data-dot aria-hidden="true"></span>
               <div class="ms__body">
-                <h3 class="ms__title"><a href="https://bisite.usal.es/es/formacion/cursos/rna">Artificial neural networks: current models and the deep learning paradigm</a></h3>
-                <p class="ms__meta">Course at BISITE, University of Salamanca. 30 hours, 2 ECTS.</p>
+                <h3 class="ms__title">Matrícula de Honor en Laboratorio de Física.</h3>
+                <p class="ms__meta">Incertidumbres de verdad: propagación de varianzas, medias ponderadas, ajustes por mínimos cuadrados con χ² e intervalos de Welch–Satterthwaite.</p>
               </div>
             </li>
             <li class="ms ms--now" data-ms>
-              <p class="ms__when">Now</p>
+              <p class="ms__when">Ahora</p>
               <span class="ms__dot" data-dot aria-hidden="true"></span>
               <div class="ms__body">
-                <h3 class="ms__title">Second year of the degree.</h3>
-                <p class="ms__meta">Academic year 2026–27.</p>
+                <h3 class="ms__title">Segundo curso del grado.</h3>
+                <p class="ms__meta">Curso 2026–27. Apuntes de mecánica cuántica en LaTeX y los guiones de Cosmosofía.</p>
               </div>
             </li>
             <li class="ms ms--next" data-ms>
-              <p class="ms__when">Next</p>
+              <p class="ms__when">Próximo</p>
               <span class="ms__dot" data-dot aria-hidden="true"></span>
               <div class="ms__body">
-                <h3 class="ms__title"><a href="https://estudiantes.rsef.es/PreliminaresPLANCKS/">PLANCKS 2027, Spanish preliminaries</a></h3>
-                <p class="ms__meta"><time datetime="2026-11-20">20 November 2026</time>. The Spanish round of PLANCKS, the international theoretical physics competition.</p>
+                <h3 class="ms__title">PLANCKS 2027.</h3>
+                <p class="ms__meta">La competición internacional de física teórica.</p>
               </div>
             </li>
           </ol>
         </div>
       </section>
 
-      <PartDivider id="how-i-work" headingId="part-how" title="How I work." />
+      <PartDivider id="proyectos" headingId="part-proyectos" title="Proyectos." />
 
-      <section class="section section--alt" aria-labelledby="how-title">
+      <section class="section section--alt" aria-labelledby="proj-title">
         <header class="intro container--wide">
-          <h2 class="headline" id="how-title">Building useful things.</h2>
-          <p class="lede">Programming, scientific computing and technical writing are all part of my day-to-day work. <strong>These are the tools I use most.</strong></p>
+          <h2 class="headline" id="proj-title">Con las manos, y con la cabeza.</h2>
+          <p class="lede">Un guante que habla, apuntes de cuántica y las herramientas con las que trabajo. <strong>Óptica y fotónica, astrofísica, física de partículas.</strong></p>
         </header>
-        <div class="how-bento container--wide">
-          <article class="how-tile how-tile--code" aria-labelledby="how-code">
-            <h3 class="how-title" id="how-code">Different tools for different tasks.</h3>
-            <!-- More languages than the tile is wide: they run past as a marquee; the second copy closes the loop and is hidden from screen readers. -->
-            <div class="how-marquee">
-              <div class="how-marquee__track">
-                <ul class="how-marquee__list">
-                  <li class="how-tool"><span class="how-icon"><img src="/toolkit/python.svg" alt="" width="64" height="64" /></span>Python</li>
-                  <li class="how-tool"><span class="how-icon"><img src="/toolkit/html5.svg" alt="" width="64" height="64" /></span>HTML</li>
-                  <li class="how-tool"><span class="how-icon"><img src="/toolkit/css.svg" alt="" width="64" height="64" /></span>CSS</li>
-                  <li class="how-tool"><span class="how-icon"><img src="/toolkit/javascript.svg" alt="" width="64" height="64" /></span>JavaScript</li>
-                  <li class="how-tool"><span class="how-icon"><img src="/toolkit/typescript.svg" alt="" width="64" height="64" /></span>TypeScript</li>
-                  <li class="how-tool"><span class="how-icon"><img src="/toolkit/matlab.png" alt="" width="64" height="64" /></span>MATLAB</li>
-                  <li class="how-tool"><span class="how-icon"><img src="/toolkit/mathematica.svg" alt="" width="64" height="64" /></span>Mathematica</li>
-                </ul>
-                <ul class="how-marquee__list" aria-hidden="true">
-                  <li class="how-tool"><span class="how-icon"><img src="/toolkit/python.svg" alt="" width="64" height="64" /></span>Python</li>
-                  <li class="how-tool"><span class="how-icon"><img src="/toolkit/html5.svg" alt="" width="64" height="64" /></span>HTML</li>
-                  <li class="how-tool"><span class="how-icon"><img src="/toolkit/css.svg" alt="" width="64" height="64" /></span>CSS</li>
-                  <li class="how-tool"><span class="how-icon"><img src="/toolkit/javascript.svg" alt="" width="64" height="64" /></span>JavaScript</li>
-                  <li class="how-tool"><span class="how-icon"><img src="/toolkit/typescript.svg" alt="" width="64" height="64" /></span>TypeScript</li>
-                  <li class="how-tool"><span class="how-icon"><img src="/toolkit/matlab.png" alt="" width="64" height="64" /></span>MATLAB</li>
-                  <li class="how-tool"><span class="how-icon"><img src="/toolkit/mathematica.svg" alt="" width="64" height="64" /></span>Mathematica</li>
-                </ul>
-              </div>
+
+        <div class="bento container--wide">
+          <article class="tile tile--full tile--dark tile--glove">
+            <div class="glove__copy">
+              <p class="tile__kicker">2024–2025 · Proyecto de TIC II, IES Federico García Bernalt</p>
+              <h3 class="tile__title">Talking Hands.</h3>
+              <p class="tile__text">Un guante que traduce el alfabeto dactilológico español a texto, para que quien no puede hablar se entienda con quien no conoce la lengua de signos.</p>
+              <p class="glove__detail">Cinco sensores de flexión en divisores de tensión sobre un Arduino Mega 2560 (ADC de 10 bits). Firmware en C/C++ que calibra los sensores y clasifica los gestos por umbrales, y manda cada letra por serie a una app que la muestra y la lee en voz alta. Con un modo servo que imita la flexión de los dedos, un modelo 3D y una propuesta inalámbrica con sensores de presión tipo piel. Hardware y firmware, con Rubén González Sánchez.</p>
             </div>
+            <figure class="glove" aria-hidden="true">
+              <svg viewBox="0 0 260 200">
+                <g class="glove__bars">
+                  {[0.82, 0.2, 0.25, 0.9, 0.86].map((v, i) => (
+                    <g transform={`translate(${20 + i * 46} 0)`}>
+                      <rect class="glove__track" x="0" y="20" width="28" height="140" rx="14" />
+                      <rect class="glove__level" x="0" y={20 + 140 * (1 - v)} width="28" height={140 * v} rx="14" style={`--d: ${i * 120}ms`} />
+                      <text x="14" y="186">{['pulgar', 'índice', 'corazón', 'anular', 'meñique'][i]}</text>
+                    </g>
+                  ))}
+                </g>
+              </svg>
+              <p class="glove__letter"><span>V</span></p>
+            </figure>
           </article>
-          <article class="how-tile how-tile--build" aria-labelledby="how-build">
-            <h3 class="how-title" id="how-build">From interface to deployment.</h3>
-            <p class="how-text">I work across the frontend and backend, using React and Vite for interfaces and Cloudflare Workers, D1 or Firebase for APIs and data.</p>
-            <ul class="how-tools">
-              <li class="how-tool"><span class="how-icon"><img src="/toolkit/react.svg" alt="" width="40" height="40" /></span>React</li>
-              <li class="how-tool"><span class="how-icon"><img src="/toolkit/vite.svg" alt="" width="40" height="40" /></span>Vite</li>
-              <li class="how-tool how-tool--pair"><span class="how-icon"><img src="/toolkit/cloudflare.svg" alt="" width="40" height="40" /></span>Cloudflare Workers and D1</li>
-              <li class="how-tool"><span class="how-icon"><img src="/toolkit/firebase.svg" alt="" width="40" height="40" /></span>Firebase</li>
+
+          <article class="tile tile--half tile--quantum">
+            <p class="tile__kicker">2026 · Apuntes en LaTeX</p>
+            <h3 class="tile__title">Mecánica cuántica, desde el espacio de Hilbert.</h3>
+            <p class="ket" aria-label="ket psi igual a la suma de c n por ket n">|ψ⟩ = Σ<sub>n</sub> c<sub>n</sub> |n⟩</p>
+            <p class="tile__text">L²(ℝ), bras y kets, operadores hermíticos, descomposición espectral y regla de Born. Ahora, cúbits y puertas cuánticas.</p>
+          </article>
+
+          <article class="tile tile--half tile--ai">
+            <p class="tile__kicker">Desde 2025 · Modelización con IA</p>
+            <h3 class="tile__title">De la variedad parametrizada al ajuste por mínimos cuadrados.</h3>
+            <p class="tile__text">Simulaciones físicas y apuntes de estudio con Claude Opus 5.5, Gemini, modelos abiertos y NotebookLM. La IA propone; yo compruebo cada paso.</p>
+          </article>
+
+          <article class="tile tile--full tile--tools">
+            <h3 class="tile__title">Las herramientas.</h3>
+            <ul class="tools">
+              <li><span class="tools__icon"><img src={href('/toolkit/python.svg')} alt="" width="64" height="64" /></span>Python</li>
+              <li><span class="tools__icon"><img src={href('/toolkit/matlab.png')} alt="" width="64" height="64" /></span>MATLAB</li>
+              <li><span class="tools__icon"><img src={href('/toolkit/mathematica.svg')} alt="" width="64" height="64" /></span>Mathematica</li>
+              <li><span class="tools__icon tools__icon--wide"><img src={href('/toolkit/latex.svg')} alt="" width="64" height="64" /></span>LaTeX</li>
+              <li><span class="tools__icon"><img src={href('/toolkit/labview.svg')} alt="" width="64" height="64" /></span>LabVIEW</li>
+              <li><span class="tools__icon tools__icon--text" aria-hidden="true">∞</span>Arduino</li>
+              <li><span class="tools__icon"><img src={href('/toolkit/claude.svg')} alt="" width="64" height="64" /></span>Claude</li>
+              <li><span class="tools__icon"><img src={href('/toolkit/html5.svg')} alt="" width="64" height="64" /></span>HTML</li>
+            </ul>
+            <p class="tile__text">Y en el laboratorio: prototipos en protoboard, PHYWE measure y SAOImage DS9 para analizar imágenes astronómicas.</p>
+          </article>
+
+          <article class="tile tile--half tile--groups">
+            <h3 class="tile__title">Donde estoy.</h3>
+            <ul class="groups">
+              <li><strong>Supernova</strong><span>Asociación astronómica de la USAL: divulgación, noches de observación, salidas y radio.</span></li>
+              <li><strong>OSAL Student Chapter</strong><span>Divulgación de óptica y fotónica en la Universidad de Salamanca.</span></li>
+              <li><strong>Optica</strong><span>Miembro individual, hasta septiembre de 2027.</span></li>
+              <li><strong>Delegación Charra</strong><span>Grupo de Estudiantes de la Real Sociedad Española de Física en Salamanca.</span></li>
             </ul>
           </article>
-          <article class="how-tile how-tile--type" aria-labelledby="how-type">
-            <h3 class="how-title" id="how-type">Lecture notes, in LaTeX.</h3>
-            <p class="how-text">LaTeX is part of my daily study routine. I use it to write up my lectures.</p>
-            <ul class="how-tools">
-              <li class="how-tool how-tool--hero"><span class="how-icon"><img src="/toolkit/latex.svg" alt="" width="80" height="80" /></span>LaTeX</li>
-            </ul>
-          </article>
-          <article class="how-tile how-tile--ship" aria-labelledby="how-ship">
-            <h3 class="how-title" id="how-ship">AI is part of my daily workflow.</h3>
-            <p class="how-text">I work with Claude Code, Codex and Cursor throughout my projects, from exploring an idea to refining the code. I use Git and GitHub to track changes and manage pull requests.</p>
-            <div class="how-ship">
-              <ul class="how-tools how-ship__group">
-                <li class="how-tool"><span class="how-icon"><img src="/toolkit/claude.svg" alt="" width="64" height="64" /></span>Claude Code</li>
-                <li class="how-tool"><span class="how-icon"><img src="/toolkit/openai.svg" alt="" width="64" height="64" /></span>Codex</li>
-                <li class="how-tool"><span class="how-icon"><img src="/toolkit/cursor.svg" alt="" width="64" height="64" /></span>Cursor</li>
-              </ul>
-              <ul class="how-tools how-ship__group">
-                <li class="how-tool"><span class="how-icon"><img src="/toolkit/git.svg" alt="" width="64" height="64" /></span>Git</li>
-                <li class="how-tool"><span class="how-icon"><img src="/toolkit/github.svg" alt="" width="64" height="64" /></span>GitHub</li>
-              </ul>
-            </div>
+
+          <article class="tile tile--half tile--langs">
+            <h3 class="tile__title">Idiomas.</h3>
+            <dl class="langs">
+              <div><dt>Español</dt><dd>Nativo</dd></div>
+              <div><dt>Inglés</dt><dd>Avanzado, formación de nivel C1</dd></div>
+            </dl>
           </article>
         </div>
       </section>
 
-      <PartDivider headingId="part-contact" title="Contact." />
+      <PartDivider id="cine" headingId="part-cine" title="Cine." />
 
-      <section class="section contact" id="contact" aria-labelledby="contact-title" data-contact>
+      <section class="section section--dark cine-teaser" aria-labelledby="cine-title">
+        <header class="intro container--wide">
+          <p class="eyebrow">Letterboxd · {letterboxd.user}</p>
+          <h2 class="headline" id="cine-title">{letterboxd.films} películas, y las que faltan.</h2>
+          <p class="lede">Mis cuatro favoritas, las últimas que he visto y lo que escribo de ellas. <strong lang="en">«{letterboxd.bio}»</strong>, de <cite>Nostalgia</cite>, de Tarkovski: la frase que me cambió la forma de mirar.</p>
+          <p class="intro__cta">
+            <a class="pill" href={cinePath}>Ver mi rincón de cine</a>
+            <a class="more" href={letterboxd.url}>Perfil en Letterboxd</a>
+          </p>
+        </header>
+        <ul class="posters container--wide" aria-label="Mis cuatro películas favoritas">
+          {favorites.map((f) => (
+            <li class="poster"><a href={cinePath} tabindex="-1"><img src={href(f.img)} alt={f.title} width="185" height="278" loading="lazy" decoding="async" /></a></li>
+          ))}
+        </ul>
+      </section>
+
+      <PartDivider headingId="part-contacto" title="Contacto." />
+
+      <section class="section contact" id="contacto" aria-labelledby="contact-title" data-contact>
         <div class="container contact__inner">
           <h2 class="contact__title" id="contact-title">
-            <span class="sr-only">Say hi.</span>
-            <span class="contact__greet" aria-hidden="true" data-greet><span class="contact__say">Say</span> <span class="contact__slot">
-                <span class="contact__word is-on" lang="en" data-word>hi.</span>
-                <span class="contact__word" lang="es" data-word>hola.</span>
+            <span class="sr-only">Di hola.</span>
+            <span class="contact__greet" aria-hidden="true" data-greet><span class="contact__say">Di</span> <span class="contact__slot">
+                <span class="contact__word is-on" lang="es" data-word>hola.</span>
+                <span class="contact__word" lang="en" data-word>hi.</span>
                 <span class="contact__word" lang="fr" data-word>bonjour.</span>
                 <span class="contact__word" lang="it" data-word>ciao.</span>
                 <span class="contact__word" lang="de" data-word>hallo.</span>
                 <span class="contact__word" lang="pt" data-word>olá.</span>
-                <span class="contact__word contact__word--cjk" lang="zh-Hans" data-word>你好.</span>
+                <span class="contact__word" lang="el" data-word>γειά.</span>
                 <span class="contact__word contact__word--cjk" lang="ja" data-word>こんにちは.</span>
                 <span class="contact__word contact__word--cjk" lang="ko" data-word>안녕하세요.</span>
               </span></span>
           </h2>
-          <p class="lede">Open to internships and junior roles.</p>
+          <p class="lede">Para divulgación, charlas, filosofía o simplemente una buena película. También al <a class="contact__tel" href={`tel:${phone.tel}`}>{phone.label}</a>.</p>
 
-          <div class="thread" data-thread>
-            <p class="thread__stamp" aria-hidden="true">Today 9:41</p>
-            <p class="thread__row">
-              <span class="bubble bubble--them">
-                <span class="bubble__body"><span class="bubble__text">Hi Nicolás, we have a project that might interest you. Where can we reach you?</span></span>
-                <span class="bubble__dots" aria-hidden="true"><i></i><i></i><i></i></span>
-              </span>
-            </p>
-            <p class="thread__row thread__row--me">
-              <a class="thread__reply" href={`mailto:${email}`} data-reply>
-                <span class="bubble bubble--me">{email}</span>
-              </a>
-            </p>
-            <p class="thread__receipt" aria-hidden="true" data-receipt>Delivered</p>
-          </div>
+          {email && (
+            <div class="thread" data-thread>
+              <p class="thread__stamp" aria-hidden="true">Hoy 9:41</p>
+              <p class="thread__row">
+                <span class="bubble bubble--them">
+                  <span class="bubble__body"><span class="bubble__text">Hola, Daniel. Organizamos una charla de divulgación y nos encantaría contar contigo. ¿Dónde te escribimos?</span></span>
+                  <span class="bubble__dots" aria-hidden="true"><i></i><i></i><i></i></span>
+                </span>
+              </p>
+              <p class="thread__row thread__row--me">
+                <a class="thread__reply" href={`mailto:${email}`} data-reply>
+                  <span class="bubble bubble--me">{email}</span>
+                </a>
+              </p>
+              <p class="thread__receipt" aria-hidden="true" data-receipt>Entregado</p>
+            </div>
+          )}
 
           <ul class="contact__links">
-            <li><a class="contact__link" href="https://github.com/mugar123" rel="me"><span class="contact__icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 .297c-6.63 0-12 5.373-12 12 0 5.303 3.438 9.8 8.205 11.385.6.113.82-.258.82-.577 0-.285-.01-1.04-.015-2.04-3.338.724-4.042-1.61-4.042-1.61C4.422 18.07 3.633 17.7 3.633 17.7c-1.087-.744.084-.729.084-.729 1.205.084 1.838 1.236 1.838 1.236 1.07 1.835 2.809 1.305 3.495.998.108-.776.417-1.305.76-1.605-2.665-.3-5.466-1.332-5.466-5.93 0-1.31.465-2.38 1.235-3.22-.135-.303-.54-1.523.105-3.176 0 0 1.005-.322 3.3 1.23.96-.267 1.98-.399 3-.405 1.02.006 2.04.138 3 .405 2.28-1.552 3.285-1.23 3.285-1.23.645 1.653.24 2.873.12 3.176.765.84 1.23 1.91 1.23 3.22 0 4.61-2.805 5.625-5.475 5.92.42.36.81 1.096.81 2.22 0 1.606-.015 2.896-.015 3.286 0 .315.21.69.825.57C20.565 22.092 24 17.592 24 12.297c0-6.627-5.373-12-12-12" /></svg></span>GitHub</a></li>
-            <li><a class="contact__link" href="https://x.com/therealmugar" rel="me"><span class="contact__icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M18.901 1.153h3.68l-8.04 9.19L24 22.846h-7.406l-5.8-7.584-6.638 7.584H.474l8.6-9.83L0 1.154h7.594l5.243 6.932ZM17.61 20.644h2.039L6.486 3.24H4.298Z" /></svg></span>Twitter</a></li>
-            <li><a class="contact__link" href="https://www.linkedin.com/in/nicol%C3%A1s-mu%C3%B1oz-garc%C3%ADa-619489309/" rel="me"><span class="contact__icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433c-1.144 0-2.063-.926-2.063-2.065 0-1.138.92-2.063 2.063-2.063 1.14 0 2.064.925 2.064 2.063 0 1.139-.925 2.065-2.064 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z" /></svg></span>LinkedIn</a></li>
+            <li><a class="contact__link" href={github} rel="me"><span class="contact__icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 .297c-6.63 0-12 5.373-12 12 0 5.303 3.438 9.8 8.205 11.385.6.113.82-.258.82-.577 0-.285-.01-1.04-.015-2.04-3.338.724-4.042-1.61-4.042-1.61C4.422 18.07 3.633 17.7 3.633 17.7c-1.087-.744.084-.729.084-.729 1.205.084 1.838 1.236 1.838 1.236 1.07 1.835 2.809 1.305 3.495.998.108-.776.417-1.305.76-1.605-2.665-.3-5.466-1.332-5.466-5.93 0-1.31.465-2.38 1.235-3.22-.135-.303-.54-1.523.105-3.176 0 0 1.005-.322 3.3 1.23.96-.267 1.98-.399 3-.405 1.02.006 2.04.138 3 .405 2.28-1.552 3.285-1.23 3.285-1.23.645 1.653.24 2.873.12 3.176.765.84 1.23 1.91 1.23 3.22 0 4.61-2.805 5.625-5.475 5.92.42.36.81 1.096.81 2.22 0 1.606-.015 2.896-.015 3.286 0 .315.21.69.825.57C20.565 22.092 24 17.592 24 12.297c0-6.627-5.373-12-12-12" /></svg></span>GitHub</a></li>
+            <li><a class="contact__link" href={linkedin} rel="me"><span class="contact__icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433c-1.144 0-2.063-.926-2.063-2.065 0-1.138.92-2.063 2.063-2.063 1.14 0 2.064.925 2.064 2.063 0 1.139-.925 2.065-2.064 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z" /></svg></span>LinkedIn</a></li>
+            <li><a class="contact__link" href={`mailto:${email}`}><span class="contact__icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M3 5h18a1.5 1.5 0 0 1 1.5 1.5v11A1.5 1.5 0 0 1 21 19H3a1.5 1.5 0 0 1-1.5-1.5v-11A1.5 1.5 0 0 1 3 5Zm.6 2.1v.3l8.4 5.6 8.4-5.6v-.3a.3.3 0 0 0-.3-.3H3.9a.3.3 0 0 0-.3.3Zm16.8 2.5-7.9 5.3a.9.9 0 0 1-1 0L3.6 9.6v7.3c0 .2.1.3.3.3h16.2c.2 0 .3-.1.3-.3Z" /></svg></span>Correo</a></li>
+            <li><a class="contact__link" href={`tel:${phone.tel}`} aria-label={`Teléfono ${phone.label}`}><span class="contact__icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M6.6 10.8a15.1 15.1 0 0 0 6.6 6.6l2.2-2.2a1 1 0 0 1 1-.25 11.4 11.4 0 0 0 3.6.57 1 1 0 0 1 1 1V20a1 1 0 0 1-1 1A17 17 0 0 1 3 4a1 1 0 0 1 1-1h3.5a1 1 0 0 1 1 1c0 1.25.2 2.45.57 3.57a1 1 0 0 1-.25 1Z" /></svg></span>Teléfono</a></li>
+            <li><a class="contact__link" href={tiktok} rel="me"><span class="contact__icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12.525.02c1.31-.02 2.61-.01 3.91-.02.08 1.53.63 3.09 1.75 4.17 1.12 1.11 2.7 1.62 4.24 1.79v4.03c-1.44-.05-2.89-.35-4.2-.97-.57-.26-1.1-.59-1.62-.93-.01 2.92.01 5.84-.02 8.75-.08 1.4-.54 2.79-1.35 3.94-1.31 1.92-3.58 3.17-5.91 3.21-1.43.08-2.86-.31-4.08-1.03-2.02-1.19-3.44-3.37-3.65-5.71-.02-.5-.03-1-.01-1.49.18-1.9 1.12-3.72 2.58-4.96 1.66-1.44 3.98-2.13 6.15-1.72.02 1.48-.04 2.96-.04 4.44-.99-.32-2.15-.23-3.02.37-.63.41-1.11 1.04-1.36 1.75-.21.51-.15 1.07-.14 1.61.24 1.64 1.82 3.02 3.5 2.87 1.12-.01 2.19-.66 2.77-1.61.19-.33.4-.67.41-1.06.1-1.79.06-3.57.07-5.36.01-4.03-.01-8.05.02-12.07z" /></svg></span>TikTok</a></li>
+            <li><a class="contact__link" href={letterboxd.url} rel="me"><span class="contact__icon" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="5" cy="12" r="4.25" opacity=".55" /><circle cx="12" cy="12" r="4.25" opacity=".8" /><circle cx="19" cy="12" r="4.25" /></svg></span>Letterboxd</a></li>
+            <li><a class="contact__link" href={cinePath}><span class="contact__icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill-rule="evenodd"><path d="M5.5 3h13A2.5 2.5 0 0 1 21 5.5v13a2.5 2.5 0 0 1-2.5 2.5h-13A2.5 2.5 0 0 1 3 18.5v-13A2.5 2.5 0 0 1 5.5 3ZM8.25 5.25v5.6h7.5v-5.6Zm0 7.9v5.6h7.5v-5.6ZM4.9 5.6v1.8h1.6V5.6Zm0 3.8v1.8h1.6V9.4Zm0 3.4v1.8h1.6v-1.8Zm0 3.8v1.8h1.6v-1.8Zm12.6-11v1.8h1.6V5.6Zm0 3.8v1.8h1.6V9.4Zm0 3.4v1.8h1.6v-1.8Zm0 3.8v1.8h1.6v-1.8Z" /></svg></span>Cine</a></li>
           </ul>
         </div>
       </section>
@@ -482,11 +462,10 @@ const sparkEnd = `190 ${(38.7 - (Math.log1p(daily[daily.length - 1]!) / Math.log
 
     <footer class="footer">
       <div class="container--wide footer__inner">
-        <p>Salamanca, Spain · 40.96° N, 5.67° W</p>
-        <p>© 2026 Nicolás Muñoz García</p>
+        <p>Salamanca · 40.96° N, 5.67° W</p>
+        <p>© 2026 Daniel Martín Guerrero</p>
       </div>
     </footer>
-
     <script>
       import { arrived, onPage } from '@/scripts/page';
       import { initScroll } from '@/scripts/scroll';
@@ -591,15 +570,11 @@ const sparkEnd = `190 ${(38.7 - (Math.log1p(daily[daily.length - 1]!) / Math.log
   .section--alt .eyebrow { color: var(--ink-2); }
   .section--dark .eyebrow { color: var(--on-dark-2); }
 
-  /* PaperTok: the page's own bento, the product's logo, its real feed and current figures. */
-  .pt-brand { display: flex; align-items: center; gap: 0.75rem; font-size: clamp(1.1875rem, 1.6vw, 1.5rem); font-weight: 600; }
-  .pt-brand img { width: 2.5rem; height: 2.5rem; }
-
   .bento { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1.25rem; }
   .tile {
     display: flex; flex-direction: column; gap: 0.75rem;
     margin: 0; padding: 2rem;
-    min-width: 0; /* a marquee inside must never widen the tile */
+    min-width: 0;
     border-radius: 1.75rem;
     background: var(--bg);
   }
@@ -613,72 +588,7 @@ const sparkEnd = `190 ${(38.7 - (Math.log1p(daily[daily.length - 1]!) / Math.log
   .tile__big { font-size: clamp(5rem, 13vw, 10rem); line-height: 0.95; font-weight: 600; letter-spacing: -0.04em; font-variant-numeric: tabular-nums; }
   .tile__big span { font-size: 0.3em; letter-spacing: -0.01em; color: var(--on-dark-2); }
   .tile__num { font-size: clamp(3rem, 5vw, 4rem); line-height: 1; font-weight: 600; letter-spacing: -0.03em; font-variant-numeric: tabular-nums; }
-  /* The real app on two phones, side by side and whole, on a tile of their own. */
   .tile--full { grid-column: 1 / -1; }
-  .tile--shot { background: linear-gradient(#fff, var(--bg-alt)); }
-  .devices { display: flex; justify-content: center; align-items: flex-start; gap: clamp(1.5rem, 5vw, 5rem); padding: 0.5rem 0; }
-  .device { width: min(44%, 17rem); container-type: inline-size; } /* cqi below = the phone's own width */
-  .device__frame {
-    position: relative;
-    padding: 3cqi;
-    border-radius: 15cqi;
-    background: #1d1d1f;
-    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.18), 0 1.5rem 3rem -1rem rgba(0, 0, 0, 0.3);
-  }
-  /* Side buttons, set just outside the frame. */
-  .device__frame::before, .device__frame::after { content: ''; position: absolute; width: 1.2cqi; background: #3a3a3c; }
-  .device__frame::before { right: -1.2cqi; top: 44cqi; height: 18cqi; border-radius: 0 1cqi 1cqi 0; }
-  .device__frame::after { left: -1.2cqi; top: 34cqi; height: 11cqi; border-radius: 1cqi 0 0 1cqi; box-shadow: 0 16cqi 0 #3a3a3c; }
-  .device__screen { overflow: hidden; border-radius: 12cqi; background: #fbf8f0; }
-  .device__screen img { display: block; width: 100%; height: auto; }
-  .device__status {
-    display: grid; grid-template-columns: 1fr auto 1fr; align-items: center;
-    padding: 3.6cqi 7cqi 2cqi;
-    color: #1d2b53; font-size: 4.4cqi; font-weight: 600; letter-spacing: -0.01em;
-  }
-  .device__island { width: 26cqi; height: 7.6cqi; border-radius: 980px; background: #000; }
-  .device__icons { display: flex; justify-content: flex-end; gap: 1.4cqi; }
-  .device__icons svg { height: 3.4cqi; width: auto; fill: currentColor; }
-
-  /* Logo pills that slide by: constant motion, so linear; the track holds the list twice and moves half. */
-  .tile--marquee { padding-bottom: 1.5rem; }
-  /* Three rows, each started a third further through the list, so the strip fills the height the
-     tiles beside it set instead of hanging at the bottom under a void. */
-  .marquee {
-    display: grid; gap: 0.5rem;
-    min-width: 0; margin: auto -2rem; padding-block: 1rem 0.5rem;
-    overflow: hidden;
-    mask-image: linear-gradient(90deg, transparent, #000 2rem, #000 calc(100% - 2rem), transparent);
-    -webkit-mask-image: linear-gradient(90deg, transparent, #000 2rem, #000 calc(100% - 2rem), transparent);
-  }
-  /* The inset before the first pill is a margin, outside the track: translateX(-50%) is half the track's own
-     width, so with it as padding each loop ended half the inset too far and the row jumped back by it. */
-  .marquee__track { display: flex; width: max-content; list-style: none; margin: 0 0 0 2rem; padding: 0; animation: marquee 90s linear infinite; }
-  .marquee--slow .marquee__track { animation-duration: 60s; }
-  .marquee--slow .marquee__row2 { animation-delay: -20s; }
-  .marquee--slow .marquee__row3 { animation-delay: -40s; }
-  @keyframes marquee { to { transform: translateX(-50%); } }
-  @media (hover: hover) and (pointer: fine) {
-    .marquee:hover .marquee__track { animation-play-state: paused; }
-  }
-  .logo-pill {
-    flex: none; display: flex; align-items: center; gap: 0.5rem;
-    margin-right: 0.5rem; padding: 0.375rem 0.875rem 0.375rem 0.375rem;
-    border-radius: 980px; background: var(--bg-alt);
-    font-size: 0.875rem; font-weight: 500; white-space: nowrap;
-  }
-  .logo-pill img { width: 1.5rem; height: 1.5rem; padding: 0.125rem; border-radius: 0.375rem; object-fit: contain; background: #fff; box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.06); }
-  @media (prefers-reduced-motion: reduce) {
-    .marquee__track { animation: none; }
-    .marquee { overflow-x: auto; mask-image: none; -webkit-mask-image: none; }
-    .marquee__row2, .marquee__row3 { display: none; }
-  }
-  @media (max-width: 620px) {
-    .devices { gap: 1rem; }
-    .device { width: 47%; }
-    .marquee { margin-inline: -1.5rem; }
-    .marquee__track { margin-left: 1.5rem; }
-  }
 
   .chips { display: flex; flex-wrap: wrap; gap: 0.5rem; list-style: none; padding: 0; margin: 0; }
   .chips li { padding: 0.375rem 0.75rem; border-radius: 0.5rem; background: var(--bg-alt); font-size: 0.875rem; font-weight: 500; }
@@ -689,347 +599,189 @@ const sparkEnd = `190 ${(38.7 - (Math.log1p(daily[daily.length - 1]!) / Math.log
   @media (max-width: 620px) {
     .bento { grid-template-columns: 1fr 1fr; gap: 1rem; }
     .tile { grid-column: 1 / -1; }
-    .tile--stat, .tile--key { grid-column: auto; } /* the two small ones share a row */
     .tile { padding: 1.5rem; }
     .tile--dark { min-height: 20rem; }
   }
 
-  /* ---- widget: people ---- */
-  .tile--people { justify-content: flex-start; gap: 0; }
-  .tile--people .tile__big { font-size: 6rem; line-height: 0.9; }
-  .tile--people .tile__big span { font-size: 0.3em; letter-spacing: 0; }
-  .tile--people .tile__text { margin-top: 0.75rem; font-size: 1.1875rem; line-height: 1.32; max-width: 28rem; }
+  /* ---- Divulgación: Cosmosofía. ---- */
+  .brand { display: flex; align-items: center; gap: 0.75rem; font-size: clamp(1.1875rem, 1.6vw, 1.5rem); font-weight: 600; }
+  .brand__mark {
+    display: grid; place-items: center; width: 2.5rem; height: 2.5rem; border-radius: 0.75rem;
+    background: radial-gradient(circle at 30% 25%, #3a4a8c, #0b0f24 70%); color: #f2d48a; font-size: 1.25rem;
+  }
+  .lede em { font-style: italic; }
 
-  .people-chart { position: relative; margin: 0; margin-top: auto; padding-top: 1.25rem; }
-  .people-chart__plot { position: relative; }
-  .spark { display: block; width: 100%; height: auto; overflow: visible; }
-  .spark__base { stroke: rgba(255, 255, 255, 0.16); stroke-width: 1; vector-effect: non-scaling-stroke; }
-  .spark__line { fill: none; stroke: #30d158; stroke-width: 0.7; stroke-linejoin: round; stroke-linecap: round; }
-  .spark__peak { fill: var(--on-dark); r: 1.25px; }
-  .spark__dot { fill: #30d158; r: 1.9px; }
-  .spark__halo { fill: rgba(48, 209, 88, 0.35); r: 3.5px; }
-  .people-chart__peak, .people-chart__axis { margin: 0; font-family: var(--mono); font-size: 0.75rem; line-height: 1rem; letter-spacing: 0.01em; color: var(--on-dark-2); font-variant-numeric: tabular-nums; }
-  .people-chart__peak { position: absolute; top: 0; left: calc(38.9% + 0.625rem); color: var(--on-dark); white-space: nowrap; }
-  .people-chart__peak span { color: var(--on-dark-2); margin-left: 0.5rem; }
-  .people-chart__axis { display: flex; justify-content: space-between; margin-top: 0.5rem; }
+  /* A night sky in the tile: two layers of stars, drawn with gradients so nothing is downloaded. */
+  .tile--sky {
+    position: relative; isolation: isolate; overflow: hidden;
+    background:
+      radial-gradient(120% 90% at 85% 0%, rgba(120, 140, 255, 0.22), transparent 60%),
+      radial-gradient(90% 70% at 0% 100%, rgba(242, 212, 138, 0.12), transparent 60%),
+      #05060c;
+  }
+  .tile--sky::before, .tile--sky::after {
+    content: ''; position: absolute; inset: 0; z-index: -1; pointer-events: none;
+    background-repeat: repeat;
+  }
+  .tile--sky::before {
+    background-image:
+      radial-gradient(1px 1px at 12% 18%, #fff 50%, transparent 51%),
+      radial-gradient(1px 1px at 33% 62%, #fff 50%, transparent 51%),
+      radial-gradient(1.5px 1.5px at 71% 24%, #fff 50%, transparent 51%),
+      radial-gradient(1px 1px at 88% 71%, #fff 50%, transparent 51%),
+      radial-gradient(1px 1px at 52% 40%, #cfd6ff 50%, transparent 51%),
+      radial-gradient(1.5px 1.5px at 22% 84%, #f2d48a 50%, transparent 51%);
+    background-size: 220px 180px;
+    opacity: 0.75;
+  }
+  .tile--sky::after {
+    background-image:
+      radial-gradient(1px 1px at 8% 44%, #fff 50%, transparent 51%),
+      radial-gradient(1px 1px at 61% 8%, #fff 50%, transparent 51%),
+      radial-gradient(1px 1px at 79% 49%, #cfd6ff 50%, transparent 51%),
+      radial-gradient(1px 1px at 41% 91%, #fff 50%, transparent 51%);
+    background-size: 140px 130px;
+    opacity: 0.45;
+    animation: twinkle 6s ease-in-out infinite alternate;
+  }
+  @keyframes twinkle { to { opacity: 0.15; } }
+  .tile--sky .tile__big { font-size: clamp(4rem, 9vw, 7rem); }
+  .tile--sky .tile__big sup { font-size: 0.5em; vertical-align: 0.9em; letter-spacing: 0; }
 
-  @media (max-width: 620px) {
-    .tile--people .tile__big { font-size: 4.5rem; }
-    .tile--people .tile__text { font-size: 1.0625rem; }
-    .people-chart { padding-top: 1.5rem; }
-    .people-chart__peak { top: -0.25rem; left: calc(38.9% + 0.5rem); }
-    .spark__peak { r: 2px; }
-    .spark__dot { r: 3px; }
-    .spark__halo { r: 5.5px; }
+  .stops { list-style: none; margin: 0.5rem 0 0; padding: 0; display: grid; }
+  .stops li {
+    display: grid; grid-template-columns: 2rem minmax(0, 1fr) auto; align-items: baseline; gap: 0.75rem;
+    padding: 0.75rem 0; border-top: 1px solid rgba(0, 0, 0, 0.08);
   }
+  .stops__n { font-family: var(--mono); font-size: 0.875rem; color: var(--ink-2); }
+  .stops__name { font-size: 1.0625rem; font-weight: 600; }
+  .stops__sub { font-size: 0.9375rem; color: var(--ink-2); text-align: right; }
 
-  /* The dot rides the line (CSS motion path), and both draw together once the chart is on screen: one
-     motion, linear, like a plotter pen; the area and the peak settle in once the line is complete. */
-  @supports (offset-path: path('M0 0')) {
-    .spark__dot, .spark__halo { cx: 0; cy: 0; offset-path: var(--path); offset-distance: 100%; offset-rotate: 0deg; }
-  }
-  :global(html.js:not(.reduce)) .people-chart .spark__line { stroke-dasharray: 1 3; stroke-dashoffset: 1; }
-  :global(html.js:not(.reduce)) .people-chart .spark__dot, :global(html.js:not(.reduce)) .people-chart .spark__halo { offset-distance: 0%; }
-  :global(html.js:not(.reduce)) .people-chart .spark__area, :global(html.js:not(.reduce)) .people-chart .spark__peak, :global(html.js:not(.reduce)) .people-chart__peak { opacity: 0; }
-  :global(html.js:not(.reduce)) .people-chart.is-in .spark__line { animation: spark-draw 2000ms linear forwards; }
-  :global(html.js:not(.reduce)) .people-chart.is-in .spark__dot, :global(html.js:not(.reduce)) .people-chart.is-in .spark__halo { animation: spark-ride 2000ms linear forwards; }
-  :global(html.js:not(.reduce)) .people-chart.is-in .spark__area { animation: spark-settle 700ms var(--ease-out) 1500ms forwards; }
-  :global(html.js:not(.reduce)) .people-chart.is-in .spark__peak, :global(html.js:not(.reduce)) .people-chart.is-in .people-chart__peak { animation: spark-settle 500ms var(--ease-out) 2050ms forwards; }
-  @keyframes spark-draw { to { stroke-dashoffset: 0; } }
-  @keyframes spark-ride { to { offset-distance: 100%; } }
-  @keyframes spark-settle { to { opacity: 1; } }
+  .tile--word { justify-content: space-between; min-height: 18rem; }
+  .word { font-family: var(--serif); font-size: clamp(2.75rem, 6vw, 4.5rem); line-height: 1; letter-spacing: -0.01em; }
+  .word i { font-style: normal; color: var(--ink-2); font-size: 0.6em; vertical-align: 0.2em; }
+  .tile--word .tile__text strong { color: var(--ink); }
 
-  /* ---- widget: universities ---- */
-  /* 398 university libraries: the count, then a strip of its own where some of them slide by in two offset rows. */
-  .tile--marquee.tile--unis { padding-bottom: 0; }
-  .tile--unis .tile__text { max-width: 32rem; margin-bottom: 0.5rem; text-wrap: balance; } /* at least 1.25rem above the strip */
-  .unis {
-  margin: auto -2rem 0; padding: 1.25rem 0 1.5rem;
-  border-top: 1px solid rgba(0, 0, 0, 0.08);
-  }
-  .unis__head {
-  display: flex; justify-content: space-between; align-items: baseline; gap: 1rem;
-  margin: 0 2rem 1rem;
-  font-size: 0.8125rem; line-height: 1.2; font-weight: 500; color: var(--ink-2);
-  }
-  .unis__count { font: 500 0.75rem/1.2 var(--mono); letter-spacing: 0.01em; font-variant-numeric: tabular-nums; }
-  .tile--unis .marquee {
-  display: grid; gap: 0.5rem;
-  margin: 0; padding: 0;
-  --fade: linear-gradient(90deg, transparent, rgba(0, 0, 0, 0.35) 1rem, rgba(0, 0, 0, 0.8) 2rem, #000 3rem, #000 calc(100% - 3rem), rgba(0, 0, 0, 0.8) calc(100% - 2rem), rgba(0, 0, 0, 0.35) calc(100% - 1rem), transparent);
-  mask-image: var(--fade); -webkit-mask-image: var(--fade);
-  }
-  /* the second row is the same list started halfway through, so the two never show the same names together */
-  .tile--unis .unis__row2 { animation-delay: -45s; }
-  .tile--unis .logo-pill {
-  height: 2.25rem; gap: 0.5rem;
-  padding: 0 0.875rem 0 0.375rem;
-  background: var(--bg);
-  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.08);
-  font-size: 0.875rem; line-height: 1; letter-spacing: 0;
-  color: var(--ink);
-  }
-  .tile--unis .logo-pill img {
-  width: 1.5rem; height: 1.5rem; padding: 0;
-  border-radius: 0; background: none; box-shadow: none;
-  object-fit: contain;
-  }
-  @media (prefers-reduced-motion: reduce) {
-    .tile--unis .marquee { overflow-x: auto; mask-image: none; -webkit-mask-image: none; }
-    .tile--unis .unis__row2 { display: none; }
-  }
-  @media (max-width: 620px) {
-    .unis { margin-inline: -1.5rem; padding: 1rem 0 1.25rem; }
-    .unis__head { margin: 0 1.5rem 0.75rem; }
-    .tile--unis .marquee { margin: 0; }
-  }
+  .tile--night { justify-content: flex-end; min-height: 18rem; background: linear-gradient(160deg, #fff 40%, #eef0fb); }
 
-  /* ---- widget: commits ---- */
-  /* GitHub's contribution graph, big cells across the whole tile, then the figure: commits on main as of 3 November 2026. */
-  /* ---- widget: commits ---- */
-    /* The last weeks of GitHub's contribution graph for PaperTok, then the figure: the commits on main as of 3 November 2026. */
-    .tile--stat { justify-content: space-between; gap: 1.5rem; }
-    /* The graph takes the room above the figure and never more: size containment, so the row's height
-       (set by the search tile beside it) decides how much of it shows. Days run across, seven squares
-       that span the full width; weeks run downwards, the newest last, right above the figure. */
-    .trail { flex: 1 1 0; min-height: 0; container-type: size; overflow: hidden; }
-    /* Weeks stack from the newest upwards; a week that no longer fits wraps into a second column
-       beyond the right edge and is clipped, so only whole weeks show and the oldest go first.
-       A square is 10 units and a gap 2, so seven across is 82 units and the gap is the width over 41. */
-    .trail__weeks { height: 100%; display: flex; flex-flow: column-reverse wrap; justify-content: flex-end; align-content: flex-start; gap: calc(100cqi / 41); }
-    .trail__week { flex: none; width: 100%; display: grid; grid-template-columns: repeat(7, 1fr); gap: calc(100cqi / 41); }
-    .trail__day { aspect-ratio: 1; border-radius: 20%; background: #ebedf0; }
-    .trail__day--1 { background: #9be9a8; }
-    .trail__day--2 { background: #40c463; }
-    .trail__day--3 { background: #30a14e; }
-    .trail__day--4 { background: #216e39; }
-    .stat { display: grid; gap: 0.75rem; }
-    .stat__num { font-size: 4.5rem; line-height: 0.85; font-weight: 600; letter-spacing: -0.045em; font-variant-numeric: tabular-nums; margin-left: -0.04em; }
-    .stat__label { display: flex; align-items: center; gap: 0.5rem; font-size: 1.0625rem; line-height: 1.2; color: var(--ink-2); }
-    .stat__mark { flex: none; width: 1.0625rem; height: 1.0625rem; fill: currentColor; }
-    @media (max-width: 620px) {
-      .tile--stat { min-height: 0; gap: 1.25rem; }
-      .stat { gap: 0.5rem; }
-      .stat__num { font-size: 3rem; }
-      .stat__label { gap: 0.375rem; font-size: 0.9375rem; }
-      .stat__mark { width: 0.9375rem; height: 0.9375rem; }
-    }
+  /* ---- Apuntes: from the notebook to LaTeX. ---- */
+  .notes { overflow: hidden; }
+  .notes .eyebrow { color: #c9b8ff; }
+  .notes .more { color: #8fb3ff; }
+  .notes__stage {
+    display: grid; grid-template-columns: 1fr auto 1fr 1fr; align-items: center;
+    gap: clamp(1rem, 3vw, 2.5rem);
+  }
+  .notes__page { margin: 0; display: grid; gap: 0.75rem; }
+  .notes__page img {
+    display: block; width: 100%; height: auto; border-radius: 0.5rem;
+    box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.08), 0 2rem 4rem -1.5rem rgba(0, 0, 0, 0.9);
+  }
+  .notes__page--paper img { filter: saturate(0.6) brightness(0.92); rotate: -2deg; }
+  .notes__page--tilt img { rotate: 1.5deg; translate: 0 1.5rem; }
+  .notes__page figcaption { font-size: 0.875rem; color: var(--on-dark-2); text-align: center; }
+  .notes__page--tilt figcaption { translate: 0 1.5rem; }
+  .notes__arrow { font-size: clamp(2rem, 4vw, 3rem); color: #f2d48a; }
 
-  /* ---- widget: search ---- */
-  /* Search: the palette that "/" opens, floating over the tile like Spotlight. */
-  .tile--key { overflow: hidden; } /* the palette's shadow stops at the tile's edge */
-  .tile--key kbd {
-  display: inline-grid; place-items: center;
-  box-sizing: border-box; width: 1.25rem; height: 1.25rem; /* 20 x 20, bevel included */
-  margin-inline: 0.125rem; vertical-align: 0.0625rem;
-  border: 1px solid rgba(0, 0, 0, 0.12); border-bottom: 2px solid rgba(0, 0, 0, 0.2); /* the 2px bevel */
-  border-radius: 0.3125rem; background: var(--bg);
-  color: var(--ink); font: 500 0.75rem/1 var(--mono);
+  .notes__figures {
+    display: flex; flex-wrap: wrap; gap: 2rem clamp(3rem, 7vw, 6rem);
+    margin-block: clamp(4rem, 8vw, 6rem) 0; padding-top: 2.5rem;
+    border-top: 1px solid rgba(255, 255, 255, 0.12);
   }
-  .palette {
-  margin: auto -1rem -1rem; /* 1rem from the tile's edges, so 1.75rem - 1rem = 0.75rem nests exactly */
-  border-radius: 0.75rem; background: var(--bg);
-  box-shadow:
-  0 0 0 1px rgba(0, 0, 0, 0.07),
-  0 1px 2px rgba(0, 0, 0, 0.05),
-  0 4px 10px rgba(0, 0, 0, 0.05),
-  0 14px 28px -6px rgba(0, 0, 0, 0.1);
+  .notes__figures div { display: flex; flex-direction: column-reverse; gap: 0.5rem; }
+  .notes__figures dt { font-size: 1.0625rem; color: var(--on-dark-2); }
+  .notes__figures dd { margin: 0; font-size: clamp(3.5rem, 7vw, 5.5rem); line-height: 1; font-weight: 600; letter-spacing: -0.035em; font-variant-numeric: tabular-nums; }
+  .notes__figures div:first-child dd { color: #c9b8ff; }
+
+  .clips {
+    display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 2rem 4rem; align-items: end;
+    margin-top: clamp(4rem, 8vw, 6rem);
   }
-  .palette svg { flex: none; width: 1rem; height: 1rem; fill: none; stroke: currentColor; stroke-width: 1.5; stroke-linecap: round; stroke-linejoin: round; }
-  .palette__field {
-  display: flex; align-items: center; gap: 0.5rem;
-  margin: 0; padding: 0.6875rem 0.75rem;
-  border-bottom: 1px solid rgba(0, 0, 0, 0.07);
-  font-size: 0.9375rem; line-height: 1.25rem; color: var(--ink);
-  }
-  .palette__field > svg { color: var(--ink-2); }
-  .palette__q { flex: 1; min-width: 0; white-space: nowrap; }
-  .palette__caret { display: inline-block; width: 1.5px; height: 1.125em; margin-left: 1px; vertical-align: -0.2em; border-radius: 1px; background: var(--blue); animation: caret 1s steps(2, start) infinite; }
-  @keyframes caret { to { visibility: hidden; } }
-  .palette__field kbd { margin: 0; vertical-align: 0; }
-  .palette__list { list-style: none; margin: 0; padding: 0.25rem; }
-  .palette__list li {
-  display: flex; align-items: center; gap: 0.5rem;
-  padding: 0.4375rem 0.5rem; border-radius: 0.5rem; /* 0.75rem - 0.25rem */
-  font-size: 0.8125rem; line-height: 1.125rem; color: var(--ink);
-  }
-  .palette__list li svg { color: var(--ink-2); }
-  .palette__list li span { flex: 1; min-width: 0; }
-  .palette__list li em { flex: none; font: 400 0.6875rem/1 var(--mono); color: var(--ink-2); letter-spacing: 0.01em; }
-  .palette__list .is-on { background: var(--bg-alt); }
-  .palette__list .is-on svg { color: var(--ink); }
-  @media (prefers-reduced-motion: reduce) {
-    .palette__caret { animation: none; }
-  }
-  @media (max-width: 620px) {
-    .tile--key .tile__title { font-size: 1.25rem; }
-    .tile--key .tile__text { font-size: 0.9375rem; }
-    .palette { margin: auto -0.75rem -0.75rem; border-radius: 1rem; } /* 1.75rem - 0.75rem */
-    .palette__field { gap: 0.375rem; padding: 0.5625rem 0.625rem; font-size: 0.875rem; }
-    .palette__field > svg { width: 0.875rem; height: 0.875rem; }
-    .palette__list { padding: 0.25rem; }
-    /* the kind moves under the name, so names never truncate */
-    .palette__list li { display: grid; grid-template-columns: 0.875rem 1fr; column-gap: 0.375rem; row-gap: 0.125rem; align-items: start; padding: 0.4375rem 0.5rem; border-radius: 0.75rem; }
-    .palette__list li svg { width: 0.875rem; height: 0.875rem; margin-top: 0.125rem; grid-row: span 2; }
-    .palette__list li em { grid-column: 2; font-size: 0.625rem; }
-    .palette__extra { display: none !important; }
+  .clips__title { font-size: clamp(1.75rem, 3vw, 2.5rem); line-height: 1.1; font-weight: 600; letter-spacing: -0.015em; }
+  .clips__text { margin-top: 1rem; font-size: clamp(1.0625rem, 1.4vw, 1.25rem); line-height: 1.45; color: var(--on-dark-2); max-width: 32rem; }
+  .clips__text strong { color: var(--on-dark); font-weight: 600; }
+  .chips--dark li { background: rgba(255, 255, 255, 0.08); color: var(--on-dark); }
+
+  @media (max-width: 760px) {
+    .notes__stage { grid-template-columns: 1fr 1fr; }
+    .notes__page--paper { grid-column: 1 / -1; width: min(70%, 20rem); justify-self: center; }
+    .notes__arrow { grid-column: 1 / -1; justify-self: center; rotate: 90deg; }
+    .notes__page--tilt img, .notes__page--tilt figcaption { translate: none; }
+    .clips { grid-template-columns: 1fr; }
   }
 
-  /* ---- widget: reader ---- */
-  /* Read at your level: a reader bar, one sheet of paper, and your note in the margin. */
-  .reader { margin-top: auto; display: grid; gap: 0.75rem; padding-top: 0.75rem; }
-  .reader .segmented {
-  position: relative;
-  display: grid; grid-auto-flow: column; grid-auto-columns: 1fr;
-  width: max-content; max-width: 100%; height: 2rem; margin: 0; padding: 0.125rem;
-  border-radius: 0.5625rem; background: #e8e8ed;
+  /* ---- Filosofía. ---- */
+  .tile--talk { padding: clamp(2rem, 5vw, 4rem); gap: 1.5rem; }
+  .talk { margin: 0; }
+  .talk__title { font-family: var(--serif); font-size: clamp(2.75rem, 7vw, 6rem); line-height: 1; letter-spacing: -0.02em; font-style: italic; }
+  .talk__sub { margin-top: 1rem; max-width: 40rem; font-family: var(--serif); font-size: clamp(1.25rem, 2vw, 1.625rem); line-height: 1.3; color: var(--ink-2); }
+  .tile--talk .tile__text { max-width: 44rem; }
+  .tile--book { justify-content: space-between; min-height: 20rem; }
+  .tile--book cite { font-style: italic; }
+  .ms__title cite { font-style: italic; }
+  .tile--motto { justify-content: space-between; background: radial-gradient(120% 80% at 100% 0%, #1b2150, #000 65%); }
+  .motto { font-family: var(--serif); font-size: clamp(2.5rem, 5.5vw, 4.25rem); line-height: 1; font-style: italic; color: #f2d48a; }
+
+
+  /* ---- Filosofía: more tiles. ---- */
+  .tile--rain { justify-content: space-between; min-height: 20rem; background: linear-gradient(170deg, #fff 30%, #eef2f6); }
+  .tile--rain .tile__title, .tile--book .tile__title { font-family: var(--serif); font-weight: 600; }
+  .tile--finals { justify-content: space-between; min-height: 16rem; }
+  .tile--finals .tile__num { font-family: var(--serif); font-weight: 600; }
+  .tile--finals .tile__num span { font-size: 0.5em; color: var(--ink-2); font-style: italic; }
+  .tile--motto { min-height: 18rem; }
+
+  /* ---- Proyectos. ---- */
+  .tile--glove { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr); gap: 2rem 3rem; align-items: center; min-height: 0; padding: clamp(2rem, 4vw, 3.5rem); }
+  .glove__copy { display: grid; gap: 0.75rem; }
+  .glove__detail { font-size: 0.9375rem; line-height: 1.5; color: var(--on-dark-2); max-width: 36rem; }
+  .glove { position: relative; margin: 0; }
+  .glove svg { display: block; width: 100%; height: auto; }
+  .glove__track { fill: rgba(255, 255, 255, 0.08); }
+  .glove__level { fill: #f2d48a; transform-box: fill-box; transform-origin: bottom; }
+  .glove text { fill: var(--on-dark-2); font-size: 11px; text-anchor: middle; font-family: var(--font); }
+  .glove__letter { position: absolute; top: -0.5rem; right: 0; display: grid; place-items: center; width: 4rem; height: 4rem; border-radius: 1rem; background: rgba(255, 255, 255, 0.1); font-size: 2.25rem; font-weight: 600; }
+  @media (prefers-reduced-motion: no-preference) {
+    .glove__level { animation: flex 3.2s var(--ease-in-out) infinite alternate; animation-delay: var(--d); }
   }
-  .reader .segmented button {
-  position: relative; min-width: 0; padding: 0 0.875rem; border: 0; border-radius: 0.4375rem;
-  background: none; color: var(--ink); font: 500 0.8125rem/1 var(--font); letter-spacing: 0;
-  white-space: nowrap; cursor: pointer; -webkit-tap-highlight-color: transparent;
-  transition: transform 120ms var(--ease-out), background-color 120ms var(--ease-out);
+  @keyframes flex { 0%, 30% { transform: scaleY(1); } 70%, 100% { transform: scaleY(0.3); } }
+
+  .tile--quantum { justify-content: space-between; min-height: 20rem; }
+  .ket { font-family: var(--math); font-size: clamp(2rem, 4vw, 3rem); line-height: 1.2; color: #4b3fb5; }
+  .tile--ai { justify-content: space-between; min-height: 20rem; }
+
+  .tools { list-style: none; margin: 0.5rem 0 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(6.5rem, 1fr)); gap: 1rem; }
+  .tools li { display: grid; justify-items: center; gap: 0.5rem; font-size: 0.875rem; font-weight: 500; text-align: center; }
+  .tools__icon { display: grid; place-items: center; width: 4.5rem; height: 4.5rem; border-radius: 1.125rem; background: var(--bg-alt); }
+  .tools__icon img { width: 2.75rem; height: 2.75rem; object-fit: contain; }
+  .tools__icon--wide img { width: 3.5rem; }
+  .tools__icon--text { font-size: 2.25rem; font-weight: 600; color: #00878f; }
+
+  .groups { list-style: none; margin: 0.5rem 0 0; padding: 0; display: grid; }
+  .groups li { display: grid; gap: 0.25rem; padding: 0.875rem 0; border-top: 1px solid rgba(0, 0, 0, 0.08); }
+  .groups strong { font-size: 1.0625rem; font-weight: 600; }
+  .groups span { font-size: 0.9375rem; line-height: 1.45; color: var(--ink-2); }
+  .tile--langs { justify-content: space-between; }
+  .langs { margin: 0; display: grid; gap: 1.25rem; }
+  .langs div { display: grid; gap: 0.125rem; }
+  .langs dt { font-size: clamp(2rem, 4vw, 3rem); font-weight: 600; letter-spacing: -0.03em; line-height: 1.1; }
+  .langs dd { margin: 0; font-size: 1.0625rem; color: var(--ink-2); }
+
+  @media (max-width: 760px) {
+    .tile--glove { grid-template-columns: 1fr; }
   }
-  /* iOS's hairline between two segments that are both off. */
-  .reader .segmented button:not(.is-on) + button:not(.is-on)::before {
-  content: ''; position: absolute; left: -0.5px; top: 0.5rem; bottom: 0.5rem; width: 1px; background: rgba(0, 0, 0, 0.12);
+
+  /* ---- Cine: the four favourites. ---- */
+  .posters {
+    list-style: none; padding: 0; margin-block: 0;
+    display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: clamp(0.75rem, 2vw, 1.5rem);
   }
-  /* One thumb slides under the three segments (state indication); the buttons themselves stay transparent. */
-  .reader .segmented__thumb {
-    position: absolute; top: 0.125rem; bottom: 0.125rem; left: 0.125rem; width: calc((100% - 0.25rem) / 3);
-    border-radius: 0.4375rem; background: var(--bg);
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12), 0 0 0 0.5px rgba(0, 0, 0, 0.04);
-    transition: transform 200ms var(--ease-out);
-  }
-  .reader .segmented[data-on="1"] .segmented__thumb { transform: translateX(100%); }
-  .reader .segmented[data-on="2"] .segmented__thumb { transform: translateX(200%); }
-  .reader .segmented button { z-index: 1; }
-  /* No hairline next to the thumb while it travels: hide them all during the move. */
-  .reader .segmented button::before { transition: opacity 120ms ease; }
-  .reader .segmented.is-moving button::before { opacity: 0; }
-  .reader .segmented button:active { transform: scale(0.97); }
-  .reader .segmented button:focus-visible { outline: 2px solid var(--blue); outline-offset: 1px; }
+  .poster a { display: block; border-radius: 0.5rem; overflow: hidden; box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.1), 0 1.5rem 3rem -1rem rgba(0, 0, 0, 0.8); transition: transform 300ms var(--ease-out); }
+  .poster img { display: block; width: 100%; height: auto; aspect-ratio: 185 / 278; object-fit: cover; }
   @media (hover: hover) and (pointer: fine) {
-    .reader .segmented button:not(.is-on):hover { background: rgba(255, 255, 255, 0.5); }
-    .reader .segmented button:hover::before, .reader .segmented button:hover + button::before { opacity: 0; }
+    .poster a:hover { transform: translateY(-0.375rem); }
   }
-
-  .reader__page {
-  display: grid; grid-template-columns: minmax(0, 1fr) 9.25rem; gap: 1.25rem;
-  padding: 1.25rem 1.25rem 1.25rem 1.5rem; border-radius: 0.75rem;
-  background: var(--bg); box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.08), 0 2px 6px rgba(0, 0, 0, 0.04);
-  }
-  /* The three levels share one cell, so the sheet keeps the height of the longest. */
-  .reader__body { display: grid; }
-  .reader__text {
-  grid-area: 1 / 1; margin: 0;
-  font: 400 1rem/1.55 var(--serif); color: var(--ink); text-wrap: pretty;
-  }
-  /* The new level fades up into place; the old one just goes, so the two never muddle. */
-  .reader__text { transition: opacity 180ms var(--ease-out), translate 180ms var(--ease-out); }
-  .reader__text[hidden] { display: block; visibility: hidden; opacity: 0; translate: 0 0.25rem; transition: none; }
-  .reader__text mark {
-  padding: 0.0625em 0.125em; margin: 0 -0.125em; border-radius: 0.1875rem;
-  background: #ffe58a; color: inherit; -webkit-box-decoration-break: clone; box-decoration-break: clone;
-  }
-  .reader__rail {
-  display: flex; flex-direction: column; justify-content: space-between; align-items: flex-start; gap: 0.75rem;
-  padding-left: 1rem; border-left: 1px solid rgba(0, 0, 0, 0.08);
-  }
-  .reader__note { margin: 0; font-size: 0.8125rem; line-height: 1.38; color: var(--ink); text-wrap: balance; }
-  .reader__tag { display: flex; align-items: center; gap: 0.375rem; margin-bottom: 0.25rem; font: 500 0.6875rem/1 var(--mono); color: var(--ink-2); }
-  .reader__tag::before { content: ''; width: 0.5rem; height: 0.5rem; border-radius: 0.125rem; background: #ffe58a; box-shadow: inset 0 0 0 0.5px rgba(0, 0, 0, 0.12); }
-  .reader__export {
-  display: inline-flex; align-items: center; height: 1.5rem; padding: 0 0.625rem; border-radius: 980px;
-  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.12); font: 500 0.75rem/1 var(--font); color: var(--ink-2); white-space: nowrap;
-  }
-
-  @media (max-width: 620px) {
-    .reader .segmented { width: 100%; }
-    .reader .segmented button { padding: 0 0.5rem; }
-    .reader__page { grid-template-columns: minmax(0, 1fr); gap: 0.875rem; padding: 1.125rem 1.125rem 1rem; }
-    .reader__text { font-size: 0.9375rem; }
-    .reader__rail { flex-direction: row; align-items: flex-end; padding: 0.75rem 0 0; border-left: 0; border-top: 1px solid rgba(0, 0, 0, 0.08); }
-  }
-
-  /* ---- widget: cites ---- */
-  /* The citation map: the paper on its timeline, what it cites above, what cites it below, and the trail:
-  the paper you came from (filled) and the one you could open next (dark). The drawing scales with the
-  tile; its labels stay at 10px, placed on the drawing's rows (20, 96 and 172 of 192 units). */
-  .cites { position: relative; margin-top: auto; container-type: inline-size; font: 500 10px/1 var(--mono); color: var(--ink-2); }
-  .cites__map { width: 100%; height: auto; overflow: visible; }
-  .cites__map * { vector-effect: non-scaling-stroke; }
-  .cites__axis { stroke: #e8e8ed; stroke-width: 1; }
-  .cites__ticks { stroke: #d2d2d7; stroke-width: 1; }
-  .cites__edges path { fill: none; stroke: #d2d2d7; stroke-width: 1.25; stroke-linecap: round; }
-  .cites__edges .cites__came { stroke: #aeaeb2; }
-  .cites__edges .cites__go { stroke: var(--ink-2); }
-  /* The trail draws itself once the map is on screen: where you came from, through the paper, to the next
-     one, which then appears. That sequence is the one thing the still drawing cannot say. */
-  /* Its dash is measured in the drawing's own units (pathLength="1"), so while it draws, its stroke has to
-     scale with the drawing. A non-scaling stroke lays the dash out in screen pixels instead: on a phone,
-     where the drawing is scaled up 1.3×, the dash ran out at 77% of the path and the line never reached
-     the next paper. --unit (one screen pixel in drawing units, set by scripts/scroll.ts) brings the width
-     back to the 1.25px of the other edges. The gap of three lengths keeps the next dash clear of the end. */
-  :global(html.js:not(.reduce)) [data-trail] .cites__came, :global(html.js:not(.reduce)) [data-trail] .cites__go {
-    vector-effect: none; stroke-width: calc(1.25px * var(--unit, 1));
-    stroke-dasharray: 1 3; stroke-dashoffset: 1;
-  }
-  :global(html.js:not(.reduce)) [data-trail] .cites__next { opacity: 0; transform: scale(0.9); transform-box: fill-box; transform-origin: center; }
-  :global(html.js:not(.reduce)) [data-trail].is-in .cites__came { animation: trail-draw 500ms var(--ease-out) 200ms forwards; }
-  :global(html.js:not(.reduce)) [data-trail].is-in .cites__go { animation: trail-draw 500ms var(--ease-out) 600ms forwards; }
-  :global(html.js:not(.reduce)) [data-trail].is-in .cites__next { animation: trail-node 300ms var(--ease-out) 1000ms forwards; }
-  @keyframes trail-draw { to { stroke-dashoffset: 0; } }
-  @keyframes trail-node { to { opacity: 1; transform: none; } }
-  .cites__nodes circle { fill: #fff; stroke: #aeaeb2; stroke-width: 1.25; }
-  .cites__next { fill: #fff; stroke: var(--ink); stroke-width: 1.5; }
-  .cites__seen { fill: #aeaeb2; }
-  .cites__ring { fill: #fff; stroke: var(--blue); stroke-opacity: 0.35; stroke-width: 1; }
-  .cites__me { fill: var(--blue); }
-  .cites__label, .cites__bib { position: absolute; translate: 0 -50%; white-space: nowrap; }
-  .cites__label--up, .cites__bib { top: 10.417%; }
-  .cites__label--from, .cites__label--to { top: 50%; }
-  .cites__label--down { top: 89.583%; }
-  .cites__label--up, .cites__label--from, .cites__label--down { left: 0; }
-  .cites__label--to, .cites__bib { right: 0; }
-  .cites__bib { padding: 0.25rem 0.5rem; border-radius: 999px; box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.12); }
-  /* Four columns between 900 and 1200px leave the drawing as narrow as 128px: a size down keeps the labels clear. */
-  @container (max-width: 180px) { .cites__label, .cites__bib { font-size: 9px; } }
-
-  /* ---- widget: weekly ---- */
-  /* The Monday email as it lands: a Mail-style notification, with last weeks' editions stacked behind it. */
-  .mail { position: relative; isolation: isolate; margin-top: auto; padding-bottom: 0.75rem; }
-  .mail::before, .mail::after {
-  content: ''; position: absolute; bottom: 0.375rem; left: 0.5rem; right: 0.5rem; height: 2.5rem;
-  border-radius: 0.75rem; background: #fff;
-  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.06), 0 2px 6px rgba(0, 0, 0, 0.04);
-  }
-  .mail::after { bottom: 0; left: 1rem; right: 1rem; border-radius: 0.625rem; background: #fafafc; z-index: -1; }
-  .mail__card {
-  position: relative; z-index: 1;
-  display: grid; gap: 0.25rem;
-  padding: 0.75rem 0.875rem 0.875rem;
-  border-radius: 0.875rem; background: #fff;
-  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.07), 0 1px 2px rgba(0, 0, 0, 0.04), 0 8px 20px -4px rgba(0, 0, 0, 0.08);
-  }
-  .mail__head { display: flex; align-items: center; gap: 0.625rem; margin-bottom: 0.375rem; }
-  /* The mark cropped to its yellow face, so it reads as an app icon rather than a sticker. */
-  .mail__icon {
-  position: relative; flex: none; width: 2rem; height: 2rem; overflow: hidden;
-  border-radius: 0.4375rem; background: #ffd21e;
-  }
-  .mail__icon img { position: absolute; top: -12.5%; left: -12.5%; width: 133.333%; height: 133.333%; }
-  .mail__icon::after { content: ''; position: absolute; inset: 0; border-radius: inherit; box-shadow: inset 0 0 0 0.5px rgba(0, 0, 0, 0.12); }
-  .mail__from { display: grid; gap: 0.125rem; min-width: 0; font-size: 0.8125rem; line-height: 1.2; font-weight: 600; white-space: nowrap; }
-  .mail__from time { font: 400 0.6875rem/1.2 var(--mono); font-variant-numeric: tabular-nums; color: var(--ink-2); }
-  .mail__subject { font-size: 0.9375rem; line-height: 1.3; font-weight: 500; text-wrap: pretty; }
-  .mail__preview { margin-top: 0.125rem; font-size: 0.8125rem; line-height: 1.35; color: var(--ink-2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  @media (max-width: 620px) {
-    .mail { margin-top: 0.5rem; }
-  }
-  @media (prefers-contrast: more) {
-    .mail__card, .mail::before, .mail::after { box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.3); }
-  }
+  @media (max-width: 620px) { .posters { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 
   /* ---- Studies: the timeline. ---- */
   /* Rail: dates | line | content. The line fills top to bottom (0 → 1 = "Now") straight from the scroll
@@ -1277,121 +1029,6 @@ const sparkEnd = `190 ${(38.7 - (Math.log1p(daily[daily.length - 1]!) / Math.log
     .ms__logo { align-self: start; width: 10.5rem; margin: 0.5rem 0 0; }
   }
 
-  /* ---- How I work: the bento. ---- */
-  /* How I work: one white tile per group on the grey page, the logos as the subject of each. */
-  .how-bento { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 1.25rem; }
-  .how-tile {
-    display: flex; flex-direction: column; gap: 0.75rem;
-    min-width: 0; padding: 2rem;
-    border-radius: 1.75rem;
-    background: var(--bg);
-  }
-  .how-tile--code, .how-tile--build { grid-column: span 3; }
-  .how-tile--type { grid-column: span 2; }
-  .how-tile--ship { grid-column: span 4; }
-
-  .how-title { font-size: clamp(1.5rem, 2.4vw, 2rem); line-height: 1.12; font-weight: 600; letter-spacing: -0.01em; text-wrap: balance; }
-  .how-text { max-width: 34rem; font-size: 1.0625rem; line-height: 1.47; color: var(--ink-2); text-wrap: pretty; }
-  .how-tile .more { align-self: flex-start; transition: transform 120ms var(--ease-out); }
-  .how-tile .more:active { transform: scale(0.97); }
-
-  /* The logos sit at the foot of each tile, one track per well, spread from edge to edge of the text column. */
-  .how-tools {
-    --n: 5; --g: 0.75rem; --well: 4rem;
-    display: grid; grid-template-columns: repeat(var(--n), minmax(0, auto)); justify-content: space-between;
-    gap: 1.5rem var(--g); align-items: start;
-    margin: auto 0 0; padding: 2rem 0 0; list-style: none;
-  }
-  .how-tool {
-    display: grid; grid-template-columns: minmax(0, 1fr); justify-items: center; gap: 0.625rem;
-    min-width: 0; /* a name wider than its well overhangs both sides equally, the well stays on the track */
-    font-size: 0.875rem; line-height: 1.25; font-weight: 500; text-align: center;
-  }
-  /* The well: one surface step down from the tile, the logo at its own brand colour inside. */
-  .how-icon {
-    display: grid; place-items: center;
-    width: var(--well); max-width: 100%; aspect-ratio: 1;
-    border-radius: 24%;
-    background: var(--bg-alt);
-  }
-  .how-icon img { width: 62%; height: auto; }
-
-  /* Give each programming language an equal track; LaTeX keeps its larger standalone logo. */
-  .how-tool--hero { --well: 7.5rem; }
-  .how-tool--hero .how-icon img { width: 66%; }
-
-  /* Code: more languages than the tile is wide, so they run past edge to edge in a slow marquee.
-     Two identical lists, each ending in one gap, so sliding the track by -50% lands exactly on the start. */
-  .how-marquee {
-    --well: 7rem; --g: 2rem; --pad: 2rem; /* --pad: the tile's padding, so the reel runs to the tile's edges */
-    margin: auto calc(-1 * var(--pad)) 0; padding-top: 2rem;
-    overflow: hidden;
-    -webkit-mask-image: linear-gradient(90deg, transparent, #000 var(--pad), #000 calc(100% - var(--pad)), transparent);
-            mask-image: linear-gradient(90deg, transparent, #000 var(--pad), #000 calc(100% - var(--pad)), transparent);
-  }
-  .how-marquee__track { display: flex; width: max-content; margin-left: var(--pad); animation: how-marquee 36s linear infinite; } /* starts in line with the title */
-  .how-marquee__list { display: flex; gap: var(--g); margin: 0; padding: 0 var(--g) 0 0; list-style: none; }
-  .how-tile--code .how-tool { flex: none; font-size: 1.0625rem; white-space: nowrap; }
-  @keyframes how-marquee { to { transform: translateX(-50%); } }
-  /* A pointer resting on the reel stops it, to read a name; touch has no hover, so it never sticks. */
-  @media (hover: hover) and (pointer: fine) {
-    .how-marquee:hover .how-marquee__track { animation-play-state: paused; }
-  }
-  /* Reduced motion: no reel; the one list stays, and scrolls sideways by hand. */
-  @media (prefers-reduced-motion: reduce) {
-    .how-marquee { overflow-x: auto; scrollbar-width: none; }
-    .how-marquee__track { animation: none; }
-    .how-marquee__list[aria-hidden] { display: none; }
-  }
-  .how-tile--type .how-tools { grid-template-columns: 7.5rem; }
-  .how-tile--type .how-icon img { width: 76%; }
-
-  /* Build: one Cloudflare well across two tracks, for Workers and D1. */
-  .how-tool--pair { grid-column: span 2; }
-  .how-tool--pair .how-icon { width: 100%; aspect-ratio: auto; height: var(--well); border-radius: calc(var(--well) * 0.24); }
-  .how-tool--pair .how-icon img { width: calc(var(--well) * 0.62); }
-
-  /* Ship with: the largest tile and the largest logos; the AI tools and version control, split by a hairline. */
-  .how-ship {
-    display: grid; grid-template-columns: auto 1px auto; justify-content: space-between; gap: 2rem;
-    margin-top: auto; padding-top: 2rem;
-    container-type: inline-size; /* the wells size to the tile: five wells and five gaps fill the width */
-  }
-  .how-ship::before { content: ''; grid-column: 2; grid-row: 1; background: rgba(0, 0, 0, 0.08); }
-  .how-ship__group { grid-row: 1; min-width: 0; }
-  .how-ship__group:first-child { grid-column: 1; }
-  .how-ship__group:last-child { grid-column: 3; }
-  .how-ship .how-tools { --g: 2rem; --well: min(7rem, (100cqi - 5 * var(--g) - 1px) / 5); margin: 0; padding: 0; }
-  .how-ship__group:first-child { --n: 3; }
-  .how-ship__group:last-child { --n: 2; }
-  .how-ship .how-tool { font-size: 1.0625rem; white-space: nowrap; }
-
-  @media (max-width: 1068px) {
-    .how-tile--code, .how-tile--build, .how-tile--type, .how-tile--ship { grid-column: 1 / -1; }
-  }
-  @media (max-width: 620px) {
-    .how-bento { gap: 0.75rem; }
-    .how-tile { padding: 1.5rem; }
-    .how-tools { --g: 0.5rem; --well: 3.5rem; gap: 1.25rem var(--g); padding-top: 1.5rem; }
-    .how-tool { gap: 0.5rem; font-size: 0.75rem; white-space: normal; }
-    .how-tool--hero { --well: 6rem; }
-    .how-marquee { --well: 4.5rem; --g: 1.25rem; --pad: 1.5rem; padding-top: 1.5rem; }
-    .how-tile--code .how-tool { font-size: 0.8125rem; }
-    .how-tile--type .how-tools { grid-template-columns: 6rem; }
-    .how-tile--type .how-tool { font-size: 0.875rem; }
-    .how-ship { grid-template-columns: 1fr; grid-template-rows: auto 1px auto; justify-content: stretch; gap: 1.5rem; padding-top: 1.5rem; }
-    .how-ship::before { grid-column: 1; grid-row: 2; }
-    .how-ship__group:first-child { grid-column: 1; grid-row: 1; }
-    .how-ship__group:last-child { grid-column: 1; grid-row: 3; }
-    .how-ship .how-tools { --well: 4.5rem; --g: 0.5rem; grid-template-columns: repeat(3, var(--well)); }
-    .how-ship .how-tool { font-size: 0.8125rem; }
-  }
-  @media (max-width: 360px) {
-    .how-tile { padding: 1.25rem; }
-    .how-marquee { --pad: 1.25rem; }
-    .how-tools { --well: 3rem; --g: 0.375rem; }
-  }
-
   /* Contact */
   /* With the footer, the last screen at its tallest (Safari's toolbar tucked away): scrolled to the end,
      the section starts at the top of the screen, so the black page before it never shows; with the
@@ -1540,6 +1177,8 @@ const sparkEnd = `190 ${(38.7 - (Math.log1p(daily[daily.length - 1]!) / Math.log
     .contact.is-playing .thread__receipt { animation: contact-fade 240ms ease 1300ms both; }
   }
 
+  .contact__tel { color: inherit; text-decoration: underline; text-underline-offset: 0.15em; font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .contact__links { flex-wrap: wrap; }
   .footer { padding-top: 1px; background: var(--bg-alt); color: var(--ink-2); font-size: 0.75rem; }
   .footer__inner { display: flex; justify-content: space-between; gap: 1rem; flex-wrap: wrap; padding-block: 1.25rem 2rem; border-top: 1px solid rgba(0, 0, 0, 0.1); }
 </style>

@@ -2,22 +2,24 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { useIslandNudge } from '@/components/IslandNudge';
 import { warm } from '@/scripts/warm';
+import { cinePath, normalizePath } from '@/lib/paths';
 import { defaultClock, IslandView, islandMetrics, type IslandMetricsOverrides, type IslandMotionOverrides, type IslandPresentation } from '@/lib/island';
 
 /**
  * The navigation as the island, drawn by the islandcn engine (src/lib/island), paired with a
- * detached music bubble that leads straight to /music.
+ * detached film bubble that leads straight to /cine (it was a music bubble on the site this one grew from).
  *
  * At rest it is the pill with the music bubble beside it (IslandNudge.tsx). Hovering (fine
  * pointers), tapping (touch) or focusing the pill opens the navigation links; hovering or pressing
  * the music bubble leaves the menu closed and navigates straight to the music page.
  */
 const links = [
-  { href: '#top', label: 'Home' },
-  { href: '#projects', label: 'Projects' },
-  { href: '#studies', label: 'Studies' },
-  { href: '#how-i-work', label: 'How I work' },
-  { href: '#contact', label: 'Contact' },
+  { href: '#top', label: 'Inicio' },
+  { href: '#divulgacion', label: 'Divulgación' },
+  { href: '#filosofia', label: 'Filosofía' },
+  { href: '#estudios', label: 'Estudios' },
+  { href: '#proyectos', label: 'Proyectos' },
+  { href: '#contacto', label: 'Contacto' },
 ] as const;
 
 /**
@@ -29,13 +31,13 @@ const hoverOpenDelay = 70;
 const hoverCloseDelay = 180;
 
 /**
- * Desktop clamps the expanded card to 452 pt (just above Pro Max width) so all five links sit on
+ * Desktop clamps the expanded card to 600 pt so all six Spanish links sit on
  * one airy row without crowding the continuous corners; smaller viewports use their own width and
  * wrap cleanly onto two balanced rows. The keyline stays on dark pages even at idle so the pill
  * never melts into black.
  */
 const metrics = {
-  screen: { width: 452 },
+  screen: { width: 600 },
   expanded: { minHeight: 72, maxHeight: 200, rowGap: 0 },
   keyline: { idle: 1 },
 } as const satisfies IslandMetricsOverrides;
@@ -89,10 +91,8 @@ const luma = (colour: string | undefined) => {
   return 0.2126 * r + 0.7152 * g + 0.0722 * b;
 };
 
-/** Where the music page lives. */
-const musicPage = '/music';
-
-const normalizePath = (p: string) => p.replace(/\/+$/, '') || '/';
+/** Where the film page lives (under the site's base path). */
+const musicPage = cinePath;
 
 export const IslandNav = ({ home = '', current = '/' }: {
   /** Prefix for the section links: "" on the home page, "/" anywhere else. Defaults to "". */
@@ -310,7 +310,7 @@ export const IslandNav = ({ home = '', current = '/' }: {
         ref={trigger}
         className="island-nav__hit"
         type="button"
-        aria-label="Menu"
+        aria-label="Menú"
         aria-expanded={open}
         onPointerEnter={(e) => {
           if (e.pointerType === 'mouse' && fine.current) setSoon(true, hoverOpenDelay);
@@ -344,7 +344,7 @@ export const IslandNav = ({ home = '', current = '/' }: {
       <IslandView
         presentation={presentation}
         placement="viewport"
-        label="Navigation and music"
+        label="Navegación y cine"
         pressTarget={bubblePressed ? 'bubble' : pressed ? 'pill' : null}
         pressStyle={bubblePressed ? 'swell' : 'squish'}
         joining={joining}
@@ -354,9 +354,9 @@ export const IslandNav = ({ home = '', current = '/' }: {
       />
       {nudge !== null && (
         <a
-          className="island-nav__music"
+          className="island-nav__cine"
           href={musicPage}
-          aria-label="Music"
+          aria-label="Cine"
           aria-current={onMusicPage ? 'page' : undefined}
           onPointerEnter={() => {
             clearTimeout(hoverTimer.current);
