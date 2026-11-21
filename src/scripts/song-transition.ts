@@ -10,9 +10,11 @@
  * stays off the page's own work (the music page sets its carousel up while the page grows).
  * Once per visit, from scripts/page.ts.
  */
+import { cinePath } from '@/lib/paths';
 import type { TransitionBeforePreparationEvent, TransitionBeforeSwapEvent } from 'astro:transitions/client';
 
-const MUSIC = '/music';
+/** The film page: it opens out of the island's film bubble (it was the music page on the site this grew from). */
+const MUSIC = cinePath;
 /** The island's corners: the resting pill and detached music bubble (lib/island/metrics.ts, Island.astro). */
 const PILL_RADIUS = 18.42;
 /** How far the pages scale about the island while the clip opens or closes. */
@@ -29,7 +31,7 @@ const supported = 'startViewTransition' in document;
 
 const path = (url: URL) => url.pathname.replace(/\/+$/, '') || '/';
 const island = () => document.querySelector<HTMLElement>('[data-island-nav] [data-islandcn] > div');
-const bubble = () => document.querySelector('.island-nav__music')?.getBoundingClientRect();
+const bubble = () => document.querySelector('.island-nav__cine')?.getBoundingClientRect();
 const pill = () => document.querySelector('.island-nav__hit')?.getBoundingClientRect();
 
 /** The music bubble as it was under the press. */
@@ -38,7 +40,7 @@ let mode: 'open' | 'close' | null = null;
 let oldName = '';
 
 document.addEventListener('click', (event) => {
-  if (event.target instanceof Element && event.target.closest('.island-nav__music')) pressed = bubble();
+  if (event.target instanceof Element && event.target.closest('.island-nav__cine')) pressed = bubble();
 }, { capture: true });
 
 document.addEventListener('astro:before-preparation', (event) => {
@@ -47,7 +49,7 @@ document.addEventListener('astro:before-preparation', (event) => {
   mode = null;
   island()?.style.removeProperty('view-transition-name');
   if (!supported || reduce.matches || leaving === arriving) return;
-  if (arriving && sourceElement?.closest('.island-nav__music')) mode = 'open';
+  if (arriving && sourceElement?.closest('.island-nav__cine')) mode = 'open';
   // A phone's back swipe has already slid the page away; don't play a second motion after it.
   else if (leaving && !(navigationType === 'traverse' && coarse.matches)) mode = 'close';
   if (mode) oldName = getComputedStyle(document.documentElement).viewTransitionName;

@@ -10,20 +10,22 @@
  * to the island already there, which re-renders its links and keeps its state.
  */
 import { IslandNav } from './IslandNav';
+import { base, cinePath, homePath, normalizePath } from '@/lib/paths';
 
-// The links point at sections of the home page: bare anchors there, "/#..." from any other page.
-const current = Astro.url.pathname;
-const home = current === '/' ? '' : '/';
+// The links point at sections of the home page: bare anchors there, "<base>/#..." from any other page.
+const current = normalizePath(Astro.url.pathname);
+const home = current === homePath ? '' : `${base}/`;
 ---
 <IslandNav client:load home={home} current={current} transition:persist="island" />
 <noscript>
-  <nav class="island-fallback" aria-label="Primary">
-    <a href={home || '#top'}>Home</a>
-    <a href={`${home}#projects`}>Projects</a>
-    <a href={`${home}#studies`}>Studies</a>
-    <a href={`${home}#how-i-work`}>How I work</a>
-    <a href={`${home}#contact`}>Contact</a>
-    <a href="/music">Music</a>
+  <nav class="island-fallback" aria-label="Principal">
+    <a href={home || '#top'}>Inicio</a>
+    <a href={`${home}#divulgacion`}>Divulgación</a>
+    <a href={`${home}#filosofia`}>Filosofía</a>
+    <a href={`${home}#estudios`}>Estudios</a>
+    <a href={`${home}#proyectos`}>Proyectos</a>
+    <a href={`${home}#contacto`}>Contacto</a>
+    <a href={cinePath}>Cine</a>
   </nav>
 </noscript>
 
@@ -39,24 +41,24 @@ const home = current === '/' ? '' : '/';
   }
   .island-nav__hit:focus-visible { outline-offset: 3px; }
 
-  /* The detached music bubble sits 7.82 px right of the idle pill (47.425 + 7.82 = 55.245 from
-     centre), as a 36.85 px circle. Pressing or clicking it goes straight to /music; hovering it
+  /* The detached film bubble sits 7.82 px right of the idle pill (47.425 + 7.82 = 55.245 from
+     centre), as a 36.85 px circle. Pressing or clicking it goes straight to /cine; hovering it
      never opens the main pill. An expanded pseudo-element keeps touch targets above 44 px while
      leaving a clear gap from the pill. */
-  .island-nav__music {
+  .island-nav__cine {
     position: fixed; top: 13.91px; left: calc(50% + 55.245px); z-index: 51;
     width: 36.85px; height: 36.85px; border-radius: 50%;
     display: block; text-decoration: none; cursor: pointer;
     -webkit-tap-highlight-color: transparent;
     pointer-events: none;
   }
-  .island-nav__music::after {
+  .island-nav__cine::after {
     content: ''; position: absolute; inset: -4px; border-radius: 50%;
   }
-  .island-nav[data-nudge]:not([data-open]) .island-nav__music { pointer-events: auto; }
-  .island-nav__music:focus-visible { outline-offset: 3px; }
+  .island-nav[data-nudge]:not([data-open]) .island-nav__cine { pointer-events: auto; }
+  .island-nav__cine:focus-visible { outline-offset: 3px; }
 
-  .island-nav__music-icon {
+  .island-nav__cine-icon {
     display: grid; place-items: center;
     width: 22px; height: 22px; flex: none;
     transform: scale(1);
@@ -64,13 +66,13 @@ const home = current === '/' ? '' : '/';
     transition: transform 190ms ease-in-out;
   }
   @media (hover: hover) and (pointer: fine) and (prefers-reduced-motion: no-preference) {
-    .island-nav[data-nudge]:has(.island-nav__music:hover) .island-nav__music-icon {
+    .island-nav[data-nudge]:has(.island-nav__cine:hover) .island-nav__cine-icon {
       transform: scale(1.08);
     }
   }
 
   @media (prefers-reduced-motion: reduce) {
-    .island-nav__music-icon { transform: none; transition: none; }
+    .island-nav__cine-icon { transform: none; transition: none; }
   }
 
   /* This menu only uses the bottom slot. Collapse the empty sensor row above it. */

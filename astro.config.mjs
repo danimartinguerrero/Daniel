@@ -3,13 +3,12 @@ import { defineConfig } from 'astro/config';
 
 import react from '@astrojs/react';
 
+// Published by GitHub Pages from the "Daniel" repository, so the site lives under /Daniel.
+// If the repository is ever renamed to danimartinguerrero.github.io, drop `base`.
 export default defineConfig({
-  site: 'https://mugar123.github.io',
+  site: 'https://danimartinguerrero.github.io',
+  base: '/Daniel',
   output: 'static',
-  redirects: {
-    '/music/fl-studio': '/music/#fl-studio',
-    '/music/fl-studio/piano-roll': '/music/#fl-studio',
-  },
   build: { inlineStylesheets: 'auto' },
   integrations: [react()],
   // Dev only: the React renderer reaches react-dom/client through a nested package, which Vite

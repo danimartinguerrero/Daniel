@@ -1,0 +1,258 @@
+---
+import '@/styles/global.css';
+import { ClientRouter } from 'astro:transitions';
+import Island from '@/components/Island.astro';
+import { diary, favorites, letterboxd, list, recent, reviews, stars } from '@/data/cine';
+import { href } from '@/lib/paths';
+
+const title = 'Cine · Daniel Martín Guerrero';
+const description = `${letterboxd.films} películas en Letterboxd: mis cuatro favoritas, lo último que he visto y lo que escribo de ello.`;
+const date = (iso: string) => new Date(`${iso}T12:00:00`).toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric' });
+const counts = [
+  { n: letterboxd.films, label: 'películas' },
+  { n: letterboxd.thisYear, label: 'este año' },
+  { n: letterboxd.lists, label: 'listas' },
+  { n: letterboxd.following, label: 'siguiendo' },
+  { n: letterboxd.followers, label: 'seguidores' },
+];
+---
+<!doctype html>
+<html lang="es" transition:animate="none">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>{title}</title>
+    <meta name="description" content={description} />
+    <meta name="theme-color" content="#000" />
+    <meta property="og:title" content={title} />
+    <meta property="og:description" content={description} />
+    <meta property="og:type" content="website" />
+    <meta property="og:locale" content="es_ES" />
+    <meta property="og:url" content={new URL(href('/cine'), Astro.site)} />
+    <meta property="og:image" content={new URL(href('/og.jpg'), Astro.site)} />
+    <meta name="twitter:card" content="summary_large_image" />
+    <link rel="icon" href={href('/favicon.ico')} sizes="48x48" />
+    <link rel="icon" href={href('/favicon.svg')} type="image/svg+xml" sizes="any" />
+    <link rel="apple-touch-icon" href={href('/apple-touch-icon.png')} />
+    <script is:inline>document.documentElement.classList.add('js');</script>
+    <ClientRouter />
+  </head>
+  <body class="cine-page">
+    <a class="skip sr-only" href="#main">Saltar al contenido</a>
+
+    <Island />
+
+    <main id="main" data-cine>
+      <section class="cine-hero" aria-labelledby="cine-title">
+        <img class="cine-hero__banner" src={href('/cine/banner.webp')} alt="" width="1188" height="512" decoding="async" fetchpriority="high" />
+        <div class="cine-hero__copy container--wide">
+          <img class="cine-hero__avatar" src={href('/cine/avatar.webp')} alt="" width="125" height="125" decoding="async" />
+          <div class="cine-hero__who">
+            <p class="cine-hero__user">Letterboxd · {letterboxd.user}</p>
+            <h1 class="cine-hero__title" id="cine-title">Cine.</h1>
+            <p class="cine-hero__bio" lang="en">«{letterboxd.bio}»</p>
+          </div>
+          <dl class="counts">
+            {counts.map((c) => <div><dt>{c.label}</dt><dd>{c.n}</dd></div>)}
+          </dl>
+        </div>
+      </section>
+
+      <section class="cine-section container--wide" aria-labelledby="fav-title">
+        <header class="cine-head">
+          <h2 class="cine-head__title" id="fav-title">Mis cuatro.</h2>
+          <p class="cine-head__text">Las películas que pondría siempre. Un agujero negro, un conejo, un café y una vela. Y siempre vuelvo a Tarkovsky, Lynch, Bergman y Kurosawa.</p>
+        </header>
+        <ol class="shelf shelf--favs">
+          {favorites.map((f, i) => (
+            <li class="shelf__item" style={`--i: ${i}`}>
+              <img src={href(f.img)} alt={f.title} width="185" height="278" decoding="async" />
+              <p class="shelf__title">{f.title}{f.year && <span> {f.year}</span>}</p>
+            </li>
+          ))}
+        </ol>
+      </section>
+
+      <section class="cine-section container--wide" aria-labelledby="recent-title">
+        <header class="cine-head">
+          <h2 class="cine-head__title" id="recent-title">Lo último.</h2>
+          <p class="cine-head__text">Lo que he visto estas semanas, con la nota que le puse.</p>
+        </header>
+        <ol class="shelf">
+          {recent.map((f) => (
+            <li class="shelf__item">
+              <img src={href(f.img)} alt={f.title} width="185" height="278" loading="lazy" decoding="async" />
+              <p class="shelf__rating"><span class="stars" aria-label={`${f.rating} de 5 estrellas`}>{stars(f.rating)}</span>{f.liked && <span class="heart" aria-label="Me gusta">♥</span>}</p>
+              <p class="shelf__title">{f.title}</p>
+            </li>
+          ))}
+        </ol>
+      </section>
+
+      <section class="cine-section container--wide" aria-labelledby="reviews-title">
+        <header class="cine-head">
+          <h2 class="cine-head__title" id="reviews-title">Lo que escribo.</h2>
+        </header>
+        <div class="reviews">
+          {reviews.map((r) => (
+            <article class="review">
+              <img src={href(r.img)} alt="" width="185" height="278" loading="lazy" decoding="async" />
+              <div class="review__body">
+                <h3 class="review__film">{r.title} <span>{r.year}</span></h3>
+                <p class="review__meta"><span class="stars" aria-label={`${r.rating} de 5 estrellas`}>{stars(r.rating)}</span> Vista el <time datetime={r.watched}>{date(r.watched)}</time></p>
+                <blockquote class="review__text" lang={r.lang}><p>{r.text}</p></blockquote>
+              </div>
+            </article>
+          ))}
+        </div>
+      </section>
+
+      <section class="cine-section container--wide cine-split" aria-label="Diario y listas">
+        <div class="diary">
+          <h2 class="cine-head__title">Diario.</h2>
+          <p class="cine-head__text">{letterboxd.diary} entradas. Las últimas:</p>
+          <ol class="diary__months">
+            {diary.map((m) => (
+              <li class="diary__month">
+                <p class="diary__name"><time datetime={m.iso}>{m.month}</time></p>
+                <ol class="diary__entries">
+                  {m.entries.map((e) => <li><span class="diary__day">{e.day}</span>{e.title}</li>)}
+                </ol>
+              </li>
+            ))}
+          </ol>
+        </div>
+        <aside class="lists">
+          <a class="list-card" href={list.url}>
+            <img src={href(list.img)} alt="" width="311" height="130" loading="lazy" decoding="async" />
+            <p class="list-card__kicker">Una lista</p>
+            <h2 class="list-card__title">{list.title}</h2>
+            <p class="list-card__meta">{list.films} películas</p>
+          </a>
+          <a class="list-card list-card--watch" href={`${letterboxd.url}watchlist/`}>
+            <img src={href('/cine/watchlist.webp')} alt="" width="311" height="130" loading="lazy" decoding="async" />
+            <p class="list-card__kicker">Pendientes</p>
+            <h2 class="list-card__title">Watchlist</h2>
+            <p class="list-card__meta">{letterboxd.watchlist} películas esperando</p>
+          </a>
+        </aside>
+      </section>
+
+      <section class="cine-end container--wide">
+        <p class="cine-end__text">El resto, en Letterboxd.</p>
+        <p class="cine-end__cta">
+          <a class="pill" href={letterboxd.url}>Seguirme en Letterboxd</a>
+          <a class="more" href={href('/')}>Volver al inicio</a>
+        </p>
+      </section>
+    </main>
+
+    <footer class="footer cine-footer">
+      <div class="container--wide footer__inner">
+        <p>Datos de Letterboxd a 21 de noviembre de 2026.</p>
+        <p>© 2026 Daniel Martín Guerrero</p>
+      </div>
+    </footer>
+  </body>
+</html>
+
+<style>
+  .skip:focus { position: fixed; top: 0.5rem; left: 0.5rem; width: auto; height: auto; clip-path: none; z-index: 10; padding: 0.5rem 1rem; background: var(--bg); border-radius: 980px; }
+
+  .cine-page { background: #0b0d12; color: var(--on-dark); }
+  .cine-page .more { color: var(--link-on-dark); }
+
+  /* The profile's own banner, faded into the page as Letterboxd does, with the profile over its foot. */
+  .cine-hero { position: relative; isolation: isolate; padding-top: clamp(14rem, 34vw, 26rem); }
+  .cine-hero__banner {
+    position: absolute; inset: 0 0 auto; z-index: -1;
+    width: 100%; height: clamp(22rem, 48vw, 40rem); object-fit: cover; object-position: center 35%;
+    mask-image: linear-gradient(#000 45%, transparent);
+    -webkit-mask-image: linear-gradient(#000 45%, transparent);
+  }
+  .cine-hero__copy {
+    display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: end; gap: 1.5rem 2rem;
+  }
+  .cine-hero__avatar { width: clamp(5rem, 9vw, 7.5rem); height: auto; border-radius: 50%; box-shadow: 0 0 0 3px #0b0d12, 0 0 0 4px rgba(255, 255, 255, 0.15); }
+  .cine-hero__user { font-size: 0.9375rem; font-weight: 600; color: var(--on-dark-2); letter-spacing: 0.02em; }
+  .cine-hero__title { font-size: clamp(4rem, 12vw, 9rem); line-height: 0.9; font-weight: 600; letter-spacing: -0.05em; }
+  .cine-hero__bio { margin-top: 0.75rem; font-family: var(--serif); font-style: italic; font-size: clamp(1.125rem, 1.6vw, 1.375rem); color: #c9cdd8; }
+
+  .counts { display: flex; gap: 0; margin: 0; }
+  .counts div { display: flex; flex-direction: column-reverse; align-items: center; padding: 0 1rem; border-left: 1px solid rgba(255, 255, 255, 0.12); }
+  .counts div:first-child { border-left: 0; }
+  .counts dt { font-size: 0.75rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--on-dark-2); }
+  .counts dd { margin: 0; font-size: clamp(1.5rem, 2.4vw, 2rem); font-weight: 600; font-variant-numeric: tabular-nums; }
+
+  .cine-section { padding-top: clamp(5rem, 10vw, 8rem); }
+  .cine-head { display: grid; gap: 0.5rem; margin-bottom: 2rem; }
+  .cine-head__title { font-size: clamp(2.5rem, 6vw, 4.5rem); line-height: 1; font-weight: 600; letter-spacing: -0.04em; }
+  .cine-head__text { font-size: clamp(1.0625rem, 1.4vw, 1.25rem); line-height: 1.45; color: var(--on-dark-2); max-width: 36rem; }
+
+  .shelf { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: clamp(0.75rem, 2vw, 1.5rem); }
+  .shelf__item img {
+    display: block; width: 100%; height: auto; aspect-ratio: 185 / 278; object-fit: cover; border-radius: 0.5rem;
+    box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.1), 0 1.5rem 3rem -1rem rgba(0, 0, 0, 0.9);
+    transition: transform 300ms var(--ease-out);
+  }
+  @media (hover: hover) and (pointer: fine) {
+    .shelf__item:hover img { transform: translateY(-0.375rem); }
+  }
+  .shelf__title { margin-top: 0.75rem; font-size: 0.9375rem; font-weight: 600; }
+  .shelf__title span { font-weight: 400; color: var(--on-dark-2); }
+  .shelf__rating { margin-top: 0.75rem; display: flex; gap: 0.5rem; align-items: center; }
+  .stars { color: #00c030; letter-spacing: 0.05em; }
+  .heart { color: #ff8000; }
+
+  /* The favourites rise into place one after another, once, on load. */
+  @media (prefers-reduced-motion: no-preference) {
+    .shelf--favs .shelf__item { animation: rise 700ms var(--ease-out) both; animation-delay: calc(150ms + var(--i) * 90ms); }
+  }
+  @keyframes rise { from { opacity: 0; transform: translateY(1.25rem); } }
+
+  .reviews { display: grid; gap: 1.5rem; }
+  .review {
+    display: grid; grid-template-columns: 6rem minmax(0, 1fr); gap: 1.5rem; align-items: start;
+    padding: 1.75rem; border-radius: 1.5rem; background: #14171f;
+  }
+  .review img { width: 100%; height: auto; border-radius: 0.375rem; }
+  .review__film { font-family: var(--serif); font-size: clamp(1.375rem, 2.2vw, 1.875rem); line-height: 1.15; font-weight: 600; }
+  .review__film span { font-family: var(--font); font-weight: 400; font-size: 0.7em; color: var(--on-dark-2); }
+  .review__meta { margin-top: 0.5rem; font-size: 0.9375rem; color: var(--on-dark-2); }
+  .review__text { margin: 1rem 0 0; font-family: var(--serif); font-size: clamp(1.25rem, 2vw, 1.625rem); line-height: 1.35; font-style: italic; max-width: 40rem; }
+
+  .cine-split { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr); gap: 3rem; align-items: start; }
+  .diary .cine-head__text { margin: 0.5rem 0 1.5rem; }
+  .diary__months { list-style: none; margin: 0; padding: 0; }
+  .diary__month { display: grid; grid-template-columns: 7.5rem minmax(0, 1fr); gap: 1rem; padding: 1rem 0; border-top: 1px solid rgba(255, 255, 255, 0.1); }
+  .diary__name { font-size: 0.8125rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--on-dark-2); padding-top: 0.2rem; }
+  .diary__entries { list-style: none; margin: 0; padding: 0; display: grid; gap: 0.5rem; font-size: 1.0625rem; }
+  .diary__day { display: inline-block; width: 2rem; color: var(--on-dark-2); font-variant-numeric: tabular-nums; }
+
+  .lists { display: grid; gap: 1.25rem; }
+  .list-card { display: grid; gap: 0.375rem; padding: 1.25rem; border-radius: 1.5rem; background: #14171f; color: inherit; text-decoration: none; transition: background-color 200ms var(--ease-out); }
+  .list-card img { width: 100%; height: auto; border-radius: 0.5rem; margin-bottom: 0.75rem; }
+  .list-card__kicker { font-size: 0.8125rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--on-dark-2); }
+  .list-card__title { font-size: 1.5rem; line-height: 1.15; font-weight: 600; letter-spacing: -0.01em; }
+  .list-card__meta { font-size: 0.9375rem; color: var(--on-dark-2); }
+  @media (hover: hover) and (pointer: fine) { .list-card:hover { background: #1b1f29; } }
+
+  .cine-end { padding-block: clamp(6rem, 12vw, 10rem); text-align: center; display: grid; gap: 1.5rem; justify-items: center; }
+  .cine-end__text { font-size: clamp(2rem, 5vw, 3.5rem); font-weight: 600; letter-spacing: -0.03em; }
+  .cine-end__cta { display: flex; gap: 1.5rem; align-items: center; flex-wrap: wrap; justify-content: center; }
+
+  .cine-footer { background: #0b0d12; color: var(--on-dark-2); font-size: 0.75rem; }
+  .cine-footer :global(.footer__inner) { display: flex; justify-content: space-between; gap: 1rem; flex-wrap: wrap; padding-block: 1.25rem 2rem; border-top: 1px solid rgba(255, 255, 255, 0.1); }
+
+  @media (max-width: 760px) {
+    .cine-hero__copy { grid-template-columns: auto minmax(0, 1fr); }
+    .counts { grid-column: 1 / -1; display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); }
+    .counts div { padding: 0 0.25rem; }
+    .counts dt { font-size: 0.625rem; letter-spacing: 0.04em; }
+    .counts dd { font-size: 1.375rem; }
+    .shelf { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .review { grid-template-columns: 4.5rem minmax(0, 1fr); padding: 1.25rem; gap: 1rem; }
+    .cine-split { grid-template-columns: 1fr; }
+    .diary__month { grid-template-columns: 1fr; gap: 0.5rem; }
+  }
+</style>
