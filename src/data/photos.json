@@ -1,0 +1,170 @@
+{
+ "supernova-grupo": {
+  "w": [
+   900,
+   1800
+  ],
+  "ratio": 1.7778
+ },
+ "observatorio": {
+  "w": [
+   900,
+   1500
+  ],
+  "ratio": 0.75
+ },
+ "eclipse-2026": {
+  "w": [
+   900,
+   1200
+  ],
+  "ratio": 0.75
+ },
+ "via-lactea": {
+  "w": [
+   900,
+   1800
+  ],
+  "ratio": 0.5625
+ },
+ "observacion-luz-roja": {
+  "w": [
+   900,
+   1800
+  ],
+  "ratio": 0.5625
+ },
+ "supernova-charla": {
+  "w": [
+   900,
+   1800
+  ],
+  "ratio": 1.3333
+ },
+ "maqueta-sistema-solar": {
+  "w": [
+   900,
+   1500
+  ],
+  "ratio": 0.75
+ },
+ "laser-difraccion": {
+  "w": [
+   900,
+   1600
+  ],
+  "ratio": 1.7778
+ },
+ "prisma-goniometro": {
+  "w": [
+   900,
+   1600
+  ],
+  "ratio": 2.2663
+ },
+ "holografia-montaje": {
+  "w": [
+   900,
+   1600
+  ],
+  "ratio": 1.7778
+ },
+ "holografia": {
+  "w": [
+   900,
+   1600
+  ],
+  "ratio": 1.4011
+ },
+ "laser-pantalla": {
+  "w": [
+   900,
+   1600
+  ],
+  "ratio": 1.7778
+ },
+ "pendulo-pohl": {
+  "w": [
+   900,
+   1500
+  ],
+  "ratio": 0.75
+ },
+ "pendulos-acoplados": {
+  "w": [
+   900,
+   1500
+  ],
+  "ratio": 0.75
+ },
+ "pulsaciones": {
+  "w": [
+   900,
+   1800
+  ],
+  "ratio": 1.3333
+ },
+ "ondas-cuerda": {
+  "w": [
+   900,
+   1500
+  ],
+  "ratio": 0.75
+ },
+ "osciloscopio": {
+  "w": [
+   900,
+   1800
+  ],
+  "ratio": 1.3333
+ },
+ "protoboard": {
+  "w": [
+   900,
+   1500
+  ],
+  "ratio": 0.75
+ },
+ "momento-inercia": {
+  "w": [
+   900,
+   1500
+  ],
+  "ratio": 0.75
+ },
+ "banco-sensores": {
+  "w": [
+   900,
+   1800
+  ],
+  "ratio": 1.3333
+ },
+ "termometria": {
+  "w": [
+   900,
+   1500
+  ],
+  "ratio": 0.75
+ },
+ "bobinas": {
+  "w": [
+   900,
+   1500
+  ],
+  "ratio": 0.75
+ },
+ "seminario-qubit-grupo": {
+  "w": [
+   900,
+   1280
+  ],
+  "ratio": 1.3333
+ },
+ "seminario-qubit-portada": {
+  "w": [
+   900,
+   1280
+  ],
+  "ratio": 1.7778
+ }
+}
