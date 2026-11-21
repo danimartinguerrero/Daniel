@@ -1,0 +1,87 @@
+---
+import '@/styles/site.css';
+import { href } from '@/lib/paths';
+
+interface Props { title: string; description: string; path?: string; page?: 'home' | 'cine' }
+const { title, description, path = '/', page = 'home' } = Astro.props;
+
+// The index: on the home page the links are anchors; elsewhere they lead back to them.
+const at = (id: string) => (page === 'home' ? `#${id}` : `${href('/')}#${id}`);
+const nav = [
+  { n: '01', id: 'divulgacion', label: 'Divulgación' },
+  { n: '02', id: 'apuntes', label: 'Apuntes' },
+  { n: '03', id: 'filosofia', label: 'Filosofía' },
+  { n: '04', id: 'trayectoria', label: 'Trayectoria' },
+  { n: '05', id: 'proyectos', label: 'Proyectos' },
+];
+---
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>{title}</title>
+    <meta name="description" content={description} />
+    <meta name="theme-color" content="#0a0a0b" />
+    <meta name="color-scheme" content="dark" />
+    <meta property="og:title" content={title} />
+    <meta property="og:description" content={description} />
+    <meta property="og:type" content="website" />
+    <meta property="og:locale" content="es_ES" />
+    <meta property="og:url" content={new URL(href(path), Astro.site)} />
+    <meta property="og:image" content={new URL(href('/og.jpg'), Astro.site)} />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <link rel="icon" href={href('/favicon.ico')} sizes="48x48" />
+    <link rel="icon" href={href('/favicon.svg')} type="image/svg+xml" />
+    <link rel="apple-touch-icon" href={href('/apple-touch-icon.png')} />
+    <script is:inline>document.documentElement.classList.add('js');</script>
+  </head>
+  <body>
+    <a class="skip" href="#main">Saltar al contenido</a>
+    <header class="head" data-head>
+      <div class="wrap head__in">
+        <a class="head__name" href={page === 'home' ? '#top' : href('/')}>Daniel Martín Guerrero</a>
+        <button class="head__menu" type="button" aria-expanded="false" aria-controls="nav" data-menu>Índice</button>
+        <nav class="head__nav" id="nav" aria-label="Índice">
+          <ol>
+            {nav.map((l) => <li><a href={at(l.id)}><span>{l.n}</span>{l.label}</a></li>)}
+            <li><a href={href('/cine')} aria-current={page === 'cine' ? 'page' : undefined}><span>06</span>Cine</a></li>
+            <li><a href={at('contacto')}><span>07</span>Contacto</a></li>
+          </ol>
+        </nav>
+      </div>
+    </header>
+
+    <main id="main">
+      <slot />
+    </main>
+
+    <footer class="foot">
+      <div class="wrap foot__in">
+        <p>Daniel Martín Guerrero · Salamanca, 40.96° N 5.67° W</p>
+        <p>Newsreader, Inter Tight y JetBrains Mono · © 2026</p>
+      </div>
+    </footer>
+
+    <script>
+      // The header gets its surface once the page has moved off the top; the index opens on small screens.
+      const head = document.querySelector<HTMLElement>('[data-head]')!;
+      const menu = document.querySelector<HTMLButtonElement>('[data-menu]')!;
+      const solid = () => head.classList.toggle('is-solid', scrollY > 24);
+      addEventListener('scroll', solid, { passive: true });
+      solid();
+      const setOpen = (open: boolean) => { head.classList.toggle('is-open', open); menu.setAttribute('aria-expanded', String(open)); menu.textContent = open ? 'Cerrar' : 'Índice'; };
+      menu.addEventListener('click', () => setOpen(!head.classList.contains('is-open')));
+      head.querySelectorAll('.head__nav a').forEach((a) => a.addEventListener('click', () => setOpen(false)));
+      addEventListener('keydown', (e) => { if (e.key === 'Escape') setOpen(false); });
+
+      // Each section arrives once as it comes into view.
+      const io = new IntersectionObserver((entries) => {
+        for (const e of entries) if (e.isIntersecting) { e.target.classList.add('is-in'); io.unobserve(e.target); }
+      }, { rootMargin: '0px 0px -8% 0px' });
+      document.querySelectorAll('[data-reveal]').forEach((el) => io.observe(el));
+    </script>
+  </body>
+</html>

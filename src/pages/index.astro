@@ -1,1204 +1,345 @@
 ---
-import '@/styles/global.css';
-import ScrollStatement from '@/components/ScrollStatement.astro';
-import { ClientRouter } from 'astro:transitions';
-import Island from '@/components/Island.astro';
-import PartDivider from '@/components/PartDivider.astro';
-import { helloStrokes, helloStrokeWidth, helloViewBox } from '@/data/hello';
-import { favorites, letterboxd } from '@/data/cine';
-import { cinePath, href } from '@/lib/paths';
+import Base from '@/layouts/Base.astro';
+import DoubleSlit from '@/components/fig/DoubleSlit.astro';
+import Lensing from '@/components/fig/Lensing.astro';
+import Balmer from '@/components/fig/Balmer.astro';
+import Oscillator from '@/components/fig/Oscillator.astro';
+import Malus from '@/components/fig/Malus.astro';
+import Fiber from '@/components/fig/Fiber.astro';
+import Glove from '@/components/fig/Glove.astro';
+import ThinFilm from '@/components/fig/ThinFilm.astro';
+import { entries, favorites, poster, profile, stars } from '@/data/cine';
+import { href } from '@/lib/paths';
 
-const title = 'Daniel Martín Guerrero';
-const description = 'Hola, soy Daniel: estudio Física en la Universidad de Salamanca y me pregunto qué significa todo eso para nosotros. Divulgación, filosofía y cine.';
-// Contact address for the "Escríbeme" bubble, as it appears on Daniel's CV. If it is ever emptied,
-// the exchange is left out and the contact links stand on their own.
 const email = 'daniel.martgue@usal.es';
-const github = 'https://github.com/danimartinguerrero';
-const tiktok = 'https://www.tiktok.com/@_.danielmg';
-const linkedin = 'https://www.linkedin.com/in/daniel-mart%C3%ADn-guerrero-b05b67448/';
-// Published at Daniel's request (21 Nov 2026), as on his CV.
 const phone = { label: '+34 644 41 93 65', tel: '+34644419365' };
-
-const statement = 'Me mueven dos preguntas: cómo funciona el universo y qué significa para nosotros, aquí abajo. La física me da el método; la filosofía, el porqué.';
-
-// Pages Daniel signs as author, counted from his PDFs (21 Nov 2026): Mecánica I, temas 1-3 (107) and its
-// formulario (1) in danimartinguerrero/Hermite; capítulo 8 (19), tema 4 parte 1 (31) and tema 5 parte 1 (29)
-// in danimartinguerrero/classical-mechanics; Sturm–Liouville y Hermite (14), sent by Daniel. The temas 1-3
-// in classical-mechanics are not his and are not counted.
+const links = {
+  linkedin: 'https://www.linkedin.com/in/daniel-mart%C3%ADn-guerrero-b05b67448/',
+  github: 'https://github.com/danimartinguerrero',
+  tiktok: 'https://www.tiktok.com/@_.danielmg',
+};
+// Pages Daniel signs as author (21 Nov 2026): Mecánica I, temas 1-3 (107) and its formulario (1);
+// capítulo 8 (19), tema 4 parte 1 (31), tema 5 parte 1 (29); Sturm–Liouville y Hermite (14).
 const notePages = 201;
+const recent = entries.filter((e, i, all) => e.poster && all.findIndex((o) => o.slug === e.slug) === i).slice(0, 6);
+const img = (name: string) => ({
+  src: href(`/notes/${name}-800.webp`),
+  srcset: `${href(`/notes/${name}-800.webp`)} 800w, ${href(`/notes/${name}-1600.webp`)} 1600w`,
+});
 ---
-<!doctype html>
-<html lang="es" transition:animate="none">
-  <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-    <title>{title}</title>
-    <meta name="description" content={description} />
-    <meta name="theme-color" content="#000" />
-    <meta property="og:title" content={title} />
-    <meta property="og:description" content={description} />
-    <meta property="og:type" content="website" />
-    <meta property="og:locale" content="es_ES" />
-    <meta property="og:url" content={new URL(href('/'), Astro.site)} />
-    <meta property="og:image" content={new URL(href('/og.jpg'), Astro.site)} />
-    <meta property="og:image:width" content="1200" />
-    <meta property="og:image:height" content="630" />
-    <meta property="og:image:alt" content="hello, soy Daniel. Estudiante de Física en la Universidad de Salamanca." />
-    <meta name="twitter:card" content="summary_large_image" />
-    <meta name="twitter:title" content={title} />
-    <meta name="twitter:description" content={description} />
-    <meta name="twitter:image" content={new URL(href('/og.jpg'), Astro.site)} />
-    <meta name="twitter:image:alt" content="hello, soy Daniel. Estudiante de Física en la Universidad de Salamanca." />
-    <link rel="icon" href={href('/favicon.ico')} sizes="48x48" />
-    <link rel="icon" href={href('/favicon.svg')} type="image/svg+xml" sizes="any" />
-    <link rel="icon" href={href('/favicon-32.png')} type="image/png" sizes="32x32" />
-    <link rel="icon" href={href('/favicon-192.png')} type="image/png" sizes="192x192" />
-    <link rel="apple-touch-icon" href={href('/apple-touch-icon.png')} />
-    <script is:inline>document.documentElement.classList.add('js');</script>
-    <!-- The site changes page without leaving the document, so the island carries on
-         (scripts/page.ts). No animation between pages: the page cuts, the island stays put. -->
-    <ClientRouter />
-  </head>
-  <body>
-    <a class="skip sr-only" href="#main">Saltar al contenido</a>
+<Base title="Daniel Martín Guerrero" description="Física, filosofía y cine. Estudiante de segundo de Física en la Universidad de Salamanca: divulgación, apuntes en LaTeX y una pregunta por el porqué.">
 
-    <Island />
-
-    <main id="main" data-home>
-      <section class="hero section--dark" id="top" data-home-intro aria-labelledby="hero-title">
-        <canvas class="hero__waves" data-waves aria-hidden="true"></canvas>
-        <div class="hero__copy container">
-          <h1 class="hero__title" id="hero-title">
-            <span class="sr-only">Hola, soy Daniel.</span>
-            <svg class="hello" viewBox={helloViewBox} aria-hidden="true" data-hello>
-              <g stroke-width={helloStrokeWidth}>{helloStrokes.map((s) => <path d={s.d} pathLength="1" data-delay={s.delay} data-duration={s.duration} />)}</g>
-            </svg>
-            <span class="hero__name" aria-hidden="true" data-after>Soy Daniel.</span>
-          </h1>
-          <p class="hero__lede" data-after>Estudio segundo de Física en la Universidad de Salamanca: óptica, astrofísica, cuántica y divulgación. <strong>Y no dejo de preguntarme por qué.</strong></p>
-          <p class="hero__cta">
-            <a class="pill" href="#divulgacion" data-after>Ver lo que hago</a>
-            <a class="pill pill--glass" href="#contacto" data-after>Escríbeme</a>
-          </p>
-        </div>
-      </section>
-
-      <ScrollStatement label="En pocas palabras" text={statement} />
-
-      <PartDivider id="divulgacion" headingId="part-divulgacion" title="Divulgación." />
-
-      <section class="section section--alt" aria-labelledby="cosmo-title">
-        <header class="intro container--wide">
-          <p class="brand"><span class="brand__mark" aria-hidden="true">✦</span>Cosmosofía</p>
-          <h2 class="headline" id="cosmo-title">Qué hay ahí arriba, y qué significa aquí abajo.</h2>
-          <p class="lede">Soy guionista y locutor en <em>Eureka</em>, el programa de divulgación científica de Radio Universidad de Salamanca, con Supernova, la asociación astronómica de la universidad. Allí creé Cosmosofía, la sección que cierra <em>Radioacción Cósmica</em> y une astrofísica y filosofía de la ciencia. <strong>La escribo y la presento.</strong></p>
-          <p class="intro__cta">
-            <a class="pill" href={href('/docs/cosmosofia-episodio-1.pdf')}>Leer el guion del episodio I</a>
-          </p>
-        </header>
-
-        <div class="bento container--wide">
-          <article class="tile tile--half tile--dark tile--sky">
-            <p class="tile__kicker">Episodio I · Un mar de cuatrocientos mil millones de soles</p>
-            <p class="tile__big">4 × 10<sup>11</sup><span> estrellas</span></p>
-            <p class="tile__text">en nuestra galaxia. Dos billones de galaxias. Un planeta. Y tú.</p>
-          </article>
-
-          <article class="tile tile--half tile--index">
-            <h3 class="tile__title">Cuatro paradas, unos ocho minutos.</h3>
-            <ol class="stops">
-              <li><span class="stops__n">0</span><span class="stops__name">Presentación</span><span class="stops__sub">Abrir la ventana</span></li>
-              <li><span class="stops__n">1</span><span class="stops__name">Coordenadas</span><span class="stops__sub">Dónde estamos</span></li>
-              <li><span class="stops__n">2</span><span class="stops__name">Polvo de estrellas</span><span class="stops__sub">De qué estamos hechos</span></li>
-              <li><span class="stops__n">3</span><span class="stops__name">¿Por qué no?</span><span class="stops__sub">La frontera de lo conocido</span></li>
-              <li><span class="stops__n">4</span><span class="stops__name">Un punto azul pálido</span><span class="stops__sub">Lo que nos debemos</span></li>
-              <li><span class="stops__n">5</span><span class="stops__name">Epílogo</span><span class="stops__sub">Mirar arriba</span></li>
-            </ol>
-          </article>
-
-          <article class="tile tile--half tile--word">
-            <p class="word" lang="grc"><span>κόσμος</span> <i aria-hidden="true">+</i> <span>σοφία</span></p>
-            <p class="tile__text"><strong>Kósmos</strong>, orden y también belleza; <strong>sophía</strong>, sabiduría. La que el cosmos nos devuelve cuando nos atrevemos a mirarlo de verdad.</p>
-          </article>
-
-          <article class="tile tile--half tile--night">
-            <p class="tile__kicker"><time datetime="2026-09-25">25 de septiembre de 2026</time> · Noche Europea de los Investigadores</p>
-            <h3 class="tile__title">«Houston, tenemos un telescopio».</h3>
-            <p class="tile__text">Organicé y dirigí esta actividad de astronomía de tres horas, abierta al público, dentro de la Noche Europea de los Investigadores Marie Skłodowska-Curie, con la UCC+i de la Universidad de Salamanca.</p>
-          </article>
-        </div>
-      </section>
-
-      <section class="section section--dark notes" aria-labelledby="notes-title">
-        <header class="intro container--wide">
-          <p class="eyebrow">Apuntes formalizados</p>
-          <h2 class="headline" id="notes-title">Del cuaderno a LaTeX.</h2>
-          <p class="lede">Lo que escribo a mano en clase termina en apuntes formales: definiciones en cajas, cada paso justificado, figuras redibujadas. <strong>Fondo negro, azul, lavanda y dorado</strong>: el mismo estilo para toda la carrera.</p>
-          <p class="intro__cta">
-            <a class="more" href={`${github}/Hermite`}>Mecánica I en GitHub</a>
-            <a class="more" href={`${github}/classical-mechanics`}>Más temas</a>
-          </p>
-        </header>
-
-        <div class="notes__stage container--wide">
-          <figure class="notes__page notes__page--paper">
-            <img src={href('/notes/hermite-cuaderno.webp')} alt="Página manuscrita: la ecuación de Hermite resuelta por series, con la fórmula de Rodrigues al final" width="900" height="1200" loading="lazy" decoding="async" />
-            <figcaption>El cuaderno · ecuación de Hermite</figcaption>
-          </figure>
-          <span class="notes__arrow" aria-hidden="true">→</span>
-          <figure class="notes__page">
-            <img src={href('/notes/hermite-portada.webp')} alt="Portada de los apuntes formalizados Operador de Sturm–Liouville y ecuación de Hermite, sobre fondo negro, con las funciones de Hermite dibujadas en colores dentro de un pozo parabólico" width="910" height="1287" loading="lazy" decoding="async" />
-            <figcaption>Los apuntes · Sturm–Liouville y Hermite</figcaption>
-          </figure>
-          <figure class="notes__page notes__page--tilt">
-            <img src={href('/notes/hermite-oscilador.webp')} alt="Página de los apuntes con el oscilador armónico cuántico: los primeros niveles de energía y sus funciones de onda, y la fórmula de Rodrigues en una caja" width="910" height="1287" loading="lazy" decoding="async" />
-            <figcaption>El oscilador armónico, página 9</figcaption>
-          </figure>
-        </div>
-
-        <dl class="notes__figures container--wide">
-          <div><dt>páginas en LaTeX, firmadas</dt><dd>{notePages}</dd></div>
-          <div><dt>páginas de Mecánica I, temas 1 a 3</dt><dd>107</dd></div>
-          <div><dt>páginas de Sturm–Liouville y Hermite</dt><dd>14</dd></div>
-        </dl>
-
-        <div class="clips container--wide">
-          <div class="clips__copy">
-            <h3 class="clips__title">Y en vertical, sin sonido.</h3>
-            <p class="clips__text">De ahí salen mis vídeos de física y matemáticas en TikTok, hechos con ayuda de la IA: un concepto por clip, de la astrofísica y el electromagnetismo a la ley de inercia de Sylvester o el teorema de Stokes generalizado. <strong>Formales, pero claros a la primera.</strong></p>
-            <p class="intro__cta"><a class="pill pill--glass" href={tiktok}>@_.danielmg en TikTok</a></p>
+  <!-- Fig. 0: the double slit fills the first screen -->
+  <section class="hero" id="top" data-slit-root aria-labelledby="name">
+    <DoubleSlit />
+    <div class="hero__shade" aria-hidden="true"></div>
+    <div class="wrap hero__in">
+      <p class="label hero__kicker">Física · Filosofía · Cine — Salamanca</p>
+      <h1 class="display hero__name" id="name">Daniel<br />Martín Guerrero</h1>
+      <div class="hero__foot">
+        <p class="lede">Estudio Física en la Universidad de Salamanca. Me pregunto cómo funciona el universo <em>y qué significa para nosotros</em>.</p>
+        <div class="hero__fig">
+          <div class="fig__ctl" role="group" aria-label="Longitud de onda">
+            <button class="ctl" type="button" data-lambda="450" aria-pressed="false">450 nm</button>
+            <button class="ctl" type="button" data-lambda="532" aria-pressed="true">532 nm</button>
+            <button class="ctl" type="button" data-lambda="650" aria-pressed="false">650 nm</button>
+            <button class="ctl" type="button" data-observe aria-pressed="false">Observar el camino</button>
           </div>
-          <ul class="chips chips--dark" aria-label="Algunos temas">
-            <li>Delta de Dirac</li><li>Función de Green</li><li>Sturm–Liouville</li><li>Polinomios de Hermite</li><li>Desarrollo multipolar</li><li>Ley de inercia de Sylvester</li><li>Formas diferenciales</li><li>Teorema de Stokes generalizado</li><li>Termodinámica</li>
-          </ul>
+          <p class="fig__cap"><b>Fig. 0</b>Doble rendija, un fotón cada vez: <span class="fig__read"><span data-slit-count>0</span> fotones</span>. Ninguno sabe dónde caerá; juntos dibujan franjas. Si se mira por qué rendija pasan, desaparecen.</p>
         </div>
-      </section>
-
-      <PartDivider id="filosofia" headingId="part-filosofia" title="Filosofía." />
-
-      <section class="section section--alt" aria-labelledby="philo-title">
-        <header class="intro container--wide">
-          <h2 class="headline" id="philo-title">La física responde cómo. La filosofía insiste en por qué.</h2>
-          <p class="lede">No quiero elegir entre las dos. <strong>Cosmosofía nació de ahí</strong>, y también lo que escribo y defiendo en voz alta.</p>
-        </header>
-
-        <div class="bento container--wide">
-          <article class="tile tile--full tile--talk">
-            <p class="tile__kicker"><time datetime="2026-02-27">27 de febrero de 2026</time> · XXI Olimpiada Filosófica de Castilla y León · Conferenciante</p>
-            <blockquote class="talk">
-              <p class="talk__title">El naufragio de la luz.</p>
-              <p class="talk__sub">Disertación filosófica acerca de la lucidez del delirio. Don Quijote, Myshkin y la estética de la bondad.</p>
-            </blockquote>
-            <p class="tile__text">Ponencia y mesa redonda en la jornada dedicada a <em>La locura. Don Quijote en el mundo actual</em>, en Salamanca. Dos locos buenos, Cervantes y Dostoyevski, y una pregunta: ¿y si la bondad solo se deja ver desde fuera de la cordura?</p>
-          </article>
-
-          <article class="tile tile--half tile--rain">
-            <p class="tile__kicker"><time datetime="2025-11">19–21 de noviembre de 2025</time> · XXX Congreso Internacional de la Sociedad Castellano-Leonesa de Filosofía</p>
-            <h3 class="tile__title">«Como lágrimas en la lluvia».</h3>
-            <p class="tile__text">Ponente en la sesión <em>Antropocentrismo y androcentrismo como límite de la compasión</em>, coordinada por la profesora Angélica Velasco Sesma, en el congreso <em>Límites del presente</em>.</p>
-          </article>
-
-          <article class="tile tile--half tile--book">
-            <p class="tile__kicker"><time datetime="2026-06-05">5 de junio de 2026</time> · Librería Víctor Jara, Salamanca</p>
-            <h3 class="tile__title">Conversando con Eduardo Infante sobre <cite>Salvar a Sócrates</cite>.</h3>
-            <p class="tile__text">En la presentación de su novela para aprender a filosofar (Ariel), junto a Pablo Beato Andrés, Isabel Briones González y David Criado García.</p>
-          </article>
-
-          <article class="tile tile--half tile--finals">
-            <p class="tile__num">XIX <span>y</span> XX</p>
-            <p class="tile__text">Dos veces finalista de la Olimpiada Filosófica de Castilla y León con una disertación filosófica, en 2024 y en 2025. Después volví como conferenciante.</p>
-          </article>
-
-          <article class="tile tile--full tile--dark tile--motto">
-            <p class="motto" lang="la">Per aspera ad astra.</p>
-            <p class="tile__text">A las estrellas, por el camino difícil. Así se despide Cosmosofía, y así entiendo estudiar Física.</p>
-          </article>
-        </div>
-      </section>
-
-      <PartDivider id="estudios" headingId="part-estudios" title="Estudios." />
-
-      <section class="section section--alt" aria-labelledby="studies-title">
-        <header class="intro container--wide">
-          <h2 class="headline" id="studies-title">Física en Salamanca, promoción de 2029.</h2>
-          <p class="lede">Bachillerato de Ciencias y Tecnología y después el Grado en Física de la Universidad de Salamanca. <strong>Ahora, en segundo.</strong></p>
-        </header>
-        <div class="tl container--wide" data-timeline="rail">
-          <div class="tl__rail" aria-hidden="true"><div class="tl__fill"></div></div>
-          <ol class="tl__list">
-            <li class="ms" data-ms>
-              <p class="ms__when"><time datetime="2023">2023</time></p>
-              <span class="ms__dot" data-dot aria-hidden="true"></span>
-              <div class="ms__body">
-                <h3 class="ms__title">Bachillerato de Ciencias y Tecnología.</h3>
-                <p class="ms__meta">IES Federico García Bernalt, Salamanca. 2023–2025.</p>
-              </div>
-            </li>
-            <li class="ms" data-ms>
-              <p class="ms__when"><time datetime="2024">2024</time></p>
-              <span class="ms__dot" data-dot aria-hidden="true"></span>
-              <div class="ms__body">
-                <h3 class="ms__title">Finalista de la XIX Olimpiada Filosófica de Castilla y León.</h3>
-                <p class="ms__meta">Disertación filosófica, en primero de Bachillerato.</p>
-              </div>
-            </li>
-            <li class="ms" data-ms>
-              <p class="ms__when"><time datetime="2025">2025</time></p>
-              <span class="ms__dot" data-dot aria-hidden="true"></span>
-              <div class="ms__body">
-                <h3 class="ms__title">Finalista otra vez, en la XX.</h3>
-                <p class="ms__meta">Y Talking Hands, un guante que traduce el alfabeto dactilológico a texto.</p>
-              </div>
-            </li>
-            <li class="ms ms--figures" data-ms>
-              <p class="ms__when"><time datetime="2025-06">Jun 2025</time></p>
-              <span class="ms__dot" data-dot aria-hidden="true"></span>
-              <div class="ms__body">
-                <h3 class="ms__title">Bachillerato, con Matrícula de Honor.</h3>
-                <dl class="ms__figures">
-                  <div class="ms__figure">
-                    <dt>Nota media de Bachillerato</dt>
-                    <dd>9,88<span>/10</span></dd>
-                  </div>
-                  <div class="ms__figure">
-                    <dt>Prueba de Acceso a la Universidad (PAU)</dt>
-                    <dd>13,378<span>/14</span></dd>
-                  </div>
-                </dl>
-                <p class="ms__meta">Premio de Acceso a la Universidad de la USAL: entre las cien mejores notas de la fase general de la PAU 2024/25, con la matrícula de primero gratuita.</p>
-              </div>
-            </li>
-            <li class="ms ms--anchor" data-ms>
-              <p class="ms__when"><time datetime="2025-09">Sep 2025</time></p>
-              <span class="ms__dot" data-dot aria-hidden="true"></span>
-              <div class="ms__body">
-                <div class="ms__card">
-                  <div>
-                    <h3 class="ms__title">Grado en Física.</h3>
-                    <p class="ms__meta">Universidad de Salamanca, promoción de 2029. Matemáticas, mecánica clásica, ondas y óptica, electromagnetismo, termodinámica y técnicas computacionales.</p>
-                  </div>
-                  <img class="ms__logo" src={href('/studies/usal-color.svg')} alt="Universidad de Salamanca" width="428" height="155" decoding="async" />
-                </div>
-              </div>
-            </li>
-            <li class="ms" data-ms>
-              <p class="ms__when"><time datetime="2026">2026</time></p>
-              <span class="ms__dot" data-dot aria-hidden="true"></span>
-              <div class="ms__body">
-                <h3 class="ms__title">Matrícula de Honor en Laboratorio de Física.</h3>
-                <p class="ms__meta">Incertidumbres de verdad: propagación de varianzas, medias ponderadas, ajustes por mínimos cuadrados con χ² e intervalos de Welch–Satterthwaite.</p>
-              </div>
-            </li>
-            <li class="ms ms--now" data-ms>
-              <p class="ms__when">Ahora</p>
-              <span class="ms__dot" data-dot aria-hidden="true"></span>
-              <div class="ms__body">
-                <h3 class="ms__title">Segundo curso del grado.</h3>
-                <p class="ms__meta">Curso 2026–27. Apuntes de mecánica cuántica en LaTeX y los guiones de Cosmosofía.</p>
-              </div>
-            </li>
-            <li class="ms ms--next" data-ms>
-              <p class="ms__when">Próximo</p>
-              <span class="ms__dot" data-dot aria-hidden="true"></span>
-              <div class="ms__body">
-                <h3 class="ms__title">PLANCKS 2027.</h3>
-                <p class="ms__meta">La competición internacional de física teórica.</p>
-              </div>
-            </li>
-          </ol>
-        </div>
-      </section>
-
-      <PartDivider id="proyectos" headingId="part-proyectos" title="Proyectos." />
-
-      <section class="section section--alt" aria-labelledby="proj-title">
-        <header class="intro container--wide">
-          <h2 class="headline" id="proj-title">Con las manos, y con la cabeza.</h2>
-          <p class="lede">Un guante que habla, apuntes de cuántica y las herramientas con las que trabajo. <strong>Óptica y fotónica, astrofísica, física de partículas.</strong></p>
-        </header>
-
-        <div class="bento container--wide">
-          <article class="tile tile--full tile--dark tile--glove">
-            <div class="glove__copy">
-              <p class="tile__kicker">2024–2025 · Proyecto de TIC II, IES Federico García Bernalt</p>
-              <h3 class="tile__title">Talking Hands.</h3>
-              <p class="tile__text">Un guante que traduce el alfabeto dactilológico español a texto, para que quien no puede hablar se entienda con quien no conoce la lengua de signos.</p>
-              <p class="glove__detail">Cinco sensores de flexión en divisores de tensión sobre un Arduino Mega 2560 (ADC de 10 bits). Firmware en C/C++ que calibra los sensores y clasifica los gestos por umbrales, y manda cada letra por serie a una app que la muestra y la lee en voz alta. Con un modo servo que imita la flexión de los dedos, un modelo 3D y una propuesta inalámbrica con sensores de presión tipo piel. Hardware y firmware, con Rubén González Sánchez.</p>
-            </div>
-            <figure class="glove" aria-hidden="true">
-              <svg viewBox="0 0 260 200">
-                <g class="glove__bars">
-                  {[0.82, 0.2, 0.25, 0.9, 0.86].map((v, i) => (
-                    <g transform={`translate(${20 + i * 46} 0)`}>
-                      <rect class="glove__track" x="0" y="20" width="28" height="140" rx="14" />
-                      <rect class="glove__level" x="0" y={20 + 140 * (1 - v)} width="28" height={140 * v} rx="14" style={`--d: ${i * 120}ms`} />
-                      <text x="14" y="186">{['pulgar', 'índice', 'corazón', 'anular', 'meñique'][i]}</text>
-                    </g>
-                  ))}
-                </g>
-              </svg>
-              <p class="glove__letter"><span>V</span></p>
-            </figure>
-          </article>
-
-          <article class="tile tile--half tile--quantum">
-            <p class="tile__kicker">2026 · Apuntes en LaTeX</p>
-            <h3 class="tile__title">Mecánica cuántica, desde el espacio de Hilbert.</h3>
-            <p class="ket" aria-label="ket psi igual a la suma de c n por ket n">|ψ⟩ = Σ<sub>n</sub> c<sub>n</sub> |n⟩</p>
-            <p class="tile__text">L²(ℝ), bras y kets, operadores hermíticos, descomposición espectral y regla de Born. Ahora, cúbits y puertas cuánticas.</p>
-          </article>
-
-          <article class="tile tile--half tile--ai">
-            <p class="tile__kicker">Desde 2025 · Modelización con IA</p>
-            <h3 class="tile__title">De la variedad parametrizada al ajuste por mínimos cuadrados.</h3>
-            <p class="tile__text">Simulaciones físicas y apuntes de estudio con Claude Opus 5.5, Gemini, modelos abiertos y NotebookLM. La IA propone; yo compruebo cada paso.</p>
-          </article>
-
-          <article class="tile tile--full tile--tools">
-            <h3 class="tile__title">Las herramientas.</h3>
-            <ul class="tools">
-              <li><span class="tools__icon"><img src={href('/toolkit/python.svg')} alt="" width="64" height="64" /></span>Python</li>
-              <li><span class="tools__icon"><img src={href('/toolkit/matlab.png')} alt="" width="64" height="64" /></span>MATLAB</li>
-              <li><span class="tools__icon"><img src={href('/toolkit/mathematica.svg')} alt="" width="64" height="64" /></span>Mathematica</li>
-              <li><span class="tools__icon tools__icon--wide"><img src={href('/toolkit/latex.svg')} alt="" width="64" height="64" /></span>LaTeX</li>
-              <li><span class="tools__icon"><img src={href('/toolkit/labview.svg')} alt="" width="64" height="64" /></span>LabVIEW</li>
-              <li><span class="tools__icon tools__icon--text" aria-hidden="true">∞</span>Arduino</li>
-              <li><span class="tools__icon"><img src={href('/toolkit/claude.svg')} alt="" width="64" height="64" /></span>Claude</li>
-              <li><span class="tools__icon"><img src={href('/toolkit/html5.svg')} alt="" width="64" height="64" /></span>HTML</li>
-            </ul>
-            <p class="tile__text">Y en el laboratorio: prototipos en protoboard, PHYWE measure y SAOImage DS9 para analizar imágenes astronómicas.</p>
-          </article>
-
-          <article class="tile tile--half tile--groups">
-            <h3 class="tile__title">Donde estoy.</h3>
-            <ul class="groups">
-              <li><strong>Supernova</strong><span>Asociación astronómica de la USAL: divulgación, noches de observación, salidas y radio.</span></li>
-              <li><strong>OSAL Student Chapter</strong><span>Divulgación de óptica y fotónica en la Universidad de Salamanca.</span></li>
-              <li><strong>Optica</strong><span>Miembro individual, hasta septiembre de 2027.</span></li>
-              <li><strong>Delegación Charra</strong><span>Grupo de Estudiantes de la Real Sociedad Española de Física en Salamanca.</span></li>
-            </ul>
-          </article>
-
-          <article class="tile tile--half tile--langs">
-            <h3 class="tile__title">Idiomas.</h3>
-            <dl class="langs">
-              <div><dt>Español</dt><dd>Nativo</dd></div>
-              <div><dt>Inglés</dt><dd>Avanzado, formación de nivel C1</dd></div>
-            </dl>
-          </article>
-        </div>
-      </section>
-
-      <PartDivider id="cine" headingId="part-cine" title="Cine." />
-
-      <section class="section section--dark cine-teaser" aria-labelledby="cine-title">
-        <header class="intro container--wide">
-          <p class="eyebrow">Letterboxd · {letterboxd.user}</p>
-          <h2 class="headline" id="cine-title">{letterboxd.films} películas, y las que faltan.</h2>
-          <p class="lede">Mis cuatro favoritas, las últimas que he visto y lo que escribo de ellas. <strong lang="en">«{letterboxd.bio}»</strong>, de <cite>Nostalgia</cite>, de Tarkovski: la frase que me cambió la forma de mirar.</p>
-          <p class="intro__cta">
-            <a class="pill" href={cinePath}>Ver mi rincón de cine</a>
-            <a class="more" href={letterboxd.url}>Perfil en Letterboxd</a>
-          </p>
-        </header>
-        <ul class="posters container--wide" aria-label="Mis cuatro películas favoritas">
-          {favorites.map((f) => (
-            <li class="poster"><a href={cinePath} tabindex="-1"><img src={href(f.img)} alt={f.title} width="185" height="278" loading="lazy" decoding="async" /></a></li>
-          ))}
-        </ul>
-      </section>
-
-      <PartDivider headingId="part-contacto" title="Contacto." />
-
-      <section class="section contact" id="contacto" aria-labelledby="contact-title" data-contact>
-        <div class="container contact__inner">
-          <h2 class="contact__title" id="contact-title">
-            <span class="sr-only">Di hola.</span>
-            <span class="contact__greet" aria-hidden="true" data-greet><span class="contact__say">Di</span> <span class="contact__slot">
-                <span class="contact__word is-on" lang="es" data-word>hola.</span>
-                <span class="contact__word" lang="en" data-word>hi.</span>
-                <span class="contact__word" lang="fr" data-word>bonjour.</span>
-                <span class="contact__word" lang="it" data-word>ciao.</span>
-                <span class="contact__word" lang="de" data-word>hallo.</span>
-                <span class="contact__word" lang="pt" data-word>olá.</span>
-                <span class="contact__word" lang="el" data-word>γειά.</span>
-                <span class="contact__word contact__word--cjk" lang="ja" data-word>こんにちは.</span>
-                <span class="contact__word contact__word--cjk" lang="ko" data-word>안녕하세요.</span>
-              </span></span>
-          </h2>
-          <p class="lede">Para divulgación, charlas, filosofía o simplemente una buena película. También al <a class="contact__tel" href={`tel:${phone.tel}`}>{phone.label}</a>.</p>
-
-          {email && (
-            <div class="thread" data-thread>
-              <p class="thread__stamp" aria-hidden="true">Hoy 9:41</p>
-              <p class="thread__row">
-                <span class="bubble bubble--them">
-                  <span class="bubble__body"><span class="bubble__text">Hola, Daniel. Organizamos una charla de divulgación y nos encantaría contar contigo. ¿Dónde te escribimos?</span></span>
-                  <span class="bubble__dots" aria-hidden="true"><i></i><i></i><i></i></span>
-                </span>
-              </p>
-              <p class="thread__row thread__row--me">
-                <a class="thread__reply" href={`mailto:${email}`} data-reply>
-                  <span class="bubble bubble--me">{email}</span>
-                </a>
-              </p>
-              <p class="thread__receipt" aria-hidden="true" data-receipt>Entregado</p>
-            </div>
-          )}
-
-          <ul class="contact__links">
-            <li><a class="contact__link" href={github} rel="me"><span class="contact__icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 .297c-6.63 0-12 5.373-12 12 0 5.303 3.438 9.8 8.205 11.385.6.113.82-.258.82-.577 0-.285-.01-1.04-.015-2.04-3.338.724-4.042-1.61-4.042-1.61C4.422 18.07 3.633 17.7 3.633 17.7c-1.087-.744.084-.729.084-.729 1.205.084 1.838 1.236 1.838 1.236 1.07 1.835 2.809 1.305 3.495.998.108-.776.417-1.305.76-1.605-2.665-.3-5.466-1.332-5.466-5.93 0-1.31.465-2.38 1.235-3.22-.135-.303-.54-1.523.105-3.176 0 0 1.005-.322 3.3 1.23.96-.267 1.98-.399 3-.405 1.02.006 2.04.138 3 .405 2.28-1.552 3.285-1.23 3.285-1.23.645 1.653.24 2.873.12 3.176.765.84 1.23 1.91 1.23 3.22 0 4.61-2.805 5.625-5.475 5.92.42.36.81 1.096.81 2.22 0 1.606-.015 2.896-.015 3.286 0 .315.21.69.825.57C20.565 22.092 24 17.592 24 12.297c0-6.627-5.373-12-12-12" /></svg></span>GitHub</a></li>
-            <li><a class="contact__link" href={linkedin} rel="me"><span class="contact__icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433c-1.144 0-2.063-.926-2.063-2.065 0-1.138.92-2.063 2.063-2.063 1.14 0 2.064.925 2.064 2.063 0 1.139-.925 2.065-2.064 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z" /></svg></span>LinkedIn</a></li>
-            <li><a class="contact__link" href={`mailto:${email}`}><span class="contact__icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M3 5h18a1.5 1.5 0 0 1 1.5 1.5v11A1.5 1.5 0 0 1 21 19H3a1.5 1.5 0 0 1-1.5-1.5v-11A1.5 1.5 0 0 1 3 5Zm.6 2.1v.3l8.4 5.6 8.4-5.6v-.3a.3.3 0 0 0-.3-.3H3.9a.3.3 0 0 0-.3.3Zm16.8 2.5-7.9 5.3a.9.9 0 0 1-1 0L3.6 9.6v7.3c0 .2.1.3.3.3h16.2c.2 0 .3-.1.3-.3Z" /></svg></span>Correo</a></li>
-            <li><a class="contact__link" href={`tel:${phone.tel}`} aria-label={`Teléfono ${phone.label}`}><span class="contact__icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M6.6 10.8a15.1 15.1 0 0 0 6.6 6.6l2.2-2.2a1 1 0 0 1 1-.25 11.4 11.4 0 0 0 3.6.57 1 1 0 0 1 1 1V20a1 1 0 0 1-1 1A17 17 0 0 1 3 4a1 1 0 0 1 1-1h3.5a1 1 0 0 1 1 1c0 1.25.2 2.45.57 3.57a1 1 0 0 1-.25 1Z" /></svg></span>Teléfono</a></li>
-            <li><a class="contact__link" href={tiktok} rel="me"><span class="contact__icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12.525.02c1.31-.02 2.61-.01 3.91-.02.08 1.53.63 3.09 1.75 4.17 1.12 1.11 2.7 1.62 4.24 1.79v4.03c-1.44-.05-2.89-.35-4.2-.97-.57-.26-1.1-.59-1.62-.93-.01 2.92.01 5.84-.02 8.75-.08 1.4-.54 2.79-1.35 3.94-1.31 1.92-3.58 3.17-5.91 3.21-1.43.08-2.86-.31-4.08-1.03-2.02-1.19-3.44-3.37-3.65-5.71-.02-.5-.03-1-.01-1.49.18-1.9 1.12-3.72 2.58-4.96 1.66-1.44 3.98-2.13 6.15-1.72.02 1.48-.04 2.96-.04 4.44-.99-.32-2.15-.23-3.02.37-.63.41-1.11 1.04-1.36 1.75-.21.51-.15 1.07-.14 1.61.24 1.64 1.82 3.02 3.5 2.87 1.12-.01 2.19-.66 2.77-1.61.19-.33.4-.67.41-1.06.1-1.79.06-3.57.07-5.36.01-4.03-.01-8.05.02-12.07z" /></svg></span>TikTok</a></li>
-            <li><a class="contact__link" href={letterboxd.url} rel="me"><span class="contact__icon" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="5" cy="12" r="4.25" opacity=".55" /><circle cx="12" cy="12" r="4.25" opacity=".8" /><circle cx="19" cy="12" r="4.25" /></svg></span>Letterboxd</a></li>
-            <li><a class="contact__link" href={cinePath}><span class="contact__icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill-rule="evenodd"><path d="M5.5 3h13A2.5 2.5 0 0 1 21 5.5v13a2.5 2.5 0 0 1-2.5 2.5h-13A2.5 2.5 0 0 1 3 18.5v-13A2.5 2.5 0 0 1 5.5 3ZM8.25 5.25v5.6h7.5v-5.6Zm0 7.9v5.6h7.5v-5.6ZM4.9 5.6v1.8h1.6V5.6Zm0 3.8v1.8h1.6V9.4Zm0 3.4v1.8h1.6v-1.8Zm0 3.8v1.8h1.6v-1.8Zm12.6-11v1.8h1.6V5.6Zm0 3.8v1.8h1.6V9.4Zm0 3.4v1.8h1.6v-1.8Zm0 3.8v1.8h1.6v-1.8Z" /></svg></span>Cine</a></li>
-          </ul>
-        </div>
-      </section>
-
-    </main>
-
-    <footer class="footer">
-      <div class="container--wide footer__inner">
-        <p>Salamanca · 40.96° N, 5.67° W</p>
-        <p>© 2026 Daniel Martín Guerrero</p>
       </div>
-    </footer>
-    <script>
-      import { arrived, onPage } from '@/scripts/page';
-      import { initScroll } from '@/scripts/scroll';
-      import { initGoto } from '@/scripts/goto';
-      import { initWaves } from '@/scripts/waves';
-      import { playHello } from '@/scripts/hello';
-      import { initContact } from '@/scripts/contact';
-      // Every time the home page is shown, first load included; it all stops when the page is swapped out.
-      onPage((signal) => {
-        if (!document.querySelector('[data-home]')) return;
-        initScroll(signal);
-        initGoto(signal);
-        const hello = document.querySelector<SVGSVGElement>('[data-home-intro] [data-hello]');
-        if (hello) playHello(hello, [...document.querySelectorAll<HTMLElement>('.hero [data-after]')]);
-        const waves = document.querySelector<HTMLCanvasElement>('[data-waves]');
-        if (waves) void arrived().then(() => {
-          if (!signal.aborted) initWaves(waves, signal);
-        });
-        const contact = document.querySelector<HTMLElement>('[data-contact]');
-        if (contact) initContact(contact, signal);
-        // The contact section and the footer share the last screen (see .contact): keep the footer's height current.
-        const footer = document.querySelector<HTMLElement>('.footer');
-        if (footer) {
-          const sized = new ResizeObserver(() => document.documentElement.style.setProperty('--footer-h', `${footer.getBoundingClientRect().height}px`));
-          sized.observe(footer);
-          signal.addEventListener('abort', () => sized.disconnect());
-        }
-      });
-    </script>
-  </body>
-</html>
+    </div>
+  </section>
+
+  <!-- 01 Divulgación -->
+  <section class="sec" id="divulgacion" aria-labelledby="t-divulgacion">
+    <div class="wrap sec__grid" data-reveal>
+      <div class="sec__side sec__rule"><p class="sec__num">01</p><p class="label">Divulgación</p></div>
+      <div class="sec__main sec__rule">
+        <h2 class="title" id="t-divulgacion">Qué hay ahí arriba, <em>y qué significa aquí abajo.</em></h2>
+        <p class="body">Escribo y presento en <em>Eureka</em>, el programa de divulgación de Radio Universidad de Salamanca, con Supernova, la asociación astronómica de la universidad. Allí creé <strong>Cosmosofía</strong>, la sección que cierra <em>Radioacción Cósmica</em>: astrofísica y filosofía de la ciencia, de las coordenadas cósmicas al punto azul pálido de Sagan.</p>
+        <p class="body"><a class="link arrow" href={href('/docs/cosmosofia-episodio-1.pdf')}>Guion del episodio I, «Un mar de cuatrocientos mil millones de soles»</a></p>
+      </div>
+    </div>
+    <div class="wrap sec__grid">
+      <figure class="fig sec__wide">
+        <div class="fig__stage"><Lensing /></div>
+        <figcaption class="fig__bar"><p class="fig__cap"><b>Fig. 1</b>Lente gravitacional. Una masa curva el espacio, y la luz de lo que hay detrás llega por dos caminos; alineadas, las imágenes se cierran en un anillo de Einstein. Mueve el cursor.</p></figcaption>
+      </figure>
+    </div>
+    <div class="wrap sec__grid">
+      <div class="sec__main">
+        <ol class="rows">
+          <li class="row"><p class="row__when">25 sep 2026</p><p class="row__what">«Houston, tenemos un telescopio»</p><p class="row__more">Organicé y dirigí esta actividad de astronomía de tres horas, abierta al público, en la Noche Europea de los Investigadores Marie Skłodowska-Curie, con la UCC+i de la Universidad de Salamanca.</p></li>
+          <li class="row"><p class="row__when">Desde 2026</p><p class="row__what">Cosmosofía, en Radio USAL</p><p class="row__more">Coordenadas, polvo de estrellas, la frontera del «¿por qué no?» y lo que nos debemos unos a otros. Nucleosíntesis, Cecilia Payne y Carl Sagan.</p></li>
+          <li class="row"><p class="row__when">En curso</p><p class="row__what">Física en vertical, sin sonido</p><p class="row__more">Vídeos de física y matemáticas en <a class="link" href={links.tiktok}>TikTok, @_.danielmg</a>: de la astrofísica y el electromagnetismo a la ley de inercia de Sylvester o el teorema de Stokes generalizado.</p></li>
+        </ol>
+        <figure class="fig" data-balmer-root>
+          <div class="fig__stage"><Balmer /></div>
+          <figcaption class="fig__bar">
+            <p class="fig__cap"><b>Fig. 2</b>Serie de Balmer del hidrógeno. En 1925 Cecilia Payne leyó líneas así en la luz de las estrellas y demostró que están hechas sobre todo de hidrógeno y helio.</p>
+            <div class="fig__ctl" role="group" aria-label="Espectro">
+              <button class="ctl" type="button" data-balmer-mode="emision" aria-pressed="true">Emisión</button>
+              <button class="ctl" type="button" data-balmer-mode="absorcion" aria-pressed="false">Absorción</button>
+            </div>
+          </figcaption>
+        </figure>
+      </div>
+    </div>
+  </section>
+
+  <!-- 02 Apuntes -->
+  <section class="sec" id="apuntes" aria-labelledby="t-apuntes">
+    <div class="wrap sec__grid" data-reveal>
+      <div class="sec__side sec__rule"><p class="sec__num">02</p><p class="label">Apuntes</p></div>
+      <div class="sec__main sec__rule">
+        <h2 class="title" id="t-apuntes">Del cuaderno a LaTeX.</h2>
+        <p class="body">Lo que escribo a mano en clase acaba en apuntes formales: cada definición en su caja, cada paso justificado, las figuras redibujadas. Fondo negro, azul, lavanda y dorado: el mismo estilo para toda la carrera. <strong>{notePages} páginas firmadas</strong> hasta hoy, de la mecánica clásica a los métodos matemáticos.</p>
+        <p class="body"><a class="link arrow" href={`${links.github}/Hermite`}>Mecánica I</a>&ensp;&ensp;<a class="link arrow" href={`${links.github}/classical-mechanics`}>Más temas</a></p>
+      </div>
+    </div>
+    <div class="wrap sec__grid">
+      <div class="pages sec__wide">
+        <figure class="page"><img {...img('hermite-cuaderno')} sizes="(max-width: 900px) 46vw, 30vw" alt="Página manuscrita: la ecuación de Hermite resuelta por series, hasta la fórmula de Rodrigues" width="800" height="1067" loading="lazy" decoding="async" /><figcaption class="label">El cuaderno</figcaption></figure>
+        <figure class="page"><img {...img('hermite-portada')} sizes="(max-width: 900px) 46vw, 30vw" alt="Portada de los apuntes Operador de Sturm–Liouville y ecuación de Hermite, con las funciones de Hermite en un pozo parabólico" width="800" height="1132" loading="lazy" decoding="async" /><figcaption class="label">Sturm–Liouville y Hermite</figcaption></figure>
+        <figure class="page"><img {...img('hermite-oscilador')} sizes="(max-width: 900px) 46vw, 30vw" alt="Página de los apuntes con el oscilador armónico cuántico y la fórmula de Rodrigues en una caja" width="800" height="1132" loading="lazy" decoding="async" /><figcaption class="label">Página 9, el oscilador</figcaption></figure>
+      </div>
+      <figure class="fig sec__wide" data-osc-root>
+        <div class="fig__stage"><Oscillator /></div>
+        <figcaption class="fig__bar">
+          <p class="fig__cap"><b>Fig. 3</b>El oscilador armónico cuántico de la página 9: ψₙ(x) ∝ Hₙ(x) e<sup>−x²/2</sup>. En dorado, |ψ|²; en blanco, la parte real, girando. Un estado propio no cambia; una superposición oscila. <span class="fig__read" data-osc-read></span></p>
+          <div class="fig__ctl" role="group" aria-label="Estado">
+            <button class="ctl" type="button" data-osc-down aria-label="Bajar un nivel">â</button>
+            <button class="ctl" type="button" data-osc-up aria-label="Subir un nivel">â†</button>
+            <button class="ctl" type="button" data-osc-mix aria-pressed="false">Superponer</button>
+          </div>
+        </figcaption>
+      </figure>
+    </div>
+  </section>
+
+  <!-- 03 Filosofía -->
+  <section class="sec" id="filosofia" aria-labelledby="t-filosofia" data-malus-root style="--malus: 0.75">
+    <div class="wrap sec__grid" data-reveal>
+      <div class="sec__side sec__rule"><p class="sec__num">03</p><p class="label">Filosofía</p></div>
+      <div class="sec__main sec__rule">
+        <h2 class="title" id="t-filosofia">La física responde cómo. <em>La filosofía insiste en por qué.</em></h2>
+        <p class="body">No quiero elegir entre las dos. De ahí salió Cosmosofía, y también lo que escribo y defiendo en voz alta.</p>
+      </div>
+    </div>
+    <div class="wrap sec__grid">
+      <figure class="fig sec__wide">
+        <div class="fig__stage"><Malus /></div>
+        <figcaption class="fig__bar">
+          <p class="fig__cap"><b>Fig. 4</b>Ley de Malus. Tras un polarizador, la luz vibra en un solo plano; un segundo filtro girado θ deja pasar I₀ cos²θ. Gira el analizador: la frase de abajo recibe esa luz. <span class="fig__read" data-malus-read></span></p>
+          <label class="slider"><span class="sr-only">Ángulo del analizador</span><input type="range" min="0" max="90" value="30" step="1" data-malus-range /></label>
+        </figcaption>
+      </figure>
+      <div class="sec__main">
+        <blockquote class="talk">
+          <p class="label">27 feb 2026 · XXI Olimpiada Filosófica de Castilla y León · Conferenciante</p>
+          <p class="talk__title">El naufragio de la luz.</p>
+          <p class="talk__sub">Disertación filosófica acerca de la lucidez del delirio. Don Quijote, Myshkin y la estética de la bondad.</p>
+        </blockquote>
+        <ol class="rows">
+          <li class="row"><p class="row__when">19–21 nov 2025</p><p class="row__what">«Como lágrimas en la lluvia»</p><p class="row__more">Ponente en el XXX Congreso Internacional de la Sociedad Castellano-Leonesa de Filosofía, <em>Límites del presente</em>, en la sesión «Antropocentrismo y androcentrismo como límite de la compasión», coordinada por la profesora Angélica Velasco Sesma.</p></li>
+          <li class="row"><p class="row__when">5 jun 2026</p><p class="row__what">Con Eduardo Infante, sobre <em>Salvar a Sócrates</em></p><p class="row__more">En la presentación de su novela para aprender a filosofar (Ariel), en la Librería Víctor Jara de Salamanca, junto a Pablo Beato Andrés, Isabel Briones González y David Criado García.</p></li>
+          <li class="row"><p class="row__when">2024 · 2025</p><p class="row__what">Dos veces finalista de la Olimpiada Filosófica</p><p class="row__more">En la XIX y la XX edición, con una disertación filosófica. Después volví como conferenciante.</p></li>
+        </ol>
+      </div>
+    </div>
+  </section>
+
+  <!-- 04 Trayectoria -->
+  <section class="sec" id="trayectoria" aria-labelledby="t-trayectoria">
+    <div class="wrap sec__grid" data-reveal>
+      <div class="sec__side sec__rule"><p class="sec__num">04</p><p class="label">Trayectoria</p></div>
+      <div class="sec__main sec__rule">
+        <h2 class="title" id="t-trayectoria">Física en Salamanca, promoción de 2029.</h2>
+        <dl class="figures">
+          <div><dt>Nota media de Bachillerato, con Matrícula de Honor</dt><dd>9,88</dd></div>
+          <div><dt>Prueba de Acceso a la Universidad, sobre 14</dt><dd>13,378</dd></div>
+          <div><dt>Premio de Acceso: entre las cien mejores notas de la PAU</dt><dd>100</dd></div>
+        </dl>
+      </div>
+    </div>
+    <div class="wrap sec__grid">
+      <div class="sec__main">
+        <figure class="fig fig--fiber">
+          <Fiber>
+            <li class="row" data-node><p class="row__when">2023</p><p class="row__what">Bachillerato de Ciencias y Tecnología</p><p class="row__more">IES Federico García Bernalt, Salamanca.</p></li>
+            <li class="row" data-node><p class="row__when">2024–2025</p><p class="row__what">Finalista de la Olimpiada Filosófica, dos veces</p><p class="row__more">Y Talking Hands, un guante que traduce el alfabeto dactilológico a texto.</p></li>
+            <li class="row" data-node><p class="row__when">Jun 2025</p><p class="row__what">Bachillerato, con Matrícula de Honor</p><p class="row__more">Premio de Acceso a la Universidad de la USAL: la matrícula de primero, gratuita.</p></li>
+            <li class="row" data-node><p class="row__when">Sep 2025</p><p class="row__what">Grado en Física, Universidad de Salamanca</p><p class="row__more">Álgebra lineal y geometría, cálculo, ecuaciones diferenciales, mecánica, ondas y óptica, electromagnetismo, termodinámica y técnicas computacionales.</p></li>
+            <li class="row" data-node><p class="row__when">2026</p><p class="row__what">Matrícula de Honor en Laboratorio de Física</p><p class="row__more">Incertidumbres en serio: propagación de varianzas, medias ponderadas, ajustes por mínimos cuadrados con χ² e intervalos de Welch–Satterthwaite.</p></li>
+            <li class="row" data-node><p class="row__when">Ahora</p><p class="row__what">Segundo curso</p><p class="row__more">Curso 2026–27. Óptica y fotónica, astrofísica, mecánica cuántica.</p></li>
+            <li class="row row--next" data-node><p class="row__when">Próximo</p><p class="row__what">PLANCKS 2027</p><p class="row__more">La competición internacional de física teórica.</p></li>
+          </Fiber>
+          <figcaption class="fig__bar"><p class="fig__cap"><b>Fig. 5</b>Reflexión total interna. Más allá del ángulo crítico (unos 42° entre vidrio y aire), la luz no escapa del núcleo y avanza rebotando: así viajan los datos por fibra óptica. Aquí avanza al ritmo de la lectura.</p></figcaption>
+        </figure>
+      </div>
+    </div>
+  </section>
+
+  <!-- 05 Proyectos -->
+  <section class="sec" id="proyectos" aria-labelledby="t-proyectos">
+    <div class="wrap sec__grid" data-reveal>
+      <div class="sec__side sec__rule"><p class="sec__num">05</p><p class="label">Proyectos</p></div>
+      <div class="sec__main sec__rule">
+        <h2 class="title" id="t-proyectos">Talking Hands.</h2>
+        <p class="body">Un guante que traduce el alfabeto dactilológico español a texto, para que quien no puede hablar se entienda con quien no conoce la lengua de signos. Cinco sensores de flexión en divisores de tensión sobre un Arduino Mega 2560; firmware en C/C++ que los calibra y clasifica cada gesto por umbrales, y una app que muestra la letra y la lee en voz alta. Con Rubén González Sánchez, en el IES Federico García Bernalt, 2024–2025.</p>
+      </div>
+    </div>
+    <div class="wrap sec__grid">
+      <div class="sec__main">
+        <figure class="fig">
+          <div class="fig__stage"><Glove /></div>
+          <figcaption class="fig__bar"><p class="fig__cap"><b>Fig. 6</b>Lecturas de los cinco sensores (ADC de 10 bits) y la letra que forman, escribiendo por el puerto serie. Simulación.</p></figcaption>
+        </figure>
+        <dl class="facts">
+          <div><dt class="label">Mecánica cuántica</dt><dd>Apuntes en LaTeX sobre espacios de Hilbert y el formalismo de Dirac: L²(ℝ), bras y kets, operadores hermíticos, descomposición espectral, regla de Born. Ahora, cúbits y puertas cuánticas.</dd></div>
+          <div><dt class="label">Modelización con IA</dt><dd>Simulaciones físicas, de variedades parametrizadas a ajustes por mínimos cuadrados, con Claude, Gemini, modelos abiertos y NotebookLM. La IA propone; cada paso lo compruebo yo.</dd></div>
+          <div><dt class="label">Herramientas</dt><dd>Python, MATLAB, Mathematica, LaTeX, Arduino (C/C++), LabVIEW, PHYWE measure y SAOImage DS9 para imágenes astronómicas.</dd></div>
+          <div><dt class="label">Asociaciones</dt><dd>Supernova (USAL) · OSAL Student Chapter, óptica y fotónica · Optica, miembro individual · Delegación Charra del Grupo de Estudiantes de la RSEF.</dd></div>
+          <div><dt class="label">Idiomas</dt><dd>Español, nativo. Inglés, avanzado (formación C1).</dd></div>
+        </dl>
+      </div>
+    </div>
+  </section>
+
+  <!-- 06 Cine -->
+  <section class="sec" id="cine" aria-labelledby="t-cine">
+    <div class="wrap sec__grid" data-reveal>
+      <div class="sec__side sec__rule"><p class="sec__num">06</p><p class="label">Cine</p></div>
+      <div class="sec__main sec__rule">
+        <h2 class="title" id="t-cine"><em lang="en">«{profile.quote}.»</em></h2>
+        <p class="body">— <em>{profile.quoteSource}</em>. La frase que me cambió la forma de mirar. {profile.films} películas en Letterboxd, {profile.thisYear} este año; siempre vuelvo a Tarkovski, Lynch, Bergman y Kurosawa.</p>
+        <ol class="favs">
+          {favorites.map((f, i) => (
+            <li><span class="favs__n">{String(i + 1).padStart(2, '0')}</span><span class="favs__t">{f.title}</span><span class="favs__m">{f.year} · {f.by}</span></li>
+          ))}
+        </ol>
+      </div>
+    </div>
+    <div class="wrap">
+      <ul class="strip" aria-label="Lo último que he visto">
+        {recent.map((e) => (
+          <li>
+            <a href={e.url} class="strip__a">
+              <img {...poster(e, '(max-width: 700px) 30vw, 15vw')} alt={`${e.title}${e.year ? ` (${e.year})` : ''}`} loading="lazy" decoding="async" />
+              <span class="strip__r" aria-label={`${e.rating} de 5`}>{stars(e.rating)}</span>
+            </a>
+          </li>
+        ))}
+      </ul>
+      <p class="strip__more"><a class="link arrow" href={href('/cine')}>El diario, las reseñas y las listas</a></p>
+    </div>
+  </section>
+
+  <!-- 07 Contacto -->
+  <section class="sec contact" id="contacto" aria-labelledby="t-contacto">
+    <div class="wrap sec__grid" data-reveal>
+      <div class="sec__side sec__rule"><p class="sec__num">07</p><p class="label">Contacto</p></div>
+      <div class="sec__main sec__rule">
+        <h2 class="title" id="t-contacto">Escríbeme.</h2>
+        <p class="contact__mail"><a class="link" href={`mailto:${email}`}>{email}</a></p>
+        <dl class="contact__list">
+          <div><dt class="label">Teléfono</dt><dd><a class="link" href={`tel:${phone.tel}`}>{phone.label}</a></dd></div>
+          <div><dt class="label">LinkedIn</dt><dd><a class="link" href={links.linkedin}>Daniel Martín Guerrero</a></dd></div>
+          <div><dt class="label">GitHub</dt><dd><a class="link" href={links.github}>danimartinguerrero</a></dd></div>
+          <div><dt class="label">TikTok</dt><dd><a class="link" href={links.tiktok}>@_.danielmg</a></dd></div>
+          <div><dt class="label">Letterboxd</dt><dd><a class="link" href={profile.url}>danielmtg</a></dd></div>
+        </dl>
+      </div>
+    </div>
+    <div class="wrap sec__grid">
+      <figure class="fig sec__wide">
+        <div class="fig__stage"><ThinFilm /></div>
+        <figcaption class="fig__bar"><p class="fig__cap"><b>Fig. 7</b>Interferencia en una lámina delgada: una pompa de jabón que se adelgaza hacia arriba. Cada grosor refleja su color; donde es más fina, ninguno. Pasa el cursor.</p></figcaption>
+      </figure>
+    </div>
+  </section>
+</Base>
 
 <style>
-  .skip:focus { position: fixed; top: 0.5rem; left: 0.5rem; width: auto; height: auto; clip-path: none; z-index: 10; padding: 0.5rem 1rem; background: var(--bg); border-radius: 980px; }
-
-  /* Hero */
-  .hero {
-    position: relative; isolation: isolate;
-    min-height: calc(100svh - var(--nav-h)); display: grid; place-items: center;
-    padding-block: clamp(4rem, 10vw, 8rem); overflow: hidden;
-  }
-  /* Keep the still glow visible until the first rendered wave takes its place. */
-  .hero::before {
-    content: ''; position: absolute; inset: 0; z-index: -1; pointer-events: none;
-    background: radial-gradient(60% 45% at 50% 100%, rgba(245, 245, 247, 0.12), transparent 70%);
-    transition: opacity 1600ms ease;
-  }
-  .hero.has-waves::before { opacity: 0; }
-  .hero__waves {
-    position: absolute; inset: 0; z-index: -1;
-    width: 100%; height: 100%;
-    opacity: 0;
-    transition: opacity 1600ms ease;
-    /* The fringes rise out of the dark instead of meeting the next section at a hard edge. */
-    mask-image: linear-gradient(to top, transparent, #000 24%);
-    -webkit-mask-image: linear-gradient(to top, transparent, #000 24%);
-  }
-  .has-waves .hero__waves { opacity: 1; }
-  /* The copy sits on a soft neutral shade, so the fringes never pass right behind the words. */
-  .hero__copy { position: relative; text-shadow: 0 1px 12px rgba(0, 0, 0, 0.5); }
-  .hero__copy::before {
-    content: ''; position: absolute; z-index: -1; inset: -12% -18%;
-    background: radial-gradient(closest-side, rgba(0, 0, 0, 0.82), rgba(0, 0, 0, 0.6) 55%, transparent);
-    pointer-events: none;
-  }
-  .hero__copy { text-align: center; display: grid; justify-items: center; gap: 1.25rem; }
-  .hero__title { display: grid; justify-items: center; gap: 0.5rem; }
-  .hello {
-    width: min(72vw, 34rem); height: auto; overflow: visible;
-  }
-  .hello g { fill: none; stroke: var(--on-dark); stroke-linecap: round; stroke-linejoin: round; }
-  .hero__name {
-    font-size: clamp(2.75rem, 7vw, 5.5rem);
-    line-height: 1.04;
-    font-weight: 600;
-    letter-spacing: -0.022em;
-  }
-  .hero__lede {
-    max-width: 38rem;
-    font-size: clamp(1.1875rem, 1.7vw, 1.5rem); line-height: 1.33; font-weight: 500; letter-spacing: 0.006em;
-    color: #aeaeb2; /* brighter than the usual secondary: it sits on a moving image */
-    text-wrap: pretty;
-  }
-  .hero__lede strong { color: var(--on-dark); font-weight: 600; }
-  .hero__cta { gap: 1rem; }
-  .hero__cta, .intro__cta, .contact__links { display: flex; align-items: center; justify-content: center; gap: 1.5rem; flex-wrap: wrap; margin-top: 0.5rem; }
-
-  /* Entrance, once, on load: "hello" is written stroke by stroke, then the rest arrives (scripts/hello.ts).
-     Until the script takes over they wait hidden; if it never runs, a failsafe shows them anyway. */
-  :global(html.js) [data-home-intro] .hello path { stroke-dasharray: 1 1; stroke-dashoffset: 1; animation: hello-failsafe-stroke 0s 5s forwards; }
-  :global(html.js) [data-home-intro] [data-after] { opacity: 0; animation: hello-failsafe-after 0s 5s forwards; }
-  @keyframes hello-failsafe-stroke { to { stroke-dashoffset: 0; } }
-  @keyframes hello-failsafe-after { to { opacity: 1; } }
-
-
-
-  /* Section intros: left-aligned. */
-  .intro { display: grid; gap: 1rem; margin-bottom: clamp(3rem, 6vw, 5rem); }
-  .intro .headline { max-width: 20ch; }
-  .intro .lede { max-width: 42rem; }
-  .intro__cta { justify-content: flex-start; }
-  .section--alt .eyebrow { color: var(--ink-2); }
-  .section--dark .eyebrow { color: var(--on-dark-2); }
-
-  .bento { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1.25rem; }
-  .tile {
-    display: flex; flex-direction: column; gap: 0.75rem;
-    margin: 0; padding: 2rem;
-    min-width: 0;
-    border-radius: 1.75rem;
-    background: var(--bg);
-  }
-  .tile--half { grid-column: span 2; }
-  .tile--dark { min-height: 22rem; background: var(--dark); color: var(--on-dark); justify-content: flex-end; }
-  .tile__kicker { font-size: 0.875rem; font-weight: 600; color: var(--ink-2); }
-  .tile--dark .tile__kicker { color: var(--on-dark-2); }
-  .tile__title { font-size: clamp(1.5rem, 2.4vw, 2rem); line-height: 1.12; font-weight: 600; letter-spacing: -0.01em; text-wrap: balance; }
-  .tile__text { font-size: 1.0625rem; line-height: 1.47; color: var(--ink-2); text-wrap: pretty; }
-  .tile--dark .tile__text { color: var(--on-dark-2); font-size: clamp(1.1875rem, 1.7vw, 1.5rem); line-height: 1.3; font-weight: 500; max-width: 30rem; }
-  .tile__big { font-size: clamp(5rem, 13vw, 10rem); line-height: 0.95; font-weight: 600; letter-spacing: -0.04em; font-variant-numeric: tabular-nums; }
-  .tile__big span { font-size: 0.3em; letter-spacing: -0.01em; color: var(--on-dark-2); }
-  .tile__num { font-size: clamp(3rem, 5vw, 4rem); line-height: 1; font-weight: 600; letter-spacing: -0.03em; font-variant-numeric: tabular-nums; }
-  .tile--full { grid-column: 1 / -1; }
-
-  .chips { display: flex; flex-wrap: wrap; gap: 0.5rem; list-style: none; padding: 0; margin: 0; }
-  .chips li { padding: 0.375rem 0.75rem; border-radius: 0.5rem; background: var(--bg-alt); font-size: 0.875rem; font-weight: 500; }
-
+  /* Hero: the double slit behind the name. */
+  .hero { position: relative; min-height: max(640px, 100svh); display: flex; align-items: flex-end; overflow: hidden; isolation: isolate; }
+  .hero :global(canvas) { z-index: -2; }
+  .hero__shade { position: absolute; inset: 0; z-index: -1; pointer-events: none; background: linear-gradient(to top, var(--bg) 6%, rgba(10, 10, 11, 0.72) 34%, rgba(10, 10, 11, 0) 62%); }
+  .hero__in { padding-top: calc(var(--head) + 40px); padding-bottom: clamp(28px, 4vw, 48px); }
+  .hero__kicker { margin-bottom: clamp(16px, 2vw, 24px); }
+  .hero__name { max-width: 12ch; }
+  .hero__foot { display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 7fr); gap: 24px clamp(24px, 4vw, 64px); align-items: end; margin-top: clamp(28px, 3.5vw, 44px); padding-top: 18px; border-top: 1px solid var(--line); }
+  .hero__foot .lede em { font-family: var(--serif); font-style: italic; color: var(--ink); }
+  .hero__fig { display: grid; gap: 12px; justify-items: end; text-align: right; }
+  .hero__fig .fig__cap { max-width: 56ch; }
+  .hero__fig .fig__read { color: var(--photon, var(--ink-2)); }
   @media (max-width: 900px) {
-    .bento { grid-template-columns: 1fr 1fr; }
-  }
-  @media (max-width: 620px) {
-    .bento { grid-template-columns: 1fr 1fr; gap: 1rem; }
-    .tile { grid-column: 1 / -1; }
-    .tile { padding: 1.5rem; }
-    .tile--dark { min-height: 20rem; }
+    .hero__foot { grid-template-columns: 1fr; }
+    .hero__fig { justify-items: start; text-align: left; }
   }
 
-  /* ---- Divulgación: Cosmosofía. ---- */
-  .brand { display: flex; align-items: center; gap: 0.75rem; font-size: clamp(1.1875rem, 1.6vw, 1.5rem); font-weight: 600; }
-  .brand__mark {
-    display: grid; place-items: center; width: 2.5rem; height: 2.5rem; border-radius: 0.75rem;
-    background: radial-gradient(circle at 30% 25%, #3a4a8c, #0b0f24 70%); color: #f2d48a; font-size: 1.25rem;
-  }
-  .lede em { font-style: italic; }
+  /* A figure as wide as the whole grid. */
+  .sec__wide { grid-column: 1 / -1; }
 
-  /* A night sky in the tile: two layers of stars, drawn with gradients so nothing is downloaded. */
-  .tile--sky {
-    position: relative; isolation: isolate; overflow: hidden;
-    background:
-      radial-gradient(120% 90% at 85% 0%, rgba(120, 140, 255, 0.22), transparent 60%),
-      radial-gradient(90% 70% at 0% 100%, rgba(242, 212, 138, 0.12), transparent 60%),
-      #05060c;
-  }
-  .tile--sky::before, .tile--sky::after {
-    content: ''; position: absolute; inset: 0; z-index: -1; pointer-events: none;
-    background-repeat: repeat;
-  }
-  .tile--sky::before {
-    background-image:
-      radial-gradient(1px 1px at 12% 18%, #fff 50%, transparent 51%),
-      radial-gradient(1px 1px at 33% 62%, #fff 50%, transparent 51%),
-      radial-gradient(1.5px 1.5px at 71% 24%, #fff 50%, transparent 51%),
-      radial-gradient(1px 1px at 88% 71%, #fff 50%, transparent 51%),
-      radial-gradient(1px 1px at 52% 40%, #cfd6ff 50%, transparent 51%),
-      radial-gradient(1.5px 1.5px at 22% 84%, #f2d48a 50%, transparent 51%);
-    background-size: 220px 180px;
-    opacity: 0.75;
-  }
-  .tile--sky::after {
-    background-image:
-      radial-gradient(1px 1px at 8% 44%, #fff 50%, transparent 51%),
-      radial-gradient(1px 1px at 61% 8%, #fff 50%, transparent 51%),
-      radial-gradient(1px 1px at 79% 49%, #cfd6ff 50%, transparent 51%),
-      radial-gradient(1px 1px at 41% 91%, #fff 50%, transparent 51%);
-    background-size: 140px 130px;
-    opacity: 0.45;
-    animation: twinkle 6s ease-in-out infinite alternate;
-  }
-  @keyframes twinkle { to { opacity: 0.15; } }
-  .tile--sky .tile__big { font-size: clamp(4rem, 9vw, 7rem); }
-  .tile--sky .tile__big sup { font-size: 0.5em; vertical-align: 0.9em; letter-spacing: 0; }
-
-  .stops { list-style: none; margin: 0.5rem 0 0; padding: 0; display: grid; }
-  .stops li {
-    display: grid; grid-template-columns: 2rem minmax(0, 1fr) auto; align-items: baseline; gap: 0.75rem;
-    padding: 0.75rem 0; border-top: 1px solid rgba(0, 0, 0, 0.08);
-  }
-  .stops__n { font-family: var(--mono); font-size: 0.875rem; color: var(--ink-2); }
-  .stops__name { font-size: 1.0625rem; font-weight: 600; }
-  .stops__sub { font-size: 0.9375rem; color: var(--ink-2); text-align: right; }
-
-  .tile--word { justify-content: space-between; min-height: 18rem; }
-  .word { font-family: var(--serif); font-size: clamp(2.75rem, 6vw, 4.5rem); line-height: 1; letter-spacing: -0.01em; }
-  .word i { font-style: normal; color: var(--ink-2); font-size: 0.6em; vertical-align: 0.2em; }
-  .tile--word .tile__text strong { color: var(--ink); }
-
-  .tile--night { justify-content: flex-end; min-height: 18rem; background: linear-gradient(160deg, #fff 40%, #eef0fb); }
-
-  /* ---- Apuntes: from the notebook to LaTeX. ---- */
-  .notes { overflow: hidden; }
-  .notes .eyebrow { color: #c9b8ff; }
-  .notes .more { color: #8fb3ff; }
-  .notes__stage {
-    display: grid; grid-template-columns: 1fr auto 1fr 1fr; align-items: center;
-    gap: clamp(1rem, 3vw, 2.5rem);
-  }
-  .notes__page { margin: 0; display: grid; gap: 0.75rem; }
-  .notes__page img {
-    display: block; width: 100%; height: auto; border-radius: 0.5rem;
-    box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.08), 0 2rem 4rem -1.5rem rgba(0, 0, 0, 0.9);
-  }
-  .notes__page--paper img { filter: saturate(0.6) brightness(0.92); rotate: -2deg; }
-  .notes__page--tilt img { rotate: 1.5deg; translate: 0 1.5rem; }
-  .notes__page figcaption { font-size: 0.875rem; color: var(--on-dark-2); text-align: center; }
-  .notes__page--tilt figcaption { translate: 0 1.5rem; }
-  .notes__arrow { font-size: clamp(2rem, 4vw, 3rem); color: #f2d48a; }
-
-  .notes__figures {
-    display: flex; flex-wrap: wrap; gap: 2rem clamp(3rem, 7vw, 6rem);
-    margin-block: clamp(4rem, 8vw, 6rem) 0; padding-top: 2.5rem;
-    border-top: 1px solid rgba(255, 255, 255, 0.12);
-  }
-  .notes__figures div { display: flex; flex-direction: column-reverse; gap: 0.5rem; }
-  .notes__figures dt { font-size: 1.0625rem; color: var(--on-dark-2); }
-  .notes__figures dd { margin: 0; font-size: clamp(3.5rem, 7vw, 5.5rem); line-height: 1; font-weight: 600; letter-spacing: -0.035em; font-variant-numeric: tabular-nums; }
-  .notes__figures div:first-child dd { color: #c9b8ff; }
-
-  .clips {
-    display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 2rem 4rem; align-items: end;
-    margin-top: clamp(4rem, 8vw, 6rem);
-  }
-  .clips__title { font-size: clamp(1.75rem, 3vw, 2.5rem); line-height: 1.1; font-weight: 600; letter-spacing: -0.015em; }
-  .clips__text { margin-top: 1rem; font-size: clamp(1.0625rem, 1.4vw, 1.25rem); line-height: 1.45; color: var(--on-dark-2); max-width: 32rem; }
-  .clips__text strong { color: var(--on-dark); font-weight: 600; }
-  .chips--dark li { background: rgba(255, 255, 255, 0.08); color: var(--on-dark); }
-
-  @media (max-width: 760px) {
-    .notes__stage { grid-template-columns: 1fr 1fr; }
-    .notes__page--paper { grid-column: 1 / -1; width: min(70%, 20rem); justify-self: center; }
-    .notes__arrow { grid-column: 1 / -1; justify-self: center; rotate: 90deg; }
-    .notes__page--tilt img, .notes__page--tilt figcaption { translate: none; }
-    .clips { grid-template-columns: 1fr; }
+  /* The three pages, side by side, on the page's own black. */
+  .pages { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: clamp(12px, 2vw, 32px); margin-top: clamp(48px, 6vw, 80px); align-items: end; }
+  .page { display: grid; gap: 12px; }
+  .page img { width: 100%; height: auto; outline: 1px solid var(--line); outline-offset: -1px; }
+  .page:first-child img { filter: grayscale(1) contrast(1.05) brightness(0.86); }
+  @media (max-width: 700px) {
+    .pages { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .page:first-child { grid-column: 1 / -1; width: 72%; }
   }
 
-  /* ---- Filosofía. ---- */
-  .tile--talk { padding: clamp(2rem, 5vw, 4rem); gap: 1.5rem; }
-  .talk { margin: 0; }
-  .talk__title { font-family: var(--serif); font-size: clamp(2.75rem, 7vw, 6rem); line-height: 1; letter-spacing: -0.02em; font-style: italic; }
-  .talk__sub { margin-top: 1rem; max-width: 40rem; font-family: var(--serif); font-size: clamp(1.25rem, 2vw, 1.625rem); line-height: 1.3; color: var(--ink-2); }
-  .tile--talk .tile__text { max-width: 44rem; }
-  .tile--book { justify-content: space-between; min-height: 20rem; }
-  .tile--book cite { font-style: italic; }
-  .ms__title cite { font-style: italic; }
-  .tile--motto { justify-content: space-between; background: radial-gradient(120% 80% at 100% 0%, #1b2150, #000 65%); }
-  .motto { font-family: var(--serif); font-size: clamp(2.5rem, 5.5vw, 4.25rem); line-height: 1; font-style: italic; color: #f2d48a; }
+  /* The talk, lit by the light Fig. 4 lets through. */
+  .talk { margin: clamp(48px, 6vw, 80px) 0 0; }
+  .talk__title { margin-top: 18px; font-family: var(--serif); font-style: italic; font-weight: 300; font-size: clamp(2.6rem, 6.4vw, 6rem); line-height: 0.98; letter-spacing: -0.03em; color: var(--gold); opacity: calc(0.12 + 0.88 * var(--malus)); transition: opacity 120ms linear; }
+  .talk__sub { margin-top: 18px; max-width: 46ch; font-family: var(--serif); font-size: clamp(1.15rem, 1.6vw, 1.4rem); line-height: 1.4; color: var(--ink-2); }
+  .slider input { width: min(260px, 60vw); accent-color: var(--gold); }
+  .slider input { appearance: none; height: 24px; background: transparent; cursor: pointer; }
+  .slider input::-webkit-slider-runnable-track { height: 1px; background: var(--line-2); }
+  .slider input::-moz-range-track { height: 1px; background: var(--line-2); }
+  .slider input::-webkit-slider-thumb { appearance: none; width: 13px; height: 13px; margin-top: -6px; border-radius: 50%; background: var(--gold); border: 0; }
+  .slider input::-moz-range-thumb { width: 13px; height: 13px; border-radius: 50%; background: var(--gold); border: 0; }
 
+  /* Key figures. */
+  .figures { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 24px; margin-top: clamp(40px, 5vw, 64px); }
+  .figures div { display: flex; flex-direction: column-reverse; gap: 10px; padding-top: 16px; border-top: 1px solid var(--line); }
+  .figures dt { font-size: 14px; line-height: 1.45; color: var(--ink-3); max-width: 26ch; }
+  .figures dd { font-family: var(--serif); font-weight: 300; font-size: clamp(3rem, 6vw, 5.6rem); line-height: 0.9; letter-spacing: -0.03em; font-variant-numeric: lining-nums tabular-nums; }
+  .figures div:first-child dd { color: var(--gold); }
+  @media (max-width: 700px) { .figures { grid-template-columns: 1fr; } }
+  .fig--fiber .row { grid-template-columns: 7.5rem minmax(0, 1fr); }
+  .row--next .row__what { font-style: italic; }
+  @media (max-width: 620px) { .fig--fiber .row { grid-template-columns: 1fr; } }
 
-  /* ---- Filosofía: more tiles. ---- */
-  .tile--rain { justify-content: space-between; min-height: 20rem; background: linear-gradient(170deg, #fff 30%, #eef2f6); }
-  .tile--rain .tile__title, .tile--book .tile__title { font-family: var(--serif); font-weight: 600; }
-  .tile--finals { justify-content: space-between; min-height: 16rem; }
-  .tile--finals .tile__num { font-family: var(--serif); font-weight: 600; }
-  .tile--finals .tile__num span { font-size: 0.5em; color: var(--ink-2); font-style: italic; }
-  .tile--motto { min-height: 18rem; }
+  /* Facts: a definition list in two columns. */
+  .facts { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 clamp(24px, 3vw, 48px); margin-top: clamp(48px, 6vw, 72px); }
+  .facts div { padding: 20px 0; border-top: 1px solid var(--line); }
+  .facts dd { margin-top: 8px; color: var(--ink-2); font-size: 15.5px; line-height: 1.6; }
+  @media (max-width: 700px) { .facts { grid-template-columns: 1fr; } }
 
-  /* ---- Proyectos. ---- */
-  .tile--glove { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr); gap: 2rem 3rem; align-items: center; min-height: 0; padding: clamp(2rem, 4vw, 3.5rem); }
-  .glove__copy { display: grid; gap: 0.75rem; }
-  .glove__detail { font-size: 0.9375rem; line-height: 1.5; color: var(--on-dark-2); max-width: 36rem; }
-  .glove { position: relative; margin: 0; }
-  .glove svg { display: block; width: 100%; height: auto; }
-  .glove__track { fill: rgba(255, 255, 255, 0.08); }
-  .glove__level { fill: #f2d48a; transform-box: fill-box; transform-origin: bottom; }
-  .glove text { fill: var(--on-dark-2); font-size: 11px; text-anchor: middle; font-family: var(--font); }
-  .glove__letter { position: absolute; top: -0.5rem; right: 0; display: grid; place-items: center; width: 4rem; height: 4rem; border-radius: 1rem; background: rgba(255, 255, 255, 0.1); font-size: 2.25rem; font-weight: 600; }
-  @media (prefers-reduced-motion: no-preference) {
-    .glove__level { animation: flex 3.2s var(--ease-in-out) infinite alternate; animation-delay: var(--d); }
-  }
-  @keyframes flex { 0%, 30% { transform: scaleY(1); } 70%, 100% { transform: scaleY(0.3); } }
+  /* Favourites, typeset. */
+  .favs { margin-top: clamp(40px, 5vw, 64px); border-top: 1px solid var(--line); }
+  .favs li { display: grid; grid-template-columns: 3rem minmax(0, 1fr) auto; align-items: baseline; gap: 16px; padding: 16px 0; border-bottom: 1px solid var(--line); }
+  .favs__n { font-family: var(--mono); font-size: 12px; color: var(--ink-3); }
+  .favs__t { font-family: var(--serif); font-weight: 300; font-size: clamp(1.8rem, 3.6vw, 3.2rem); line-height: 1.05; letter-spacing: -0.02em; }
+  .favs__m { font-family: var(--mono); font-size: 12px; letter-spacing: 0.04em; color: var(--ink-3); text-align: right; }
+  @media (max-width: 620px) { .favs li { grid-template-columns: 2.2rem minmax(0, 1fr); } .favs__m { grid-column: 2; text-align: left; } }
 
-  .tile--quantum { justify-content: space-between; min-height: 20rem; }
-  .ket { font-family: var(--math); font-size: clamp(2rem, 4vw, 3rem); line-height: 1.2; color: #4b3fb5; }
-  .tile--ai { justify-content: space-between; min-height: 20rem; }
+  /* The last films, as a strip of posters. */
+  .strip { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: clamp(8px, 1.4vw, 20px); margin-top: clamp(48px, 6vw, 80px); }
+  .strip__a { display: grid; gap: 10px; text-decoration: none; }
+  .strip img { width: 100%; height: auto; aspect-ratio: 2 / 3; object-fit: cover; outline: 1px solid var(--line); outline-offset: -1px; transition: opacity 300ms var(--ease); }
+  .strip__a:hover img { opacity: 0.82; }
+  .strip__r { font-size: 12px; letter-spacing: 0.08em; color: var(--ink-3); }
+  .strip__more { margin-top: 28px; }
+  @media (max-width: 700px) { .strip { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
 
-  .tools { list-style: none; margin: 0.5rem 0 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(6.5rem, 1fr)); gap: 1rem; }
-  .tools li { display: grid; justify-items: center; gap: 0.5rem; font-size: 0.875rem; font-weight: 500; text-align: center; }
-  .tools__icon { display: grid; place-items: center; width: 4.5rem; height: 4.5rem; border-radius: 1.125rem; background: var(--bg-alt); }
-  .tools__icon img { width: 2.75rem; height: 2.75rem; object-fit: contain; }
-  .tools__icon--wide img { width: 3.5rem; }
-  .tools__icon--text { font-size: 2.25rem; font-weight: 600; color: #00878f; }
-
-  .groups { list-style: none; margin: 0.5rem 0 0; padding: 0; display: grid; }
-  .groups li { display: grid; gap: 0.25rem; padding: 0.875rem 0; border-top: 1px solid rgba(0, 0, 0, 0.08); }
-  .groups strong { font-size: 1.0625rem; font-weight: 600; }
-  .groups span { font-size: 0.9375rem; line-height: 1.45; color: var(--ink-2); }
-  .tile--langs { justify-content: space-between; }
-  .langs { margin: 0; display: grid; gap: 1.25rem; }
-  .langs div { display: grid; gap: 0.125rem; }
-  .langs dt { font-size: clamp(2rem, 4vw, 3rem); font-weight: 600; letter-spacing: -0.03em; line-height: 1.1; }
-  .langs dd { margin: 0; font-size: 1.0625rem; color: var(--ink-2); }
-
-  @media (max-width: 760px) {
-    .tile--glove { grid-template-columns: 1fr; }
-  }
-
-  /* ---- Cine: the four favourites. ---- */
-  .posters {
-    list-style: none; padding: 0; margin-block: 0;
-    display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: clamp(0.75rem, 2vw, 1.5rem);
-  }
-  .poster a { display: block; border-radius: 0.5rem; overflow: hidden; box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.1), 0 1.5rem 3rem -1rem rgba(0, 0, 0, 0.8); transition: transform 300ms var(--ease-out); }
-  .poster img { display: block; width: 100%; height: auto; aspect-ratio: 185 / 278; object-fit: cover; }
-  @media (hover: hover) and (pointer: fine) {
-    .poster a:hover { transform: translateY(-0.375rem); }
-  }
-  @media (max-width: 620px) { .posters { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
-
-  /* ---- Studies: the timeline. ---- */
-  /* Rail: dates | line | content. The line fills top to bottom (0 → 1 = "Now") straight from the scroll
-     position: it is the reader's own motion, so it is never eased and can be stopped or reversed at any
-     instant. --p is its value without the script or under reduced motion (full); with the script, the
-     browser (below) or scripts/scroll.ts sets the fill's own transform. Lighting a milestone is the state
-     change that motion causes: its colours cross over in 200ms, nothing moves. */
-  .tl {
-    --p: 0;
-    --t: clamp(1.3125rem, 2vw, 1.75rem);        /* milestone title size */
-    --dot: 0.75rem;                              /* node diameter */
-    --dot-y: calc(var(--t) * 0.6);               /* node centre = middle of the title's first line */
-    --line: 2px;
-    --track: #d2d2d7;
-    display: grid;
-    grid-template-columns: [when] 8.5rem [rail] var(--dot) [body] minmax(0, 1fr);
-    column-gap: 2.5rem;
-  }
-
-  /* No JS, or reduced motion: the line is drawn in full, no scrubbing. */
-  :global(html:not(.js)) .tl,
-  :global(html.reduce) .tl { --p: 1; }
-
-  /* The rail spans rows 1–6 and stops on the "Now" node (row 7). */
-  .tl__rail {
-    grid-column: rail; grid-row: 1 / 7;
-    justify-self: center;
-    position: relative;
-    width: var(--line);
-    margin-block: var(--dot-y) calc(-1 * var(--dot-y));
-    background: var(--track);
-  }
-  .tl__fill {
-    position: absolute; inset: 0;
-    background: var(--ink);
-    transform: scaleY(var(--p));
-    transform-origin: top;
-  }
-  /* Where an animation can be tied to the scroll itself, the browser draws the fill; Chrome and Safari
-     (from 26.4) then run it on the scrolling thread, in step with the page, instead of a frame behind it
-     from the script, which on phones made its tip wobble against the reading line. Same range as the script's: from
-     the first dot on the reading line, 60% down the screen, to the "Now" dot on it. The script lights the
-     milestones from this animation's own progress, so the two always agree. */
-  @supports (animation-timeline: view()) {
-    /* Inset 0: by default the timeline's window leaves out the page's scroll-padding (4rem at the top),
-       which ran the fill 64px ahead of the dots it lights. */
-    .tl__rail { view-timeline-name: --tl-rail; view-timeline-axis: block; view-timeline-inset: 0; }
-    :global(html.js:not(.reduce)) .tl__fill { animation: tl-fill linear both; }
-    /* The timeline in a rule of its own, which outranks the shorthand (the shorthand resets it): in the
-       same rule the CSS minifier folds it into the shorthand, a form no browser accepts. */
-    :global(html.js:not(.reduce)) .tl__rail > .tl__fill {
-      animation-duration: auto;
-      animation-timeline: --tl-rail;
-      animation-range: cover 40dvh cover calc(100% - 60dvh);
-    }
-    @keyframes tl-fill { from { transform: scaleY(0); } to { transform: scaleY(1); } }
-  }
-
-  .tl__list {
-    grid-column: 1 / -1; grid-row: 1 / span 8;
-    display: grid;
-    grid-template-columns: subgrid;
-    grid-template-rows: subgrid;
-    margin: 0; padding: 0; list-style: none;
-  }
-
-  /* Milestone tokens: not reached (dim) by default. */
-  .ms {
-    --c-when: #6e6e73;                           /* dim, but AA on #f5f5f7 and on the tile */
-    --c-title: #6e6e73;
-    --c-meta: #6e6e73;
-    --c-unit: #86868b;
-    --c-link: #6e6e73;
-    --c-dot: var(--bg-alt);
-    --c-ring: #c7c7cc;
-    --logo: 0.4;
-    grid-column: 1 / -1;
-    display: grid;
-    grid-template-columns: subgrid;
-    align-items: baseline;                       /* date and title share a baseline */
-  }
-  /* Reached: lit. (No JS and reduced motion: everything up to "Now" is reached.) */
-  .ms.is-reached,
-  :global(html:not(.js)) .ms:not(.ms--next),
-  :global(html.reduce) .ms:not(.ms--next) {
-    --c-when: var(--ink);
-    --c-title: var(--ink);
-    --c-meta: var(--ink-2);
-    --c-unit: var(--ink-2);
-    --c-link: var(--link);
-    --c-dot: var(--ink);
-    --c-ring: var(--ink);
-    --logo: 1;
-  }
-  .ms--now.is-reached,
-  :global(html:not(.js)) .ms--now:not(.ms--next),
-  :global(html.reduce) .ms--now:not(.ms--next) {
-    --c-when: #248a3d;                           /* green that reads on a light ground */
-    --c-dot: #30d158;
-    --c-ring: #30d158;
-  }
-  /* Next: in the future, never reached. Readable, but not lit. */
-  .ms--next {
-    --c-when: #48484a;
-    --c-title: #48484a;
-    --c-meta: var(--ink-2);
-    --c-link: var(--link);
-    --c-ring: #aeaeb2;
-  }
-
-  .ms__when {
-    grid-column: when; grid-row: 1;
-    font-size: 1.0625rem;
-    line-height: calc(var(--t) * 1.2);
-    font-weight: 600;
-    color: var(--c-when);
-    font-variant-numeric: tabular-nums;
-    text-align: right;
-    white-space: nowrap;
-  }
-
-  .ms__dot {
-    grid-column: rail; grid-row: 1;
-    position: relative; z-index: 1;
-    align-self: start;
-    width: var(--dot); height: var(--dot);
-    margin-top: calc(var(--dot-y) - var(--dot) / 2);
-    border-radius: 50%;
-    background: var(--c-dot);
-    box-shadow: inset 0 0 0 var(--line) var(--c-ring), 0 0 0 0.375rem var(--bg-alt);
-  }
-  .ms--now .ms__dot {
-    --dot: 1rem;
-    margin-inline: -0.125rem;                    /* 1rem node centred on a 0.75rem column */
-  }
-
-  /* From "Now" to "Next": the future, dashed. Not part of the 0 → 1 travel. */
-  .ms--now::after {
-    content: '';
-    grid-column: rail; grid-row: 1;
-    justify-self: center; align-self: stretch;
-    width: var(--line);
-    margin-block: var(--dot-y) calc(-1 * var(--dot-y));
-    background: repeating-linear-gradient(to bottom, #aeaeb2 0 0.25rem, transparent 0.25rem 0.625rem);
-  }
-
-  .ms__body {
-    grid-column: body; grid-row: 1;
-    max-width: 40rem;
-    padding-bottom: clamp(3rem, 5.5vw, 4.5rem);
-  }
-  .ms:last-child .ms__body { padding-bottom: 0; }
-
-  .ms__title {
-    font-size: var(--t);
-    line-height: 1.2;
-    font-weight: 600;
-    color: var(--c-title);
-    text-wrap: balance;
-  }
-  .ms__title a {
-    color: var(--c-link);
-    text-decoration: none;
-  }
-  .ms__title a::after { content: '\00a0›'; }
-  @media (hover: hover) and (pointer: fine) {
-    .ms__title a:hover { text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 0.15em; }
-  }
-  .ms__title a:active { opacity: 0.7; }
-
-  .ms__meta {
-    margin-top: 0.5rem;
-    font-size: 1.0625rem;
-    line-height: 1.47;
-    color: var(--c-meta);
-    text-wrap: pretty;
-  }
-
-  /* June 2025: the two figures, as display type. */
-  .ms__figures {
-    display: flex; flex-wrap: wrap;
-    gap: 1.5rem clamp(3rem, 6vw, 5.5rem);
-    margin: 1.5rem 0 0;
-  }
-  .ms__figure { display: flex; flex-direction: column-reverse; gap: 0.5rem; }
-  .ms__figure dt { font-size: 1.0625rem; line-height: 1.47; color: var(--c-meta); }
-  .ms__figure dd {
-    margin: 0;
-    font-size: clamp(3.5rem, 7.5vw, 6rem);
-    line-height: 1;
-    font-weight: 600;
-    letter-spacing: -0.035em;
-    font-variant-numeric: tabular-nums;
-    color: var(--c-title);
-  }
-  .ms__figure dd span { font-size: 0.375em; letter-spacing: -0.01em; color: var(--c-unit); }
-
-  /* September 2025: the university, the anchor. The only surface on the rail. */
-  .ms--figures .ms__body,
-  .ms--anchor .ms__body { max-width: none; }
-  .ms--anchor { --pad: 2.5rem; }
-  .ms--anchor .ms__dot { margin-top: calc(var(--pad) + 1px + var(--dot-y) - var(--dot) / 2); }
-  .ms__card {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) auto;
-    align-items: start;
-    gap: 1.5rem 2rem;
-    max-width: 44rem;
-    padding: var(--pad);
-    border: 1px solid rgba(0, 0, 0, 0.06);
-    border-radius: 1.75rem;
-    background: var(--bg);
-  }
-  .ms__card .ms__meta { max-width: 30rem; }
-  .ms__logo {
-    align-self: center;
-    width: 12.5rem; height: auto;
-    margin: 0.5rem;
-    opacity: var(--logo);
-  }
-
-  .ms__when, .ms__title, .ms__title a, .ms__meta, .ms__figure dt, .ms__figure dd, .ms__figure dd span { transition: color 200ms var(--ease-out); }
-  .ms__dot { transition: background-color 200ms var(--ease-out), box-shadow 200ms var(--ease-out); }
-  .ms__logo { transition: opacity 200ms var(--ease-out); }
-
-  @media (max-width: 620px) {
-    .tl {
-      --dot-y: 0.75rem;                          /* middle of the date line */
-      grid-template-columns: [rail] var(--dot) [body] minmax(0, 1fr);
-      column-gap: 1.25rem;
-    }
-    .ms__when {
-      grid-column: body; grid-row: 1;
-      font-size: 0.9375rem;
-      line-height: 1.5rem;
-      text-align: left;
-    }
-    .ms--now::after { grid-row: 1 / span 2; }
-    .ms__body { grid-column: body; grid-row: 2; margin-top: 0.25rem; padding-bottom: 2.5rem; }
-    .ms__figures { flex-direction: column; gap: 1.5rem; }
-    .ms__figure dd { font-size: 3.5rem; }
-    .ms--anchor { --pad: 1.5rem; }
-    .ms--anchor .ms__dot { margin-top: calc(var(--dot-y) - var(--dot) / 2); }
-    .ms__card { grid-template-columns: minmax(0, 1fr); gap: 1.5rem; border-radius: 1.25rem; }
-    .ms__logo { align-self: start; width: 10.5rem; margin: 0.5rem 0 0; }
-  }
-
-  /* Contact */
-  /* With the footer, the last screen at its tallest (Safari's toolbar tucked away): scrolled to the end,
-     the section starts at the top of the screen, so the black page before it never shows; with the
-     toolbar out it starts a toolbar's height above, and "Say hi." still sits clear of the island. Never
-     dynamic units here or below: Safari moves its toolbar when the end of the page is pulled, and a
-     section that resized with it changed the page's length mid-pull, so the page jumped back and forth.
-     --footer-h is measured by the page script. The thread is a short iMessage exchange set on the page
-     like a quote: the visitor asks where to reach him, his reply is the email, and the reply bubble is
-     the mailto. The headline says hi in one language after another (scripts/contact.ts). */
-  .contact { min-height: calc(100lvh - var(--footer-h, 0px)); display: grid; align-content: center; text-align: center; background: var(--bg); }
-  /* Only the island's clearance above and a little air below, not a section's generous padding, so the
-     exchange fits that last screen and is centred in it; with the full padding it outgrew short windows
-     and the headline went under the island at the end. Scrolled to the end, the headline sits as far
-     below the top as the screen is taller than everything under it, so in short windows the headline,
-     the thread and their spacing also scale with the height. */
-  .contact.section { padding-block: 5rem 3rem; }
-  .contact__inner { display: grid; justify-items: center; gap: 1.25rem; }
-  /* One line, one em tall whatever script the greeting is in, so nothing below moves when it changes. */
-  .contact__title { width: 100%; height: 1.05em; font-size: clamp(2.75rem, min(6vw, 8.5svh), 4.5rem); line-height: 1.05; font-weight: 600; letter-spacing: -0.022em; }
-  /* "Say" stays; the greeting after it changes (scripts/contact.ts). The line stays centred: when the new
-     word is a different width, the whole line glides to its new place instead of jumping. */
-  .contact__greet { display: inline-block; white-space: nowrap; }
-  .contact__slot { position: relative; display: inline-block; }
-  .contact__word { display: none; }
-  .contact__word.is-on { display: inline-block; }
-  /* The word on its way out is taken out of the line, so the line measures the word coming in. */
-  .contact__word.is-leaving { display: inline-block; position: absolute; left: 0; top: 0; }
-  /* Each glyph in its own box (the script splits the words), so the letters can arrive one after another. */
-  .contact__word > :global(span) { display: inline-block; }
-  .contact__word--cjk { letter-spacing: 0; font-feature-settings: 'palt'; }
-  .contact .lede { max-width: 30rem; }
-
-  /* The thread. Everything inside is sized in em of the bubble text, so the exchange scales as one. */
-  .thread {
-    --grey: #e9e9eb; /* the received-bubble grey, one step darker than --bg-alt so it holds on white */
-    --tail: 1.18em;
-    width: min(100%, 22em);
-    margin-top: clamp(1.25rem, min(3vw, 3svh), 2.5rem);
-    padding-inline: 0.45em; /* room for the tails inside the gutter */
-    font-size: clamp(1.0625rem, min(0.5rem + 1.4vw, 0.25rem + 2.5svh), 1.75rem); /* smaller in short windows too (see .contact) */
-    line-height: 1.3;
-    letter-spacing: -0.005em;
-    text-align: left;
-  }
-  .thread__stamp, .thread__receipt { font-size: max(0.75rem, 0.55em); line-height: 1.3; font-weight: 500; letter-spacing: 0.01em; color: var(--ink-2); }
-  .thread__stamp { text-align: center; margin-bottom: 0.9em; }
-  .thread__receipt { text-align: right; margin-top: 0.4em; padding-right: 0.15em; }
-  .thread__row { display: flex; }
-  .thread__row--me { justify-content: flex-end; margin-top: 0.7em; }
-  .bubble { position: relative; display: block; padding: 0.42em 0.8em; border-radius: 1.1em; }
-  /* The received bubble is two layers: the tail, drawn by the bubble itself, and the body, which carries
-     the colour and the text and is the only part that is clipped while the message grows. */
-  .bubble--them { max-width: 82%; padding: 0; color: var(--ink); }
-  .bubble__body { display: block; padding: 0.42em 0.8em; border-radius: 1.1em; background: var(--grey); text-wrap: pretty; }
-  .bubble--me { background: var(--blue); color: #fff; overflow-wrap: anywhere; text-decoration: underline; text-decoration-thickness: 0.06em; text-underline-offset: 0.18em; transition: background-color 200ms ease; }
-  /* Tails: a bubble-coloured corner, then a page-coloured mask that carves it into a hook. The mask is
-     only as wide as its curve: the tail sticks out 0.41em, and a wider mask, invisible on the page,
-     reached past the screen's edge on phones and let the page pan sideways. */
-  .bubble::before, .bubble::after { content: ''; position: absolute; bottom: 0; height: var(--tail); }
-  .bubble::before { width: var(--tail); background: inherit; }
-  .bubble::after { width: 0.6em; background: var(--bg); }
-  .bubble--them::before { left: -0.41em; border-bottom-right-radius: 0.94em 0.82em; background: var(--grey); }
-  .bubble--them::after { left: -0.6em; border-bottom-right-radius: 0.59em; }
-  .bubble--me::before { right: -0.41em; border-bottom-left-radius: 0.94em 0.82em; }
-  .bubble--me::after { right: -0.6em; border-bottom-left-radius: 0.59em; }
-  /* The reply is the action: it gives under the finger, anchored at its tail; an invisible slop takes
-     the hit area past 44px while the bubble keeps its proportions. */
-  .thread__reply { position: relative; display: block; max-width: 100%; border-radius: 1.1em; color: #fff; text-decoration: none; transform-origin: 100% 100%; transition: transform 140ms var(--ease-out); }
-  .thread__reply:active { transform: scale(0.97); }
-  .thread__reply::after { content: ''; position: absolute; inset: -0.5rem -0.75rem; }
-  .thread__reply:focus-visible { outline-offset: 4px; }
-  @media (hover: hover) and (pointer: fine) {
-    .thread__reply:hover .bubble--me { background-color: var(--blue-hover); }
-  }
-  /* The other ways to reach me, as the action buttons of a contact card: a round icon, its name under it. */
-  .contact__links { display: flex; justify-content: center; gap: clamp(1.5rem, 4vw, 2.5rem); margin: clamp(1rem, min(2.5vw, 2.5svh), 2rem) 0 0; padding: 0; list-style: none; }
-  .contact__link {
-    display: grid; justify-items: center; gap: 0.5rem; min-width: 4.5rem;
-    color: var(--ink-2); text-decoration: none;
-    font-size: 0.8125rem; line-height: 1.2; font-weight: 500; letter-spacing: 0.01em;
-    transition: transform 140ms var(--ease-out), color 200ms ease;
-  }
-  .contact__icon { display: grid; place-items: center; width: 3.25rem; height: 3.25rem; border-radius: 50%; background: var(--bg-alt); color: var(--ink); transition: background-color 200ms ease; }
-  .contact__icon svg { width: 1.375rem; height: 1.375rem; fill: currentColor; }
-  .contact__link:active { transform: scale(0.97); }
-  .contact__link:focus-visible { outline-offset: 6px; border-radius: 0.75rem; }
-  @media (hover: hover) and (pointer: fine) {
-    .contact__link:hover { color: var(--ink); }
-    .contact__link:hover .contact__icon { background-color: #e8e8ed; }
-  }
-
-  /* The arrival, once, the way Messages does it. Armed by the script, so without it the exchange simply
-     reads. The typing bubble pops in at the tail (a spring with a little bounce), the dots breathe, then
-     the bubble grows into the message (a clip that opens, critically damped, with the text fading in as
-     it does), and the reply is sent: it springs up from below the thread, anchored at its own tail. Then,
-     a beat later, it is delivered, as Messages shows it: the conversation is anchored at its bottom, so
-     the label is added below the reply and the whole thread rises by the label's height while
-     "Delivered" fades in. Until then the thread sits that much lower. Springs are sampled into linear()
-     easings, so all of it is CSS, off the main thread; browsers without linear() get the site's ease-out. */
-  .thread { --receipt-h: calc(max(0.75rem, 0.55em) * 1.7); } /* the label's line and its margin, in its own em */
-  .bubble__dots { display: none; }
-  .contact.is-armed .thread__stamp, .contact.is-armed .bubble--them, .contact.is-armed .thread__reply, .contact.is-armed .thread__receipt { opacity: 0; }
-  .contact.is-armed .bubble__dots { position: absolute; left: 0; bottom: 0; width: 3.6em; height: 2.14em; display: flex; align-items: center; justify-content: center; gap: 0.24em; }
-  .contact.is-armed .bubble__dots i { width: 0.42em; height: 0.42em; border-radius: 50%; background: #8e8e93; opacity: 0.35; }
-  .contact.is-playing .thread__stamp { animation: contact-fade 300ms ease both; }
-  .contact.is-playing .bubble--them { transform-origin: 0 100%; animation: contact-pop 640ms var(--ease-out) 150ms both; }
-  .contact.is-playing .bubble__body { animation: contact-grow 550ms var(--ease-out) 1900ms both; }
-  .contact.is-playing .bubble--them .bubble__text { animation: contact-fade 220ms ease 2000ms both; }
-  .contact.is-playing .bubble__dots i { animation: contact-breathe 1.1s ease-in-out 300ms infinite; }
-  .contact.is-playing .bubble__dots i + i { animation-delay: 480ms; }
-  .contact.is-playing .bubble__dots i + i + i { animation-delay: 660ms; }
-  .contact.is-playing .bubble__dots { animation: contact-fade 150ms linear 1900ms reverse both; }
-  .contact.is-playing .thread__reply { animation: contact-send 575ms var(--ease-out) 2800ms both; }
-  .contact.is-playing .thread { animation: contact-lift 450ms var(--ease-out) 3900ms both; }
-  .contact.is-playing .thread__receipt { animation: contact-fade 200ms var(--ease-out) 3940ms both; }
-  @supports (animation-timing-function: linear(0, 1)) {
-    .contact.is-playing .bubble--them { animation-timing-function: linear(0.0, 0.039 3.1%, 0.138 6.2%, 0.27 9.4%, 0.415 12.5%, 0.559 15.6%, 0.691 18.8%, 0.805 21.9%, 0.898 25.0%, 0.97 28.1%, 1.021 31.2%, 1.056 34.4%, 1.075 37.5%, 1.083 40.6%, 1.082 43.8%, 1.076 46.9%, 1.065 50.0%, 1.054 53.1%, 1.041 56.2%, 1.03 59.4%, 1.02 62.5%, 1.011 65.6%, 1.005 68.8%, 1.0 71.9%, 0.996 75.0%, 0.994 78.1%, 0.993 81.2%, 0.993 84.4%, 0.993 87.5%, 0.994 90.6%, 0.995 93.8%, 0.996 96.9%, 1); }
-    .contact.is-playing .bubble__body, .contact.is-playing .thread { animation-timing-function: linear(0.0, 0.024 3.1%, 0.084 6.2%, 0.166 9.4%, 0.258 12.5%, 0.353 15.6%, 0.445 18.8%, 0.532 21.9%, 0.611 25.0%, 0.682 28.1%, 0.743 31.2%, 0.796 34.4%, 0.84 37.5%, 0.877 40.6%, 0.907 43.8%, 0.931 46.9%, 0.951 50.0%, 0.966 53.1%, 0.978 56.2%, 0.986 59.4%, 0.993 62.5%, 0.997 65.6%, 1.001 68.8%, 1.003 71.9%, 1.004 75.0%, 1.005 78.1%, 1.005 81.2%, 1.005 84.4%, 1.005 87.5%, 1.004 90.6%, 1.004 93.8%, 1.003 96.9%, 1); }
-    .contact.is-playing .thread__reply { animation-timing-function: linear(0.0, 0.023 3.1%, 0.082 6.2%, 0.165 9.4%, 0.262 12.5%, 0.365 15.6%, 0.468 18.8%, 0.565 21.9%, 0.656 25.0%, 0.737 28.1%, 0.807 31.2%, 0.867 34.4%, 0.916 37.5%, 0.956 40.6%, 0.986 43.8%, 1.009 46.9%, 1.026 50.0%, 1.037 53.1%, 1.043 56.2%, 1.046 59.4%, 1.046 62.5%, 1.044 65.6%, 1.04 68.8%, 1.036 71.9%, 1.031 75.0%, 1.027 78.1%, 1.022 81.2%, 1.018 84.4%, 1.014 87.5%, 1.01 90.6%, 1.007 93.8%, 1.005 96.9%, 1); }
-  }
-  @keyframes contact-fade { from { opacity: 0; } to { opacity: 1; } }
-  @keyframes contact-pop { from { opacity: 0; transform: scale(0.5); } 20% { opacity: 1; } to { opacity: 1; transform: none; } }
-  /* Only the typing bubble shows at first: the bottom-left corner of the message's body, a small pill
-     with every corner round (the tail sits outside the clip, on the bubble itself), which then opens to
-     the whole message. */
-  @keyframes contact-grow {
-    from { clip-path: inset(calc(100% - 2.14em) calc(100% - 3.6em) 0 0 round 1.1em); }
-    to { clip-path: inset(0 round 1.1em); }
-  }
-  @keyframes contact-breathe { 0%, 100% { opacity: 0.35; } 35% { opacity: 1; } }
-  @keyframes contact-send { from { opacity: 0; transform: translateY(1.2em) scale(0.8); } 25% { opacity: 1; } to { opacity: 1; transform: none; } }
-  @keyframes contact-lift { from { transform: translateY(var(--receipt-h)); } to { transform: none; } }
-
-  /* Reduced motion: the same order, as cross-fades. No pop, no growing, no dots, and the greeting stays. */
-  @media (prefers-reduced-motion: reduce) {
-    .contact__link { transition: none; }
-    .contact__link:active { transform: none; opacity: 0.7; }
-    .thread__reply { transition: none; }
-    .thread__reply:active { transform: none; opacity: 0.85; }
-    .contact.is-armed .bubble__dots { display: none; }
-    .contact.is-playing .bubble--them { animation: contact-fade 300ms ease 150ms both; }
-    .contact.is-playing .bubble__body { animation: none; }
-    .contact.is-playing .bubble--them .bubble__text { animation: none; }
-    .contact.is-playing .thread__reply { animation: contact-fade 300ms ease 900ms both; }
-    .contact.is-playing .thread { animation: none; }
-    .contact.is-playing .thread__receipt { animation: contact-fade 240ms ease 1300ms both; }
-  }
-
-  .contact__tel { color: inherit; text-decoration: underline; text-underline-offset: 0.15em; font-variant-numeric: tabular-nums; white-space: nowrap; }
-  .contact__links { flex-wrap: wrap; }
-  .footer { padding-top: 1px; background: var(--bg-alt); color: var(--ink-2); font-size: 0.75rem; }
-  .footer__inner { display: flex; justify-content: space-between; gap: 1rem; flex-wrap: wrap; padding-block: 1.25rem 2rem; border-top: 1px solid rgba(0, 0, 0, 0.1); }
+  /* Contact. */
+  .contact__mail { margin-top: clamp(24px, 3vw, 36px); font-family: var(--serif); font-weight: 300; font-size: clamp(1.7rem, 4.4vw, 3.6rem); letter-spacing: -0.02em; line-height: 1.1; overflow-wrap: anywhere; }
+  .contact__list { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 0 24px; margin-top: clamp(36px, 5vw, 56px); }
+  .contact__list div { padding: 16px 0; border-top: 1px solid var(--line); }
+  .contact__list dd { margin-top: 6px; font-size: 15.5px; }
 </style>
-
-<script>
-  import { onPage } from '@/scripts/page';
-  // The reader demo: the segmented control swaps the rewrite level. Set up on every page shown
-  // (scripts/page.ts); its listeners are on the demo's own buttons and go with the page.
-  onPage(() => document.querySelectorAll<HTMLElement>('[data-reader]').forEach((reader) => {
-    const buttons = reader.querySelectorAll<HTMLButtonElement>('[data-level]');
-    const texts = reader.querySelectorAll<HTMLElement>('[data-level-text]');
-    const group = reader.querySelector<HTMLElement>('.segmented')!;
-    let moving: number | undefined;
-    buttons.forEach((b) => b.addEventListener('click', () => {
-      buttons.forEach((x) => { x.classList.toggle('is-on', x === b); x.setAttribute('aria-pressed', String(x === b)); });
-      group.dataset.on = b.dataset.level;
-      group.classList.add('is-moving');
-      clearTimeout(moving);
-      moving = window.setTimeout(() => group.classList.remove('is-moving'), 220);
-      texts.forEach((t) => { t.hidden = t.dataset.levelText !== b.dataset.level; });
-    }));
-  }));
-</script>

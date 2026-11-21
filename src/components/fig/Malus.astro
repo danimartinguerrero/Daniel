@@ -1,0 +1,123 @@
+---
+/**
+ * Fig. 4: Malus's law. Light passes a vertical polariser, then an analyser turned by θ: the field that
+ * gets through is E₀ cos θ, the intensity I₀ cos²θ. The analyser turns with the slider (or by dragging
+ * across the figure). The page reads the transmitted intensity from --malus on the figure's root.
+ */
+---
+<div class="malus" data-malus>
+  <canvas data-malus-canvas aria-hidden="true"></canvas>
+</div>
+
+<style>
+  .malus { position: relative; aspect-ratio: 16 / 6; cursor: ew-resize; touch-action: pan-y; }
+  .malus canvas { position: absolute; inset: 0; width: 100%; height: 100%; }
+  @media (max-width: 700px) { .malus { aspect-ratio: 16 / 9; } }
+</style>
+
+<script>
+  import { loop, surface, token } from '@/lib/figure';
+
+  document.querySelectorAll<HTMLElement>('[data-malus-root]').forEach((root) => {
+    const box = root.querySelector<HTMLElement>('[data-malus]')!;
+    const canvas = box.querySelector<HTMLCanvasElement>('[data-malus-canvas]')!;
+    const range = root.querySelector<HTMLInputElement>('[data-malus-range]');
+    const read = root.querySelector<HTMLElement>('[data-malus-read]');
+    const s = surface(canvas);
+    const ink = token('--ink'), gold = token('--gold');
+    let theta = Number(range?.value ?? 30);
+
+    const set = (deg: number) => {
+      theta = Math.max(0, Math.min(90, deg));
+      const I = Math.cos((theta * Math.PI) / 180) ** 2;
+      if (range) range.value = String(Math.round(theta));
+      if (read) read.textContent = `θ = ${Math.round(theta)}° · I/I₀ = cos²θ = ${I.toFixed(2).replace('.', ',')}`;
+      root.style.setProperty('--malus', I.toFixed(3));
+      view.redraw();
+    };
+    range?.addEventListener('input', () => set(Number(range.value)));
+    let drag: number | null = null;
+    box.addEventListener('pointerdown', (e) => { drag = e.clientX; box.setPointerCapture(e.pointerId); });
+    box.addEventListener('pointermove', (e) => { if (drag === null) return; set(theta + (e.clientX - drag) * 0.35); drag = e.clientX; });
+    box.addEventListener('pointerup', () => { drag = null; });
+
+    // A polariser seen at an angle: an ellipse with its transmission lines turned by φ (from vertical).
+    const disc = (cx: number, cy: number, R: number, phi: number, k: number) => {
+      const { ctx } = s;
+      ctx.save();
+      ctx.beginPath(); ctx.ellipse(cx, cy, R * k, R, 0, 0, Math.PI * 2);
+      ctx.fillStyle = 'rgba(236,235,230,0.035)'; ctx.fill();
+      ctx.strokeStyle = 'rgba(236,235,230,0.4)'; ctx.lineWidth = 1; ctx.stroke();
+      ctx.clip();
+      ctx.strokeStyle = 'rgba(236,235,230,0.16)';
+      const c = Math.cos(phi), sn = Math.sin(phi);
+      for (let d = -R; d <= R; d += R / 7) {
+        // A line at offset d perpendicular to the direction (sin φ, cos φ), squashed in x by k.
+        const ax = d * c - R * sn, ay = -d * sn - R * c, bx = d * c + R * sn, by = -d * sn + R * c;
+        ctx.beginPath(); ctx.moveTo(cx + ax * k, cy + ay); ctx.lineTo(cx + bx * k, cy + by); ctx.stroke();
+      }
+      ctx.restore();
+    };
+
+    const view = loop(box, (t) => {
+      const { ctx, w, h } = s;
+      ctx.clearRect(0, 0, w, h);
+      const cy = h / 2, R = Math.min(h * 0.36, w * 0.12), k = 0.34;
+      const x0 = w * 0.04, x1 = w * 0.3, x2 = w * 0.62, x3 = w * 0.96;
+      const phi = (theta * Math.PI) / 180;
+      const E = Math.cos(phi);
+      const lambda = Math.max(26, w / 22), speed = 2.4;
+
+      // Unpolarised light: fields in every direction, drawn as a soft band.
+      ctx.strokeStyle = 'rgba(236,235,230,0.5)'; ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.moveTo(x0, cy); ctx.lineTo(x1, cy); ctx.stroke();
+      for (let i = 0; i < 4; i++) {
+        const a = (i * Math.PI) / 4 + t * 0.3;
+        ctx.strokeStyle = 'rgba(236,235,230,0.12)';
+        ctx.beginPath();
+        for (let x = x0; x <= x1; x += 2) {
+          const v = Math.sin(((x - x0) / lambda) * 2 * Math.PI - t * speed) * R * 0.5;
+          const px = x + v * Math.sin(a) * k, py = cy - v * Math.cos(a);
+          x === x0 ? ctx.moveTo(px, py) : ctx.lineTo(px, py);
+        }
+        ctx.stroke();
+      }
+      disc(x1, cy, R, 0, k);
+
+      // Vertically polarised between the two.
+      ctx.strokeStyle = 'rgba(236,235,230,0.5)';
+      ctx.beginPath(); ctx.moveTo(x1, cy); ctx.lineTo(x2, cy); ctx.stroke();
+      ctx.strokeStyle = ink; ctx.globalAlpha = 0.8;
+      ctx.beginPath();
+      for (let x = x1; x <= x2; x += 2) {
+        const v = Math.sin(((x - x1) / lambda) * 2 * Math.PI - t * speed) * R * 0.55;
+        x === x1 ? ctx.moveTo(x, cy - v) : ctx.lineTo(x, cy - v);
+      }
+      ctx.stroke(); ctx.globalAlpha = 1;
+      disc(x2, cy, R, phi, k);
+
+      // After the analyser: E₀ cos θ along its axis, I = cos²θ in the beam's brightness.
+      ctx.strokeStyle = `rgba(226,194,125,${0.15 + 0.85 * E * E})`;
+      ctx.beginPath(); ctx.moveTo(x2, cy); ctx.lineTo(x3, cy); ctx.stroke();
+      ctx.strokeStyle = gold;
+      ctx.beginPath();
+      for (let x = x2; x <= x3; x += 2) {
+        const v = Math.sin(((x - x1) / lambda) * 2 * Math.PI - t * speed) * R * 0.55 * E;
+        const px = x + v * Math.sin(phi) * k, py = cy - v * Math.cos(phi);
+        x === x2 ? ctx.moveTo(px, py) : ctx.lineTo(px, py);
+      }
+      ctx.stroke();
+      // The spot on the screen.
+      ctx.fillStyle = `rgba(226,194,125,${0.06 + 0.9 * E * E})`;
+      ctx.fillRect(x3, cy - R * 0.7, 2, R * 1.4);
+
+      ctx.fillStyle = 'rgba(236,235,230,0.38)';
+      ctx.font = '11px "JetBrains Mono Variable", monospace';
+      ctx.textAlign = 'center';
+      ctx.fillText('polarizador', x1, cy + R + 22);
+      ctx.fillText(`analizador · ${Math.round(theta)}°`, x2, cy + R + 22);
+      ctx.textAlign = 'start';
+    });
+    set(theta);
+  });
+</script>
