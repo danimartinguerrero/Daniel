@@ -1,260 +1,140 @@
 ---
-import '@/styles/global.css';
-import { ClientRouter } from 'astro:transitions';
-import Island from '@/components/Island.astro';
-import { diary, favorites, letterboxd, list, recent, reviews, stars } from '@/data/cine';
+import Base from '@/layouts/Base.astro';
+import { clean, date, entries, favorites, fetched, lists, poster, profile, quotable, stars } from '@/data/cine';
 import { href } from '@/lib/paths';
 
-const title = 'Cine · Daniel Martín Guerrero';
-const description = `${letterboxd.films} películas en Letterboxd: mis cuatro favoritas, lo último que he visto y lo que escribo de ello.`;
-const date = (iso: string) => new Date(`${iso}T12:00:00`).toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric' });
+const reviews = quotable.slice(0, 8);
 const counts = [
-  { n: letterboxd.films, label: 'películas' },
-  { n: letterboxd.thisYear, label: 'este año' },
-  { n: letterboxd.lists, label: 'listas' },
-  { n: letterboxd.following, label: 'siguiendo' },
-  { n: letterboxd.followers, label: 'seguidores' },
+  { n: profile.films, label: 'películas' },
+  { n: profile.thisYear, label: 'este año' },
+  { n: profile.watchlist, label: 'por ver' },
+  { n: profile.followers, label: 'seguidores' },
 ];
 ---
-<!doctype html>
-<html lang="es" transition:animate="none">
-  <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-    <title>{title}</title>
-    <meta name="description" content={description} />
-    <meta name="theme-color" content="#000" />
-    <meta property="og:title" content={title} />
-    <meta property="og:description" content={description} />
-    <meta property="og:type" content="website" />
-    <meta property="og:locale" content="es_ES" />
-    <meta property="og:url" content={new URL(href('/cine'), Astro.site)} />
-    <meta property="og:image" content={new URL(href('/og.jpg'), Astro.site)} />
-    <meta name="twitter:card" content="summary_large_image" />
-    <link rel="icon" href={href('/favicon.ico')} sizes="48x48" />
-    <link rel="icon" href={href('/favicon.svg')} type="image/svg+xml" sizes="any" />
-    <link rel="apple-touch-icon" href={href('/apple-touch-icon.png')} />
-    <script is:inline>document.documentElement.classList.add('js');</script>
-    <ClientRouter />
-  </head>
-  <body class="cine-page">
-    <a class="skip sr-only" href="#main">Saltar al contenido</a>
+<Base title="Cine · Daniel Martín Guerrero" description={`${profile.films} películas en Letterboxd. Mis favoritas, mi diario y lo que escribo de lo que veo.`} path="/cine" page="cine">
+  <section class="cine-top wrap">
+    <p class="label">06 · Cine · Letterboxd</p>
+    <h1 class="display cine-top__q" lang="en"><em>Unspoken feelings are unforgettable.</em></h1>
+    <p class="cine-top__src label">— <b>{profile.quoteSource}</b></p>
+    <dl class="counts">
+      {counts.map((c) => <div><dt class="label">{c.label}</dt><dd>{c.n}</dd></div>)}
+    </dl>
+  </section>
 
-    <Island />
-
-    <main id="main" data-cine>
-      <section class="cine-hero" aria-labelledby="cine-title">
-        <img class="cine-hero__banner" src={href('/cine/banner.webp')} alt="" width="1188" height="512" decoding="async" fetchpriority="high" />
-        <div class="cine-hero__copy container--wide">
-          <img class="cine-hero__avatar" src={href('/cine/avatar.webp')} alt="" width="125" height="125" decoding="async" />
-          <div class="cine-hero__who">
-            <p class="cine-hero__user">Letterboxd · {letterboxd.user}</p>
-            <h1 class="cine-hero__title" id="cine-title">Cine.</h1>
-            <p class="cine-hero__bio"><span lang="en">«{letterboxd.bio}»</span> <span class="cine-hero__source">— <cite>{letterboxd.bioSource}</cite>. La frase que me cambió la forma de mirar.</span></p>
-          </div>
-          <dl class="counts">
-            {counts.map((c) => <div><dt>{c.label}</dt><dd>{c.n}</dd></div>)}
-          </dl>
-        </div>
-      </section>
-
-      <section class="cine-section container--wide" aria-labelledby="fav-title">
-        <header class="cine-head">
-          <h2 class="cine-head__title" id="fav-title">Mis cuatro.</h2>
-          <p class="cine-head__text">Las películas que pondría siempre. Un agujero negro, un conejo, un café y una vela. Y siempre vuelvo a Tarkovsky, Lynch, Bergman y Kurosawa.</p>
-        </header>
-        <ol class="shelf shelf--favs">
+  <section class="sec" aria-labelledby="t-favs">
+    <div class="wrap sec__grid">
+      <div class="sec__side sec__rule"><p class="sec__num">I</p><p class="label">Las cuatro</p></div>
+      <div class="sec__main sec__rule">
+        <h2 class="sr-only" id="t-favs">Mis cuatro favoritas</h2>
+        <ol class="favs">
           {favorites.map((f, i) => (
-            <li class="shelf__item" style={`--i: ${i}`}>
-              <img src={href(f.img)} alt={f.title} width="185" height="278" decoding="async" />
-              <p class="shelf__title">{f.title}{f.year && <span> {f.year}</span>}</p>
-            </li>
+            <li><span class="favs__n">{String(i + 1).padStart(2, '0')}</span><span class="favs__t">{f.title}</span><span class="favs__m">{f.year} · {f.by}</span></li>
           ))}
         </ol>
-      </section>
-
-      <section class="cine-section container--wide" aria-labelledby="recent-title">
-        <header class="cine-head">
-          <h2 class="cine-head__title" id="recent-title">Lo último.</h2>
-          <p class="cine-head__text">Lo que he visto estas semanas, con la nota que le puse.</p>
-        </header>
-        <ol class="shelf">
-          {recent.map((f) => (
-            <li class="shelf__item">
-              <img src={href(f.img)} alt={f.title} width="185" height="278" loading="lazy" decoding="async" />
-              <p class="shelf__rating"><span class="stars" aria-label={`${f.rating} de 5 estrellas`}>{stars(f.rating)}</span>{f.liked && <span class="heart" aria-label="Me gusta">♥</span>}</p>
-              <p class="shelf__title">{f.title}</p>
-            </li>
-          ))}
-        </ol>
-      </section>
-
-      <section class="cine-section container--wide" aria-labelledby="reviews-title">
-        <header class="cine-head">
-          <h2 class="cine-head__title" id="reviews-title">Lo que escribo.</h2>
-        </header>
-        <div class="reviews">
-          {reviews.map((r) => (
-            <article class="review">
-              <img src={href(r.img)} alt="" width="185" height="278" loading="lazy" decoding="async" />
-              <div class="review__body">
-                <h3 class="review__film">{r.title} <span>{r.year}</span></h3>
-                <p class="review__meta"><span class="stars" aria-label={`${r.rating} de 5 estrellas`}>{stars(r.rating)}</span> Vista el <time datetime={r.watched}>{date(r.watched)}</time></p>
-                <blockquote class="review__text" lang={r.lang}><p>{r.text}</p></blockquote>
-              </div>
-            </article>
-          ))}
-        </div>
-      </section>
-
-      <section class="cine-section container--wide cine-split" aria-label="Diario y listas">
-        <div class="diary">
-          <h2 class="cine-head__title">Diario.</h2>
-          <p class="cine-head__text">{letterboxd.diary} entradas. Las últimas:</p>
-          <ol class="diary__months">
-            {diary.map((m) => (
-              <li class="diary__month">
-                <p class="diary__name"><time datetime={m.iso}>{m.month}</time></p>
-                <ol class="diary__entries">
-                  {m.entries.map((e) => <li><span class="diary__day">{e.day}</span>{e.title}</li>)}
-                </ol>
-              </li>
-            ))}
-          </ol>
-        </div>
-        <aside class="lists">
-          <a class="list-card" href={list.url}>
-            <img src={href(list.img)} alt="" width="311" height="130" loading="lazy" decoding="async" />
-            <p class="list-card__kicker">Una lista</p>
-            <h2 class="list-card__title">{list.title}</h2>
-            <p class="list-card__meta">{list.films} películas</p>
-          </a>
-          <a class="list-card list-card--watch" href={`${letterboxd.url}watchlist/`}>
-            <img src={href('/cine/watchlist.webp')} alt="" width="311" height="130" loading="lazy" decoding="async" />
-            <p class="list-card__kicker">Pendientes</p>
-            <h2 class="list-card__title">Watchlist</h2>
-            <p class="list-card__meta">{letterboxd.watchlist} películas esperando</p>
-          </a>
-        </aside>
-      </section>
-
-      <section class="cine-end container--wide">
-        <p class="cine-end__text">El resto, en Letterboxd.</p>
-        <p class="cine-end__cta">
-          <a class="pill" href={letterboxd.url}>Seguirme en Letterboxd</a>
-          <a class="more" href={href('/')}>Volver al inicio</a>
-        </p>
-      </section>
-    </main>
-
-    <footer class="footer cine-footer">
-      <div class="container--wide footer__inner">
-        <p>Datos de Letterboxd a 21 de noviembre de 2026.</p>
-        <p>© 2026 Daniel Martín Guerrero</p>
+        <p class="body note">Un agujero negro, un conejo, un café y una vela. Siempre vuelvo a Tarkovski, Lynch, Bergman y Kurosawa.</p>
       </div>
-    </footer>
-  </body>
-</html>
+    </div>
+  </section>
+
+  <section class="sec" aria-labelledby="t-reviews">
+    <div class="wrap sec__grid">
+      <div class="sec__side sec__rule"><p class="sec__num">II</p><p class="label">Lo que escribo</p></div>
+      <div class="sec__main sec__rule">
+        <h2 class="sr-only" id="t-reviews">Reseñas</h2>
+        <ol class="reviews">
+          {reviews.map((e) => (
+            <li class="review">
+              <a href={e.url} class="review__img" tabindex="-1" aria-hidden="true"><img {...poster(e, '120px')} alt="" loading="lazy" decoding="async" /></a>
+              <div>
+                <blockquote class="review__q"><p>{clean(e.review.join(' '))}</p></blockquote>
+                <p class="review__m"><a class="link" href={e.url}>{e.title}</a>{e.year && <span> · {e.year}</span>} · <span class="review__s" aria-label={`${e.rating} de 5`}>{stars(e.rating)}</span></p>
+              </div>
+            </li>
+          ))}
+        </ol>
+      </div>
+    </div>
+  </section>
+
+  <section class="sec" aria-labelledby="t-diary">
+    <div class="wrap sec__grid">
+      <div class="sec__side sec__rule"><p class="sec__num">III</p><p class="label">Diario</p></div>
+      <div class="sec__main sec__rule">
+        <h2 class="sr-only" id="t-diary">Diario</h2>
+        <p class="body note diary__lead">Las últimas {entries.length} entradas, de la más reciente a la más antigua.</p>
+        <ul class="grid">
+          {entries.map((e) => (
+            <li class="film">
+              <a href={e.url} class="film__a">
+                {e.poster && <img {...poster(e, '(max-width: 520px) 44vw, (max-width: 1200px) 15vw, 170px')} alt="" loading="lazy" decoding="async" />}
+                <span class="film__t">{e.title}</span>
+                <span class="film__m"><span class="film__s" aria-label={`${e.rating} de 5`}>{stars(e.rating)}</span>{e.liked && <span class="film__like" aria-label="Me gusta">♥</span>}<time class="film__d" datetime={e.watched}>{date(e.watched)}</time></span>
+              </a>
+            </li>
+          ))}
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <section class="sec" aria-labelledby="t-lists">
+    <div class="wrap sec__grid">
+      <div class="sec__side sec__rule"><p class="sec__num">IV</p><p class="label">Listas</p></div>
+      <div class="sec__main sec__rule">
+        <h2 class="sr-only" id="t-lists">Listas</h2>
+        {lists.map((l) => (
+          <div class="list">
+            <h3 class="list__t"><a class="link" href={l.url}>{l.title}</a></h3>
+            <p class="list__f">{l.films.join(' · ')}{l.total > l.films.length && <span> · y {l.total - l.films.length} más</span>}</p>
+          </div>
+        ))}
+        <p class="body note">Del diario de Letterboxd a {date(fetched, { day: 'numeric', month: 'long', year: 'numeric' })}. <a class="link arrow" href={profile.url}>Todo en Letterboxd</a></p>
+      </div>
+    </div>
+  </section>
+</Base>
 
 <style>
-  .skip:focus { position: fixed; top: 0.5rem; left: 0.5rem; width: auto; height: auto; clip-path: none; z-index: 10; padding: 0.5rem 1rem; background: var(--bg); border-radius: 980px; }
+  .cine-top { padding-top: calc(var(--head) + clamp(72px, 12vw, 160px)); }
+  .cine-top__q { margin-top: 24px; max-width: 14ch; font-size: clamp(3rem, 8.4vw, 8.2rem); }
+  .cine-top__src { margin-top: 24px; }
+  .counts { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 24px; margin-top: clamp(56px, 8vw, 96px); }
+  .counts div { display: flex; flex-direction: column-reverse; gap: 8px; padding-top: 14px; border-top: 1px solid var(--line); }
+  .counts dd { font-family: var(--serif); font-weight: 300; font-size: clamp(2.4rem, 4.4vw, 4rem); line-height: 1; letter-spacing: -0.02em; font-variant-numeric: lining-nums tabular-nums; }
+  @media (max-width: 620px) { .counts { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+  .note { margin-top: 28px; }
 
-  .cine-page { background: #0b0d12; color: var(--on-dark); }
-  .cine-page .more { color: var(--link-on-dark); }
+  .favs { border-top: 1px solid var(--line); }
+  .favs li { display: grid; grid-template-columns: 3rem minmax(0, 1fr) auto; align-items: baseline; gap: 16px; padding: 18px 0; border-bottom: 1px solid var(--line); }
+  .favs__n { font-family: var(--mono); font-size: 12px; color: var(--ink-3); }
+  .favs__t { font-family: var(--serif); font-weight: 300; font-size: clamp(2rem, 4.6vw, 4.2rem); line-height: 1.02; letter-spacing: -0.025em; }
+  .favs__m { font-family: var(--mono); font-size: 12px; letter-spacing: 0.04em; color: var(--ink-3); text-align: right; }
+  @media (max-width: 620px) { .favs li { grid-template-columns: 2.2rem minmax(0, 1fr); } .favs__m { grid-column: 2; text-align: left; } }
 
-  /* The profile's own banner, faded into the page as Letterboxd does, with the profile over its foot. */
-  .cine-hero { position: relative; isolation: isolate; padding-top: clamp(14rem, 34vw, 26rem); }
-  .cine-hero__banner {
-    position: absolute; inset: 0 0 auto; z-index: -1;
-    width: 100%; height: clamp(22rem, 48vw, 40rem); object-fit: cover; object-position: center 35%;
-    mask-image: linear-gradient(#000 45%, transparent);
-    -webkit-mask-image: linear-gradient(#000 45%, transparent);
-  }
-  .cine-hero__copy {
-    display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: end; gap: 1.5rem 2rem;
-  }
-  .cine-hero__avatar { width: clamp(5rem, 9vw, 7.5rem); height: auto; border-radius: 50%; box-shadow: 0 0 0 3px #0b0d12, 0 0 0 4px rgba(255, 255, 255, 0.15); }
-  .cine-hero__user { font-size: 0.9375rem; font-weight: 600; color: var(--on-dark-2); letter-spacing: 0.02em; }
-  .cine-hero__title { font-size: clamp(4rem, 12vw, 9rem); line-height: 0.9; font-weight: 600; letter-spacing: -0.05em; }
-  .cine-hero__source { display: block; margin-top: 0.25rem; font-family: var(--font); font-style: normal; font-size: 0.9375rem; color: var(--on-dark-2); }
-  .cine-hero__source cite { font-style: italic; }
-  .cine-hero__bio { margin-top: 0.75rem; font-family: var(--serif); font-style: italic; font-size: clamp(1.125rem, 1.6vw, 1.375rem); color: #c9cdd8; }
+  .reviews { border-top: 1px solid var(--line); }
+  .review { display: grid; grid-template-columns: 96px minmax(0, 1fr); gap: clamp(16px, 2.4vw, 32px); padding: 28px 0; border-bottom: 1px solid var(--line); align-items: start; }
+  .review__img img { width: 96px; height: auto; aspect-ratio: 2 / 3; object-fit: cover; outline: 1px solid var(--line); outline-offset: -1px; }
+  .review__q { font-family: var(--serif); font-weight: 300; font-size: clamp(1.3rem, 2.1vw, 1.75rem); line-height: 1.32; letter-spacing: -0.01em; max-width: 36ch; text-wrap: pretty; }
+  .review__q p::before { content: '«'; } .review__q p::after { content: '»'; }
+  .review__m { margin-top: 14px; font-family: var(--mono); font-size: 12px; letter-spacing: 0.04em; color: var(--ink-3); }
+  .review__m .link { color: var(--ink-2); }
+  .review__s { color: var(--gold); }
+  @media (max-width: 620px) { .review { grid-template-columns: 64px minmax(0, 1fr); } .review__img img { width: 64px; } }
 
-  .counts { display: flex; gap: 0; margin: 0; }
-  .counts div { display: flex; flex-direction: column-reverse; align-items: center; padding: 0 1rem; border-left: 1px solid rgba(255, 255, 255, 0.12); }
-  .counts div:first-child { border-left: 0; }
-  .counts dt { font-size: 0.75rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--on-dark-2); }
-  .counts dd { margin: 0; font-size: clamp(1.5rem, 2.4vw, 2rem); font-weight: 600; font-variant-numeric: tabular-nums; }
+  .diary__lead { margin: 0 0 28px; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 32px clamp(12px, 1.6vw, 22px); }
+  .film__a { display: grid; gap: 8px; text-decoration: none; }
+  .film__a img { width: 100%; height: auto; aspect-ratio: 2 / 3; object-fit: cover; outline: 1px solid var(--line); outline-offset: -1px; transition: opacity 300ms var(--ease); }
+  .film__a:hover img { opacity: 0.82; }
+  .film__t { font-size: 14px; line-height: 1.3; color: var(--ink); }
+  .film__m { display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px 8px; font-size: 11.5px; color: var(--ink-3); letter-spacing: 0.04em; }
+  .film__s { white-space: nowrap; }
+  .film__like { color: var(--gold); }
+  .film__d { margin-left: auto; font-family: var(--mono); font-size: 10.5px; white-space: nowrap; }
+  @media (max-width: 520px) { .grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 
-  .cine-section { padding-top: clamp(5rem, 10vw, 8rem); }
-  .cine-head { display: grid; gap: 0.5rem; margin-bottom: 2rem; }
-  .cine-head__title { font-size: clamp(2.5rem, 6vw, 4.5rem); line-height: 1; font-weight: 600; letter-spacing: -0.04em; }
-  .cine-head__text { font-size: clamp(1.0625rem, 1.4vw, 1.25rem); line-height: 1.45; color: var(--on-dark-2); max-width: 36rem; }
-
-  .shelf { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: clamp(0.75rem, 2vw, 1.5rem); }
-  .shelf__item img {
-    display: block; width: 100%; height: auto; aspect-ratio: 185 / 278; object-fit: cover; border-radius: 0.5rem;
-    box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.1), 0 1.5rem 3rem -1rem rgba(0, 0, 0, 0.9);
-    transition: transform 300ms var(--ease-out);
-  }
-  @media (hover: hover) and (pointer: fine) {
-    .shelf__item:hover img { transform: translateY(-0.375rem); }
-  }
-  .shelf__title { margin-top: 0.75rem; font-size: 0.9375rem; font-weight: 600; }
-  .shelf__title span { font-weight: 400; color: var(--on-dark-2); }
-  .shelf__rating { margin-top: 0.75rem; display: flex; gap: 0.5rem; align-items: center; }
-  .stars { color: #00c030; letter-spacing: 0.05em; }
-  .heart { color: #ff8000; }
-
-  /* The favourites rise into place one after another, once, on load. */
-  @media (prefers-reduced-motion: no-preference) {
-    .shelf--favs .shelf__item { animation: rise 700ms var(--ease-out) both; animation-delay: calc(150ms + var(--i) * 90ms); }
-  }
-  @keyframes rise { from { opacity: 0; transform: translateY(1.25rem); } }
-
-  .reviews { display: grid; gap: 1.5rem; }
-  .review {
-    display: grid; grid-template-columns: 6rem minmax(0, 1fr); gap: 1.5rem; align-items: start;
-    padding: 1.75rem; border-radius: 1.5rem; background: #14171f;
-  }
-  .review img { width: 100%; height: auto; border-radius: 0.375rem; }
-  .review__film { font-family: var(--serif); font-size: clamp(1.375rem, 2.2vw, 1.875rem); line-height: 1.15; font-weight: 600; }
-  .review__film span { font-family: var(--font); font-weight: 400; font-size: 0.7em; color: var(--on-dark-2); }
-  .review__meta { margin-top: 0.5rem; font-size: 0.9375rem; color: var(--on-dark-2); }
-  .review__text { margin: 1rem 0 0; font-family: var(--serif); font-size: clamp(1.25rem, 2vw, 1.625rem); line-height: 1.35; font-style: italic; max-width: 40rem; }
-
-  .cine-split { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr); gap: 3rem; align-items: start; }
-  .diary .cine-head__text { margin: 0.5rem 0 1.5rem; }
-  .diary__months { list-style: none; margin: 0; padding: 0; }
-  .diary__month { display: grid; grid-template-columns: 7.5rem minmax(0, 1fr); gap: 1rem; padding: 1rem 0; border-top: 1px solid rgba(255, 255, 255, 0.1); }
-  .diary__name { font-size: 0.8125rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--on-dark-2); padding-top: 0.2rem; }
-  .diary__entries { list-style: none; margin: 0; padding: 0; display: grid; gap: 0.5rem; font-size: 1.0625rem; }
-  .diary__day { display: inline-block; width: 2rem; color: var(--on-dark-2); font-variant-numeric: tabular-nums; }
-
-  .lists { display: grid; gap: 1.25rem; }
-  .list-card { display: grid; gap: 0.375rem; padding: 1.25rem; border-radius: 1.5rem; background: #14171f; color: inherit; text-decoration: none; transition: background-color 200ms var(--ease-out); }
-  .list-card img { width: 100%; height: auto; border-radius: 0.5rem; margin-bottom: 0.75rem; }
-  .list-card__kicker { font-size: 0.8125rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--on-dark-2); }
-  .list-card__title { font-size: 1.5rem; line-height: 1.15; font-weight: 600; letter-spacing: -0.01em; }
-  .list-card__meta { font-size: 0.9375rem; color: var(--on-dark-2); }
-  @media (hover: hover) and (pointer: fine) { .list-card:hover { background: #1b1f29; } }
-
-  .cine-end { padding-block: clamp(6rem, 12vw, 10rem); text-align: center; display: grid; gap: 1.5rem; justify-items: center; }
-  .cine-end__text { font-size: clamp(2rem, 5vw, 3.5rem); font-weight: 600; letter-spacing: -0.03em; }
-  .cine-end__cta { display: flex; gap: 1.5rem; align-items: center; flex-wrap: wrap; justify-content: center; }
-
-  .cine-footer { background: #0b0d12; color: var(--on-dark-2); font-size: 0.75rem; }
-  .cine-footer :global(.footer__inner) { display: flex; justify-content: space-between; gap: 1rem; flex-wrap: wrap; padding-block: 1.25rem 2rem; border-top: 1px solid rgba(255, 255, 255, 0.1); }
-
-  @media (max-width: 760px) {
-    .cine-hero__copy { grid-template-columns: auto minmax(0, 1fr); }
-    .counts { grid-column: 1 / -1; display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); }
-    .counts div { padding: 0 0.25rem; }
-    .counts dt { font-size: 0.625rem; letter-spacing: 0.04em; }
-    .counts dd { font-size: 1.375rem; }
-    .shelf { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-    .review { grid-template-columns: 4.5rem minmax(0, 1fr); padding: 1.25rem; gap: 1rem; }
-    .cine-split { grid-template-columns: 1fr; }
-    .diary__month { grid-template-columns: 1fr; gap: 0.5rem; }
-  }
+  .list { padding: 22px 0; border-bottom: 1px solid var(--line); }
+  .list:first-child { border-top: 1px solid var(--line); }
+  .list__t { font-family: var(--serif); font-weight: 300; font-size: clamp(1.6rem, 2.8vw, 2.4rem); line-height: 1.1; letter-spacing: -0.015em; }
+  .list__f { margin-top: 12px; color: var(--ink-2); font-size: 15.5px; line-height: 1.7; max-width: 70ch; }
 </style>

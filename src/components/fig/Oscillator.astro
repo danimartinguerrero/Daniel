@@ -1,0 +1,114 @@
+---
+/**
+ * Fig. 3: the quantum harmonic oscillator of Daniel's Sturm–Liouville and Hermite notes.
+ * ψₙ(x) = (2ⁿ n! √π)^(-1/2) Hₙ(x) e^(−x²/2), computed with the normalised recurrence
+ * ψₙ₊₁ = √(2/(n+1)) x ψₙ − √(n/(n+1)) ψₙ₋₁. An eigenstate is stationary: |ψ|² stays still while
+ * Re ψ e^(−iEt) turns. A superposition of two neighbours sloshes from side to side at ω.
+ */
+---
+<div class="osc" data-osc>
+  <canvas data-osc-canvas aria-hidden="true"></canvas>
+</div>
+
+<style>
+  .osc { position: relative; aspect-ratio: 16 / 8; }
+  .osc canvas { position: absolute; inset: 0; width: 100%; height: 100%; }
+  @media (max-width: 700px) { .osc { aspect-ratio: 4 / 3.4; } }
+</style>
+
+<script>
+  import { loop, surface, token } from '@/lib/figure';
+
+  document.querySelectorAll<HTMLElement>('[data-osc-root]').forEach((root) => {
+    const box = root.querySelector<HTMLElement>('[data-osc]')!;
+    const canvas = box.querySelector<HTMLCanvasElement>('[data-osc-canvas]')!;
+    const read = root.querySelector<HTMLElement>('[data-osc-read]');
+    const down = root.querySelector<HTMLButtonElement>('[data-osc-down]');
+    const up = root.querySelector<HTMLButtonElement>('[data-osc-up]');
+    const mix = root.querySelector<HTMLButtonElement>('[data-osc-mix]');
+    const s = surface(canvas);
+    const MAX = 9, X = 5.2, N = 420;
+
+    // ψₙ sampled on the grid, once.
+    const xs = Float64Array.from({ length: N }, (_, i) => -X + (2 * X * i) / (N - 1));
+    const psi: Float64Array[] = [];
+    psi[0] = xs.map((x) => Math.PI ** -0.25 * Math.exp(-x * x / 2));
+    psi[1] = xs.map((x, i) => Math.SQRT2 * x * psi[0][i]);
+    for (let n = 1; n < MAX + 1; n++) psi[n + 1] = xs.map((x, i) => Math.sqrt(2 / (n + 1)) * x * psi[n][i] - Math.sqrt(n / (n + 1)) * psi[n - 1][i]);
+
+    let n = 2, superpose = false, shown = 2;
+    const ink = token('--ink'), gold = token('--gold');
+
+    const update = () => {
+      if (superpose && n >= MAX) n = MAX - 1;
+      down!.disabled = n === 0; up!.disabled = n >= (superpose ? MAX - 1 : MAX);
+      if (read) read.textContent = superpose ? `(|${n}⟩ + |${n + 1}⟩)/√2 · ⟨E⟩ = ${n + 1} ħω` : `n = ${n} · Eₙ = ${n + 0.5} ħω`;
+    };
+    down?.addEventListener('click', () => { n = Math.max(0, n - 1); update(); view.redraw(); });
+    up?.addEventListener('click', () => { n = Math.min(MAX, n + 1); update(); view.redraw(); });
+    mix?.addEventListener('click', () => { superpose = !superpose; mix.setAttribute('aria-pressed', String(superpose)); update(); view.redraw(); });
+    update();
+
+    const view = loop(box, (t) => {
+      const { ctx, w, h } = s;
+      ctx.clearRect(0, 0, w, h);
+      const padB = 28, Emax = MAX + 1.2;
+      const px = (x: number) => ((x + X) / (2 * X)) * w;
+      const py = (E: number) => h - padB - (E / Emax) * (h - padB - 10);
+      const unit = (h - padB - 10) / Emax; // pixels per ħω
+
+      // V(x) = x²/2 and the levels Eₙ = n + ½, each across its classically allowed region.
+      ctx.lineWidth = 1;
+      ctx.strokeStyle = 'rgba(236,235,230,0.28)';
+      ctx.beginPath();
+      for (let i = 0; i < N; i++) { const x = xs[i], y = py(x * x / 2); i ? ctx.lineTo(px(x), y) : ctx.moveTo(px(x), y); }
+      ctx.stroke();
+      for (let k = 0; k <= MAX; k++) {
+        const E = k + 0.5, a = Math.sqrt(2 * E);
+        const on = superpose ? k === n || k === n + 1 : k === n;
+        ctx.strokeStyle = on ? 'rgba(236,235,230,0.55)' : 'rgba(236,235,230,0.12)';
+        ctx.beginPath(); ctx.moveTo(px(-a), py(E)); ctx.lineTo(px(a), py(E)); ctx.stroke();
+      }
+      ctx.fillStyle = 'rgba(236,235,230,0.32)';
+      ctx.font = '11px "JetBrains Mono Variable", monospace';
+      for (let k = 0; k <= MAX; k++) ctx.fillText(String(k), px(-X) + 2, py(k + 0.5) + 4);
+
+      // The state.
+      const w0 = 1.4; // visual angular frequency
+      const base = superpose ? n + 1 : n + 0.5;
+      const amp = unit * 1.15;
+      const re = new Float64Array(N), im = new Float64Array(N), dens = new Float64Array(N);
+      for (let i = 0; i < N; i++) {
+        if (superpose) {
+          const a1 = -(n + 0.5) * w0 * t, a2 = -(n + 1.5) * w0 * t;
+          re[i] = (psi[n][i] * Math.cos(a1) + psi[n + 1][i] * Math.cos(a2)) / Math.SQRT2;
+          im[i] = (psi[n][i] * Math.sin(a1) + psi[n + 1][i] * Math.sin(a2)) / Math.SQRT2;
+        } else {
+          const a = -(n + 0.5) * w0 * t;
+          re[i] = psi[n][i] * Math.cos(a); im[i] = psi[n][i] * Math.sin(a);
+        }
+        dens[i] = re[i] * re[i] + im[i] * im[i];
+      }
+      // |ψ|², filled.
+      ctx.beginPath(); ctx.moveTo(px(-X), py(base));
+      for (let i = 0; i < N; i++) ctx.lineTo(px(xs[i]), py(base) - dens[i] * amp * 2.2);
+      ctx.lineTo(px(X), py(base)); ctx.closePath();
+      ctx.fillStyle = 'rgba(226,194,125,0.16)'; ctx.fill();
+      ctx.strokeStyle = gold; ctx.lineWidth = 1.25;
+      ctx.beginPath();
+      for (let i = 0; i < N; i++) { const y = py(base) - dens[i] * amp * 2.2; i ? ctx.lineTo(px(xs[i]), y) : ctx.moveTo(px(xs[i]), y); }
+      ctx.stroke();
+      // Re ψ, turning.
+      ctx.strokeStyle = ink; ctx.globalAlpha = 0.75; ctx.lineWidth = 1;
+      ctx.beginPath();
+      for (let i = 0; i < N; i++) { const y = py(base) - re[i] * amp; i ? ctx.lineTo(px(xs[i]), y) : ctx.moveTo(px(xs[i]), y); }
+      ctx.stroke(); ctx.globalAlpha = 1;
+
+      // Axis labels.
+      ctx.fillStyle = 'rgba(236,235,230,0.38)';
+      ctx.fillText('x', w - 10, h - 8);
+      ctx.fillText('E / ħω', px(-X) + 18, 14);
+      shown = n;
+    });
+  });
+</script>

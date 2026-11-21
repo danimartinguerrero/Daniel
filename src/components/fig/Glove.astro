@@ -1,0 +1,82 @@
+---
+/**
+ * Fig. 6: Talking Hands. Five flex-sensor readings (10-bit ADC) and the letter the threshold classifier
+ * makes of them, spelling H-O-L-A down the serial line. The readings are a simulation of the glove.
+ */
+const fingers = ['pulgar', 'índice', 'corazón', 'anular', 'meñique'];
+---
+<div class="glove" data-glove>
+  <div class="glove__bars">
+    {fingers.map((f) => (
+      <div class="glove__f">
+        <div class="glove__track"><div class="glove__level" data-level></div></div>
+        <p class="glove__val" data-val>0</p>
+        <p class="glove__name">{f}</p>
+      </div>
+    ))}
+  </div>
+  <div class="glove__out">
+    <p class="glove__letter" data-letter aria-live="off">H</p>
+    <p class="glove__serial"><span class="label">Serie</span> <span data-serial></span><i class="glove__caret"></i></p>
+  </div>
+</div>
+
+<style>
+  .glove { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr); gap: 24px; align-items: end; padding: 36px 0 28px; }
+  .glove__bars { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 8px; }
+  .glove__f { display: grid; justify-items: center; gap: 8px; }
+  .glove__track { position: relative; width: 1px; height: clamp(120px, 16vw, 190px); background: var(--line-2); }
+  .glove__level { position: absolute; left: -1px; bottom: 0; width: 3px; height: 0; background: var(--gold); transition: height 700ms var(--ease); }
+  .glove__val { font-family: var(--mono); font-size: 12px; color: var(--ink-2); font-variant-numeric: tabular-nums; }
+  .glove__name { font-family: var(--mono); font-size: 10.5px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-3); }
+  .glove__out { display: grid; gap: 14px; justify-items: start; }
+  .glove__letter { font-family: var(--serif); font-weight: 300; font-size: clamp(6rem, 13vw, 11rem); line-height: 0.8; letter-spacing: -0.04em; }
+  .glove__serial { font-family: var(--mono); font-size: 13px; color: var(--ink); letter-spacing: 0.2em; }
+  .glove__serial .label { letter-spacing: 0.12em; margin-right: 0.6em; }
+  .glove__caret { display: inline-block; width: 7px; height: 1em; vertical-align: -0.15em; background: var(--gold); margin-left: 2px; }
+  @media (prefers-reduced-motion: no-preference) { .glove__caret { animation: caret 1.1s steps(1) infinite; } }
+  @keyframes caret { 50% { opacity: 0; } }
+  @media (max-width: 620px) { .glove { grid-template-columns: 1fr; } }
+</style>
+
+<script>
+  import { reduceMotion } from '@/lib/figure';
+
+  document.querySelectorAll<HTMLElement>('[data-glove]').forEach((root) => {
+    const levels = [...root.querySelectorAll<HTMLElement>('[data-level]')];
+    const vals = [...root.querySelectorAll<HTMLElement>('[data-val]')];
+    const letter = root.querySelector<HTMLElement>('[data-letter]')!;
+    const serial = root.querySelector<HTMLElement>('[data-serial]')!;
+    // Flexion per finger (0 straight, 1 bent): thumb, index, middle, ring, little.
+    const shapes: Record<string, number[]> = {
+      H: [0.82, 0.06, 0.08, 0.93, 0.95],
+      O: [0.55, 0.66, 0.7, 0.68, 0.64],
+      L: [0.04, 0.05, 0.94, 0.95, 0.92],
+      A: [0.12, 0.96, 0.97, 0.95, 0.94],
+    };
+    const word = 'HOLA';
+    let i = 0;
+    const show = (ch: string) => {
+      shapes[ch].forEach((f, k) => {
+        const adc = Math.round(180 + f * 760 + (Math.random() - 0.5) * 18);
+        levels[k].style.height = `${(adc / 1023) * 100}%`;
+        vals[k].textContent = String(adc);
+      });
+      letter.textContent = ch;
+    };
+    if (reduceMotion()) { show('A'); serial.textContent = word; return; }
+    let visible = false;
+    new IntersectionObserver(([e]) => { visible = e.isIntersecting; }).observe(root);
+    const step = () => {
+      if (visible) {
+        const ch = word[i % word.length];
+        if (i % word.length === 0) serial.textContent = '';
+        show(ch);
+        serial.textContent += ch;
+        i++;
+      }
+      setTimeout(step, i % word.length === 0 ? 2600 : 1500);
+    };
+    step();
+  });
+</script>

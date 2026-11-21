@@ -1,0 +1,93 @@
+---
+/**
+ * Fig. 7: thin-film interference, a soap film draining under gravity. Light reflected from the film's
+ * two faces interferes: at normal incidence the reflectance at wavelength λ goes as sin²(2πnt/λ), so
+ * each thickness t has its own colour (summed across the visible spectrum into a lookup table). Where
+ * the film is thinnest it reflects nothing: the black film at the top. The pointer thickens it locally.
+ */
+---
+<div class="film" data-film>
+  <canvas data-film-canvas aria-hidden="true"></canvas>
+</div>
+
+<style>
+  .film { position: relative; aspect-ratio: 16 / 5; }
+  @media (max-width: 700px) { .film { aspect-ratio: 4 / 3; } }
+  .film canvas { position: absolute; inset: 0; width: 100%; height: 100%; }
+</style>
+
+<script>
+  import { loop, surface, wavelengthRGB } from '@/lib/figure';
+
+  const box = document.querySelector<HTMLElement>('[data-film]');
+  if (box) {
+    const canvas = box.querySelector<HTMLCanvasElement>('[data-film-canvas]')!;
+    const host = box;
+    // Colour of each thickness, 0–1600 nm in 2 nm steps, for water (n = 1.33).
+    const STEP = 2, TMAX = 1600, n = 1.33;
+    const lut = new Float32Array((TMAX / STEP + 1) * 3);
+    const lambdas = Array.from({ length: 31 }, (_, i) => 400 + i * 10);
+    const white = lambdas.reduce((acc, l) => { const c = wavelengthRGB(l); return [acc[0] + c[0], acc[1] + c[1], acc[2] + c[2]]; }, [0, 0, 0]);
+    for (let k = 0; k <= TMAX / STEP; k++) {
+      const t = k * STEP;
+      let r = 0, g = 0, b = 0;
+      for (const l of lambdas) {
+        const R = Math.sin((2 * Math.PI * n * t) / l) ** 2;
+        const c = wavelengthRGB(l);
+        r += R * c[0]; g += R * c[1]; b += R * c[2];
+      }
+      let R = (r / white[0]) * 255, G = (g / white[1]) * 255, B = (b / white[2]) * 255;
+      const Y = 0.2126 * R + 0.7152 * G + 0.0722 * B, sat = 0.62;
+      R = Y + (R - Y) * sat; G = Y + (G - Y) * sat; B = Y + (B - Y) * sat;
+      lut[k * 3] = R; lut[k * 3 + 1] = G; lut[k * 3 + 2] = B;
+    }
+
+    const s = surface(canvas);
+    const low = document.createElement('canvas');
+    const lctx = low.getContext('2d')!;
+    let img: ImageData | null = null;
+    const CELL = 3; // CSS px per sample: the field is smooth, so it is drawn small and scaled up
+    let pointer = { x: -1, y: -1, k: 0 };
+    host.addEventListener('pointermove', (e) => {
+      const r = box.getBoundingClientRect();
+      pointer = { x: (e.clientX - r.left) / r.width, y: (e.clientY - r.top) / r.height, k: 1 };
+    });
+    host.addEventListener('pointerleave', () => { pointer.k = 0; });
+    let bump = 0;
+
+    loop(box, (t) => {
+      const { ctx, w, h } = s;
+      const cols = Math.ceil(w / CELL), rows = Math.ceil(h / CELL);
+      if (low.width !== cols || low.height !== rows) { low.width = cols; low.height = rows; img = lctx.createImageData(cols, rows); }
+      const d = img!.data;
+      bump += ((pointer.k ? 1 : 0) - bump) * 0.06;
+      const ar = w / h;
+      for (let j = 0; j < rows; j++) {
+        const y = j / rows;
+        const drain = 20 + 760 * Math.pow(y, 1.8);
+        const fadeY = Math.min(1, (1 - y) / 0.18);
+        for (let i = 0; i < cols; i++) {
+          const x = (i / cols) * ar;
+          let th = drain
+            + 150 * Math.sin(2.1 * x + 1.4 * y + 0.23 * t) * Math.sin(2.6 * y - 0.17 * t + 1.2 * Math.sin(1.3 * x + 0.11 * t))
+            + 55 * Math.sin(5.3 * x - 4.1 * y + 0.41 * t);
+          if (bump > 0.01) {
+            const dx = i / cols - pointer.x, dy = (y - pointer.y) / ar;
+            th += 320 * bump * Math.exp(-(dx * dx + dy * dy) / 0.004);
+          }
+          th = Math.max(0, Math.min(TMAX, th));
+          const k = Math.round(th / STEP) * 3;
+          const fadeX = Math.min(1, (i / cols) / 0.04) * Math.min(1, (1 - i / cols) / 0.04);
+          const a = 0.5 * fadeX * fadeY;
+          const o = (j * cols + i) * 4;
+          // On the page's own near-black (#0a0a0b), so the edges melt into it.
+          d[o] = 10 + lut[k] * a; d[o + 1] = 10 + lut[k + 1] * a; d[o + 2] = 11 + lut[k + 2] * a; d[o + 3] = 255;
+        }
+      }
+      lctx.putImageData(img!, 0, 0);
+      ctx.clearRect(0, 0, w, h);
+      ctx.imageSmoothingEnabled = true; ctx.imageSmoothingQuality = 'high';
+      ctx.drawImage(low, 0, 0, w, h);
+    });
+  }
+</script>

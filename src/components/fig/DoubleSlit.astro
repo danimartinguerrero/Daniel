@@ -1,0 +1,122 @@
+---
+/**
+ * Fig. 0, the hero: Young's double slit, one photon at a time. Each photon lands at a place drawn from
+ * the interference pattern I(x) = cos²(πx/Δ) · sinc²(πx/7Δ), whose fringe spacing Δ grows with the
+ * wavelength. Watching which slit each photon takes ("Observar") removes the interference term and only
+ * the single-slit envelope is left. The canvas fills its parent; the controls are rendered by the page.
+ */
+---
+<canvas class="slit" data-slit aria-hidden="true"></canvas>
+
+<style>
+  .slit { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+</style>
+
+<script>
+  import { loop, reduceMotion, surface, wavelengthRGB } from '@/lib/figure';
+
+  const canvas = document.querySelector<HTMLCanvasElement>('[data-slit]');
+  if (canvas) {
+    const root = canvas.closest<HTMLElement>('[data-slit-root]')!;
+    const count = root.querySelector<HTMLElement>('[data-slit-count]');
+    const buttons = [...root.querySelectorAll<HTMLButtonElement>('[data-lambda]')];
+    const observe = root.querySelector<HTMLButtonElement>('[data-observe]');
+
+    let lambda = 532;
+    let observed = false;
+    let n = 0;
+    // The photon's colour, a fifth of the way towards the page's warm white: light, not neon.
+    const soft = (nm: number) => wavelengthRGB(nm).map((c, i) => Math.round(c * 0.8 + [236, 235, 230][i] * 0.2)) as [number, number, number];
+    let colour = soft(lambda);
+    const film = document.createElement('canvas'); // where the photons that have landed accumulate
+    const fctx = film.getContext('2d')!;
+    let recent: { x: number; y: number; age: number }[] = [];
+
+    const s = surface(canvas, () => reset());
+
+    function reset() {
+      film.width = canvas!.width; film.height = canvas!.height;
+      fctx.setTransform(s.dpr, 0, 0, s.dpr, 0, 0);
+      recent = []; n = 0;
+      if (reduceMotion()) { for (let i = 0; i < 60000; i++) land(false); paint(); }
+    }
+
+    // Fringe spacing in CSS px, proportional to λ; the envelope's first zero is four fringes out.
+    const spacing = () => Math.max(18, Math.min(s.w, 1600) / 30) * (lambda / 532);
+    const intensity = (x: number) => {
+      const d = spacing();
+      const u = (Math.PI * x) / (7 * d);
+      const env = u === 0 ? 1 : (Math.sin(u) / u) ** 2;
+      return observed ? env : env * Math.cos((Math.PI * x) / d) ** 2;
+    };
+    const gauss = () => { let u = 0, v = 0; while (!u) u = Math.random(); while (!v) v = Math.random(); return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v); };
+
+    function land(flash = true) {
+      // Rejection sampling of the pattern across the screen's width.
+      for (let tries = 0; tries < 60; tries++) {
+        const x = (Math.random() - 0.5) * s.w;
+        if (Math.random() > intensity(x)) continue;
+        const y = s.h * 0.42 + gauss() * s.h * 0.24;
+        if (y < 0 || y > s.h) continue;
+        const px = s.w / 2 + x;
+        const [r, g, b] = colour;
+        fctx.fillStyle = `rgba(${r},${g},${b},0.42)`;
+        fctx.fillRect(px - 0.55, y - 0.55, 1.1, 1.1);
+        if (flash) recent.push({ x: px, y, age: 0 });
+        n++;
+        return;
+      }
+    }
+
+    function paint() {
+      const { ctx, w, h } = s;
+      ctx.clearRect(0, 0, w, h);
+      ctx.drawImage(film, 0, 0, w, h);
+      // Each new arrival shows for a moment as a small flash, so the photons read as single events.
+      const [r, g, b] = colour;
+      for (const p of recent) {
+        const a = 1 - p.age / 0.5;
+        ctx.fillStyle = `rgba(${r},${g},${b},${0.85 * a})`;
+        ctx.beginPath(); ctx.arc(p.x, p.y, 0.8 + 1.4 * a, 0, Math.PI * 2); ctx.fill();
+      }
+      if (count) count.textContent = n.toLocaleString('es-ES');
+    }
+
+    let clock = 0, owed = 0;
+    const view = loop(canvas, (t, dt) => {
+      clock += dt;
+      // Photons per second: a few dozen at first, so each one is seen to land; then the pattern fills in.
+      const rate = clock < 2.5 ? 40 : Math.min(9000, 160 + (clock - 2.5) ** 2 * 520);
+      owed += rate * dt;
+      const k = Math.floor(owed); owed -= k;
+      for (let i = 0; i < k; i++) land(clock < 6 || Math.random() < 0.015);
+      for (const p of recent) p.age += dt;
+      recent = recent.filter((p) => p.age < 0.5);
+      // A steady state: what has landed fades very slowly, so the screen never saturates.
+      if (n > 140000) {
+        fctx.save(); fctx.setTransform(1, 0, 0, 1, 0, 0);
+        fctx.globalCompositeOperation = 'destination-out';
+        fctx.fillStyle = 'rgba(0,0,0,0.012)';
+        fctx.fillRect(0, 0, film.width, film.height);
+        fctx.restore();
+      }
+      paint();
+    });
+
+    const restart = () => { fctx.save(); fctx.setTransform(1, 0, 0, 1, 0, 0); fctx.clearRect(0, 0, film.width, film.height); fctx.restore(); clock = 0; reset(); view.redraw(); };
+
+    buttons.forEach((btn) => btn.addEventListener('click', () => {
+      lambda = Number(btn.dataset.lambda); colour = soft(lambda);
+      buttons.forEach((b) => b.setAttribute('aria-pressed', String(b === btn)));
+      root.style.setProperty('--photon', `rgb(${colour.join(',')})`);
+      restart();
+    }));
+    observe?.addEventListener('click', () => {
+      observed = !observed;
+      observe.setAttribute('aria-pressed', String(observed));
+      observe.textContent = observed ? 'Dejar de observar' : 'Observar el camino';
+      restart();
+    });
+    root.style.setProperty('--photon', `rgb(${colour.join(',')})`);
+  }
+</script>

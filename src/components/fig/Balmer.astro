@@ -1,0 +1,82 @@
+---
+/**
+ * Fig. 2: hydrogen's Balmer series, drawn as vectors at build time. "Emisión" shows the bright lines of
+ * a hot gas; "Absorción" shows them as dark lines across a star's continuous spectrum, which is how
+ * Cecilia Payne read the composition of stars in 1925.
+ */
+import { wavelengthRGB } from '@/lib/figure';
+
+const lo = 390, hi = 710, W = 1200, H = 160, top = 26, band = 88;
+const x = (nm: number) => ((nm - lo) / (hi - lo)) * W;
+const lines = [
+  { nm: 656.28, name: 'Hα', n: '3 → 2' },
+  { nm: 486.13, name: 'Hβ', n: '4 → 2' },
+  { nm: 434.05, name: 'Hγ', n: '5 → 2' },
+  { nm: 410.17, name: 'Hδ', n: '6 → 2' },
+];
+const stops = Array.from({ length: 35 }, (_, i) => {
+  const nm = lo + (i / 34) * (hi - lo);
+  return { off: i / 34, c: `rgb(${wavelengthRGB(nm).join(',')})` };
+});
+const ticks = [400, 450, 500, 550, 600, 650, 700];
+---
+<div class="balmer" data-balmer data-mode="emision">
+  <svg viewBox={`0 0 ${W} ${H}`} role="img" aria-labelledby="balmer-title">
+    <title id="balmer-title">Serie de Balmer del hidrógeno: líneas en 656, 486, 434, 410 y 397 nanómetros.</title>
+    <defs>
+      <linearGradient id="continuum" x1="0" x2="1" y1="0" y2="0">
+        {stops.map((s) => <stop offset={s.off} stop-color={s.c} />)}
+      </linearGradient>
+      <linearGradient id="fade" x1="0" x2="0" y1="0" y2="1">
+        <stop offset="0" stop-color="#fff" stop-opacity="0" /><stop offset="0.2" stop-color="#fff" stop-opacity="1" /><stop offset="0.8" stop-color="#fff" stop-opacity="1" /><stop offset="1" stop-color="#fff" stop-opacity="0" />
+      </linearGradient>
+      <mask id="band-mask"><rect x="0" y={top} width={W} height={band} fill="url(#fade)" /></mask>
+    </defs>
+    <g mask="url(#band-mask)">
+      <rect class="balmer__cont" x="0" y={top} width={W} height={band} fill="url(#continuum)" />
+      {lines.map((l) => (
+        <g>
+          <rect class="balmer__emit" x={x(l.nm) - 1.6} y={top} width="3.2" height={band} fill={`rgb(${wavelengthRGB(l.nm).join(',')})`} />
+          <rect class="balmer__abs" x={x(l.nm) - 2.2} y={top} width="4.4" height={band} fill="#0a0a0b" />
+        </g>
+      ))}
+    </g>
+    {lines.map((l) => (
+      <g class="balmer__tag">
+        <text x={x(l.nm)} y="16" text-anchor="middle">{l.name}</text>
+      </g>
+    ))}
+    <line x1="0" x2={W} y1={top + band + 14} y2={top + band + 14} class="balmer__axis" />
+    {ticks.map((t) => (
+      <g class="balmer__tick">
+        <line x1={x(t)} x2={x(t)} y1={top + band + 14} y2={top + band + 20} />
+        <text x={x(t)} y={top + band + 36} text-anchor="middle">{t}</text>
+      </g>
+    ))}
+    <text x={W} y={top + band + 36} text-anchor="end" class="balmer__unit">nm</text>
+  </svg>
+</div>
+
+<style>
+  .balmer { padding: 28px 0 20px; }
+  .balmer svg { overflow: visible; }
+  .balmer text { font-family: var(--mono); font-size: 13px; fill: var(--ink-3); letter-spacing: 0.04em; }
+  .balmer__tag text { fill: var(--ink-2); }
+  .balmer__axis, .balmer__tick line { stroke: var(--line-2); stroke-width: 1; vector-effect: non-scaling-stroke; }
+  .balmer__unit { fill: var(--ink-3); }
+  .balmer__cont, .balmer__abs, .balmer__emit { transition: opacity 600ms var(--ease); }
+  .balmer[data-mode='emision'] .balmer__cont, .balmer[data-mode='emision'] .balmer__abs { opacity: 0; }
+  .balmer[data-mode='absorcion'] .balmer__emit { opacity: 0; }
+  .balmer[data-mode='absorcion'] .balmer__cont { opacity: 0.85; }
+</style>
+
+<script>
+  document.querySelectorAll<HTMLElement>('[data-balmer-root]').forEach((root) => {
+    const fig = root.querySelector<HTMLElement>('[data-balmer]')!;
+    const btns = [...root.querySelectorAll<HTMLButtonElement>('[data-balmer-mode]')];
+    btns.forEach((b) => b.addEventListener('click', () => {
+      fig.dataset.mode = b.dataset.balmerMode;
+      btns.forEach((o) => o.setAttribute('aria-pressed', String(o === b)));
+    }));
+  });
+</script>
