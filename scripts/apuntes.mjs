@@ -1,5 +1,5 @@
-// Brings Daniel's notes and lab reports from the public repository danimartinguerrero/apuntes into the
-// site: the PDFs are copied to public/apuntes/ (not committed; every build fetches them again), and
+// Brings Daniel's notes and lab reports from his public repositories danimartinguerrero/apuntes and
+// danimartinguerrero/fotos (every PDF in either) into the site: the PDFs are copied to public/apuntes/ (not committed; every build fetches them again), and
 // src/data/apuntes.json lists each one with its subject, kind and page count. A PDF added to that
 // repository shows up on the site at the next build.
 // With --soft (as `npm run build` runs it) a failure is reported and the saved list is kept: the links
@@ -9,14 +9,26 @@ import { copyFile, mkdir, readdir, readFile, rm, stat, writeFile } from 'node:fs
 import { existsSync } from 'node:fs';
 import { PDFDocument } from 'pdf-lib';
 
-const REPO = 'https://github.com/danimartinguerrero/apuntes';
-const CACHE = new URL('../.cache/apuntes/', import.meta.url).pathname;
+const REPOS = ['https://github.com/danimartinguerrero/apuntes', 'https://github.com/danimartinguerrero/fotos'];
+const REPO = REPOS[0];
+const cacheOf = (repo) => new URL(`../.cache/${repo.split('/').pop()}/`, import.meta.url).pathname;
 const OUT = new URL('../public/apuntes/', import.meta.url).pathname;
 const DATA = new URL('../src/data/apuntes.json', import.meta.url);
 const soft = process.argv.includes('--soft');
 
+// Files whose name doesn't say what they are.
+const NAMED = {
+  'Daniel_Martín_Guerrero.pdf': { title: 'Práctica 6. Medida de la constante de Hubble', subject: 'Laboratorio de Física', kind: 'informe' },
+  'Tema 1. Conceptos básicos.pdf': { subject: 'Termodinámica I' },
+  'Tema 2. Primera ley.pdf': { subject: 'Termodinámica I' },
+  'Tema 3. Segunda ley.pdf': { subject: 'Termodinámica I' },
+};
 // Subject by the file's name; the order matters (first match wins).
 const SUBJECTS = [
+  [/an[aá]lisis matem[aá]tico ii/i, 'Análisis Matemático II'],
+  [/c[aá]lculo diferencial|teorema de taylor/i, 'Análisis Matemático I'],
+  [/[aá]lgebra lineal y geometr[ií]a ii/i, 'Álgebra Lineal y Geometría II'],
+  [/cap[ií]tulo \d+\.\s*(din[aá]mica|trabajo|f[ií]sica del s[oó]lido)/i, 'Física I'],
   [/p[eé]ndulos|momento de inercia|ondas estacionarias|quincke|doppler/i, 'Laboratorio de Mecánica y Ondas'],
   [/gas perfecto/i, 'Termodinámica I'],
   [/mec[aá]nica i\b/i, 'Mecánica I'],
@@ -33,32 +45,38 @@ const tidy = (name) => name
   .trim();
 
 async function sync() {
-  if (existsSync(`${CACHE}.git`)) execFileSync('git', ['-C', CACHE, 'pull', '--ff-only', '-q'], { stdio: 'inherit' });
-  else execFileSync('git', ['clone', '--depth', '1', '-q', REPO, CACHE], { stdio: 'inherit' });
   await mkdir(OUT, { recursive: true });
-  const files = (await readdir(CACHE)).filter((f) => f.toLowerCase().endsWith('.pdf')).sort((a, b) => a.localeCompare(b, 'es'));
+  const files = [];
+  for (const repo of REPOS) {
+    const CACHE = cacheOf(repo);
+    if (existsSync(`${CACHE}.git`)) execFileSync('git', ['-C', CACHE, 'pull', '--ff-only', '-q'], { stdio: 'inherit' });
+    else execFileSync('git', ['clone', '--depth', '1', '-q', repo, CACHE], { stdio: 'inherit', env: { ...process.env, GIT_LFS_SKIP_SMUDGE: '1' } });
+    for (const f of (await readdir(CACHE)).filter((f) => f.toLowerCase().endsWith('.pdf'))) files.push({ repo, CACHE, file: f });
+  }
+  files.sort((a, b) => a.file.localeCompare(b.file, 'es'));
   const items = [];
-  for (const file of files) {
+  for (const { repo, CACHE, file } of files) {
     const s = slug(file.replace(/\.pdf$/i, ''));
     await copyFile(`${CACHE}${file}`, `${OUT}${s}.pdf`);
     const bytes = await readFile(`${CACHE}${file}`);
     let pages = null;
     try { pages = (await PDFDocument.load(bytes, { ignoreEncryption: true, updateMetadata: false })).getPageCount(); } catch { /* left out */ }
     const coauthor = file.match(/\(([^)]*Daniel Mart[ií]n[^)]*)\)/i)?.[1] ?? null;
+    const named = NAMED[file.normalize('NFC')] ?? {};
     items.push({
-      file, slug: s, title: tidy(file),
-      kind: /informe|pr[aá]ctica \d/i.test(file) ? 'informe' : 'apuntes',
-      subject: SUBJECTS.find(([re]) => re.test(file))?.[1] ?? 'Otros',
+      file, slug: s, title: named.title ?? tidy(file),
+      kind: named.kind ?? (/informe|pr[aá]ctica \d/i.test(file) ? 'informe' : 'apuntes'),
+      subject: named.subject ?? SUBJECTS.find(([re]) => re.test(file))?.[1] ?? 'Otros',
       dark: /oscuro/i.test(file),
       coauthor,
       pages, kb: Math.round((await stat(`${CACHE}${file}`)).size / 1024),
-      github: `${REPO}/blob/main/${encodeURIComponent(file)}`,
+      github: `${repo}/blob/main/${encodeURIComponent(file)}`,
     });
   }
   // Drop copies of files that left the repository.
   for (const f of await readdir(OUT)) if (!items.some((i) => `${i.slug}.pdf` === f)) await rm(`${OUT}${f}`);
   await writeFile(DATA, `${JSON.stringify({ repo: REPO, fetched: new Date().toISOString().slice(0, 10), items }, null, 2)}\n`);
-  console.log(`${items.length} PDFs from ${REPO}`);
+  console.log(`${items.length} PDFs from ${REPOS.join(' and ')}`);
 }
 
 try {

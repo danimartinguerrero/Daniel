@@ -6,8 +6,8 @@ import { mkdir, writeFile } from 'node:fs/promises';
 import sharp from 'sharp';
 
 const USER = '0qlsgddi6nc7uaz7gaib5tngw';
-// The track the site offers to play first: Cascade, by Kaikobad (in "Estudio estoico").
-const FEATURED = 'spotify:track:1Enf6eEwLMOqjVkAc7vwar';
+// The track the site offers to play first: Tonight, Tonight, by The Smashing Pumpkins (in "🥀").
+const FEATURED = 'spotify:track:7bu0znpSbTks0O6I98ij0W';
 const OUT = new URL('../public/music/', import.meta.url);
 const DATA = new URL('../src/data/spotify.json', import.meta.url);
 
@@ -26,6 +26,8 @@ const entity = async (kind, id) => {
 const biggest = (url) => url
   // Album art is also on i.scdn.co, whatever CDN the embed names.
   .replace(/https:\/\/image-cdn-\w+\.spotifycdn\.com\/image\/(ab67616d)/, 'https://i.scdn.co/image/$1')
+  // Playlist covers: the same path is served by every Spotify image CDN.
+  .replace(/https:\/\/image-cdn-\w+\.spotifycdn\.com\//, 'https://image-cdn-fa.spotifycdn.com/')
   .replace('ab67706c0000da84', 'ab67706c0000bebb')
   .replace('ab67616d00001e02', 'ab67616d0000b273')
   .replace(/mosaic\.scdn\.co\/\d+\//, 'mosaic.scdn.co/640/');
@@ -55,7 +57,8 @@ for (const id of ids) {
 const trackId = FEATURED.split(':').pop();
 const t = await entity('track', trackId);
 const featured = {
-  title: t.name ?? t.title, artist: (t.artists ?? []).map((a) => a.name).join(', ') || t.subtitle,
+  // The song's own name, without the reissue's label ("- Remastered 2012").
+  title: (t.name ?? t.title).replace(/\s+-\s+(\d{4}\s+)?Remaster(ed)?(\s+\d{4})?$/i, ''), artist: (t.artists ?? []).map((a) => a.name).join(', ') || t.subtitle,
   uri: FEATURED, url: `https://open.spotify.com/track/${trackId}`, ms: t.duration,
   // A track's cover comes in its visual identity; the 300 px one is enough to name the 640 px original.
   cover: (t.visualIdentity?.image?.[0]?.url ?? t.coverArt?.sources?.[0]?.url) ? await save(t.visualIdentity?.image?.[0]?.url ?? t.coverArt.sources[0].url, `track-${trackId}`) : null,
