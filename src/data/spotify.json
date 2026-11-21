@@ -1,0 +1,507 @@
+{
+  "user": "0qlsgddi6nc7uaz7gaib5tngw",
+  "profile": "https://open.spotify.com/user/0qlsgddi6nc7uaz7gaib5tngw",
+  "fetched": "2026-11-21",
+  "featured": {
+    "title": "Cascade",
+    "artist": "Kaikobad",
+    "uri": "spotify:track:1Enf6eEwLMOqjVkAc7vwar",
+    "url": "https://open.spotify.com/track/1Enf6eEwLMOqjVkAc7vwar",
+    "ms": 205120,
+    "cover": "/music/track-1Enf6eEwLMOqjVkAc7vwar.webp"
+  },
+  "playlists": [
+    {
+      "id": "61RQW3SGUUF2DPlllRnd2s",
+      "name": "Absolute cinema 🚬",
+      "uri": "spotify:playlist:61RQW3SGUUF2DPlllRnd2s",
+      "url": "https://open.spotify.com/playlist/61RQW3SGUUF2DPlllRnd2s",
+      "cover": "/music/playlist-61RQW3SGUUF2DPlllRnd2s.webp",
+      "count": 100,
+      "tracks": [
+        {
+          "title": "The Winner Is",
+          "artist": "DeVotchKa, Mychael Danna",
+          "uri": "spotify:track:7wFEzF8FbofVlQS1OcbghM",
+          "ms": 184813
+        },
+        {
+          "title": "Main Title",
+          "artist": "James Horner",
+          "uri": "spotify:track:4P1sbofnneFeEEASTFMEGl",
+          "ms": 170866
+        },
+        {
+          "title": "A Gift Of A Thistle",
+          "artist": "James Horner, London Symphony Orchestra",
+          "uri": "spotify:track:3Yvi5NkUrSppVwrMHYkB6u",
+          "ms": 97666
+        },
+        {
+          "title": "The Legend Spreads",
+          "artist": "James Horner, London Symphony Orchestra",
+          "uri": "spotify:track:3AAVcuHcZncbS1zhPjtaEC",
+          "ms": 69333
+        },
+        {
+          "title": "Freedom / The Execution Bannockburn",
+          "artist": "James Horner, London Symphony Orchestra",
+          "uri": "spotify:track:1IlqCS2hDTOoG0ntlcWxgV",
+          "ms": 444066
+        },
+        {
+          "title": "End Credits",
+          "artist": "James Horner, London Symphony Orchestra",
+          "uri": "spotify:track:1bOYJUjIOkxEHeXBMPsEod",
+          "ms": 435066
+        },
+        {
+          "title": "For The Love Of A Princess",
+          "artist": "James Horner, London Symphony Orchestra",
+          "uri": "spotify:track:22yxHt6UqZpH7tP6W4PooI",
+          "ms": 247333
+        },
+        {
+          "title": "Love Theme (From \"Cinema Paradiso\")",
+          "artist": "Ennio Morricone, Orchestra dell'Accademia Nazionale di Santa Cecilia, Rocco Zifarelli, Amedeo Tommasi, Gilda Buttà",
+          "uri": "spotify:track:26SstvhEz7d3t95N5WmtKt",
+          "ms": 193213
+        },
+        {
+          "title": "Hope Overture",
+          "artist": "Clint Mansell, Kronos Quartet",
+          "uri": "spotify:track:0J4sNccRowctPpjjzsqNLu",
+          "ms": 151200
+        },
+        {
+          "title": "The Shire",
+          "artist": "Howard Shore",
+          "uri": "spotify:track:6zW80jVqLtgSF1yCtGHiiD",
+          "ms": 149480
+        },
+        {
+          "title": "Concerning Hobbits",
+          "artist": "Howard Shore",
+          "uri": "spotify:track:644es5aYPJghtZLjM1rmSP",
+          "ms": 175040
+        },
+        {
+          "title": "The Battle of the Pelennor Fields",
+          "artist": "Howard Shore",
+          "uri": "spotify:track:2pSMjadGmWcUbIF5eqLUxE",
+          "ms": 250040
+        }
+      ]
+    },
+    {
+      "id": "58eGxOpUsS6GUmH05CU5bW",
+      "name": "2000's y 2010's",
+      "uri": "spotify:playlist:58eGxOpUsS6GUmH05CU5bW",
+      "url": "https://open.spotify.com/playlist/58eGxOpUsS6GUmH05CU5bW",
+      "cover": "/music/playlist-58eGxOpUsS6GUmH05CU5bW.webp",
+      "count": 42,
+      "tracks": [
+        {
+          "title": "Counting Stars",
+          "artist": "OneRepublic",
+          "uri": "spotify:track:2tpWsVSb9UEmDRxAl1zhX1",
+          "ms": 257265
+        },
+        {
+          "title": "Radioactive",
+          "artist": "Imagine Dragons",
+          "uri": "spotify:track:62yJjFtgkhUrXktIoSjgP2",
+          "ms": 186813
+        },
+        {
+          "title": "Animals",
+          "artist": "Maroon 5",
+          "uri": "spotify:track:2bL2gyO6kBdLkNSkxXNh6x",
+          "ms": 231013
+        },
+        {
+          "title": "Whatever It Takes",
+          "artist": "Imagine Dragons",
+          "uri": "spotify:track:6Qn5zhYkTa37e91HC1D7lb",
+          "ms": 201240
+        },
+        {
+          "title": "The Nights",
+          "artist": "Avicii",
+          "uri": "spotify:track:0ct6r3EGTcMLPtrXHDvVjc",
+          "ms": 176658
+        },
+        {
+          "title": "Stereo Hearts (feat. Adam Levine)",
+          "artist": "Gym Class Heroes, Adam Levine",
+          "uri": "spotify:track:0qOnSQQF0yzuPWsXrQ9paz",
+          "ms": 210960
+        },
+        {
+          "title": "Safe And Sound",
+          "artist": "Capital Cities",
+          "uri": "spotify:track:6Z8R6UsFuGXGtiIxiD8ISb",
+          "ms": 192789
+        },
+        {
+          "title": "Wake Me Up",
+          "artist": "Avicii",
+          "uri": "spotify:track:0nrRP2bk19rLc0orkWPQk2",
+          "ms": 247426
+        },
+        {
+          "title": "Hey Brother",
+          "artist": "Avicii",
+          "uri": "spotify:track:4lhqb6JvbHId48OUJGwymk",
+          "ms": 255093
+        },
+        {
+          "title": "Waiting For Love",
+          "artist": "Avicii",
+          "uri": "spotify:track:2P4OICZRVAQcYAV2JReRfj",
+          "ms": 230613
+        },
+        {
+          "title": "Levels - Original Version",
+          "artist": "Avicii",
+          "uri": "spotify:track:6Xe9wT5xeZETPwtaP2ynUz",
+          "ms": 338866
+        },
+        {
+          "title": "Moves Like Jagger - Studio Recording From \"The Voice\" Performance",
+          "artist": "Maroon 5, Christina Aguilera",
+          "uri": "spotify:track:7pYfyrMNPn3wtoCyqcTVoI",
+          "ms": 201493
+        }
+      ]
+    },
+    {
+      "id": "5SklD7eiseTm2qX9Vk4N2y",
+      "name": "🤌🏼",
+      "uri": "spotify:playlist:5SklD7eiseTm2qX9Vk4N2y",
+      "url": "https://open.spotify.com/playlist/5SklD7eiseTm2qX9Vk4N2y",
+      "cover": "/music/playlist-5SklD7eiseTm2qX9Vk4N2y.webp",
+      "count": 66,
+      "tracks": [
+        {
+          "title": "Sultans Of Swing",
+          "artist": "Dire Straits",
+          "uri": "spotify:track:37Tmv4NnfQeb0ZgUC4fOJj",
+          "ms": 348400
+        },
+        {
+          "title": "Under the Bridge",
+          "artist": "Red Hot Chili Peppers",
+          "uri": "spotify:track:3d9DChrdc6BOeFsbrZ3Is0",
+          "ms": 264306
+        },
+        {
+          "title": "Losing My Religion",
+          "artist": "R.E.M.",
+          "uri": "spotify:track:31AOj9sFz2gM0O3hMARRBx",
+          "ms": 268426
+        },
+        {
+          "title": "Stairway to Heaven - Remaster",
+          "artist": "Led Zeppelin",
+          "uri": "spotify:track:5CQ30WqJwcep0pYcV4AMNc",
+          "ms": 482830
+        },
+        {
+          "title": "Message In A Bottle",
+          "artist": "The Police",
+          "uri": "spotify:track:1oYYd2gnWZYrt89EBXdFiO",
+          "ms": 290280
+        },
+        {
+          "title": "Otherside",
+          "artist": "Red Hot Chili Peppers",
+          "uri": "spotify:track:64BbK9SFKH2jk86U3dGj2P",
+          "ms": 255373
+        },
+        {
+          "title": "Money For Nothing - Remastered 1996",
+          "artist": "Dire Straits",
+          "uri": "spotify:track:4nFNJmjfgBF7jwv2oBC45b",
+          "ms": 505333
+        },
+        {
+          "title": "Californication",
+          "artist": "Red Hot Chili Peppers",
+          "uri": "spotify:track:48UPSzbZjgc449aqz8bxox",
+          "ms": 329733
+        },
+        {
+          "title": "Have You Ever Seen The Rain",
+          "artist": "Creedence Clearwater Revival",
+          "uri": "spotify:track:2LawezPeJhN4AWuSB0GtAU",
+          "ms": 160133
+        },
+        {
+          "title": "Hold the Line",
+          "artist": "TOTO",
+          "uri": "spotify:track:4aVuWgvD0X63hcOCnZtNFA",
+          "ms": 235552
+        },
+        {
+          "title": "November Rain",
+          "artist": "Guns N' Roses",
+          "uri": "spotify:track:3YRCqOhFifThpSRFJ1VWFM",
+          "ms": 536066
+        },
+        {
+          "title": "Wind Of Change",
+          "artist": "Scorpions",
+          "uri": "spotify:track:3ovjw5HZZv43SxTwApooCM",
+          "ms": 312360
+        }
+      ]
+    },
+    {
+      "id": "1OEOlf9xkgG9FOAoDB6rLI",
+      "name": "🥀",
+      "uri": "spotify:playlist:1OEOlf9xkgG9FOAoDB6rLI",
+      "url": "https://open.spotify.com/playlist/1OEOlf9xkgG9FOAoDB6rLI",
+      "cover": "/music/playlist-1OEOlf9xkgG9FOAoDB6rLI.webp",
+      "count": 100,
+      "tracks": [
+        {
+          "title": "Let Down",
+          "artist": "Radiohead",
+          "uri": "spotify:track:2fuYa3Lx06QQJAm0MjztKr",
+          "ms": 299560
+        },
+        {
+          "title": "No. 1 Party Anthem",
+          "artist": "Arctic Monkeys",
+          "uri": "spotify:track:5TTGoX70AFrTvuEtqHK37S",
+          "ms": 243131
+        },
+        {
+          "title": "1979 - Remastered 2012",
+          "artist": "The Smashing Pumpkins",
+          "uri": "spotify:track:5QLHGv0DfpeXLNFo7SFEy1",
+          "ms": 266200
+        },
+        {
+          "title": "How Soon Is Now? - 2011 Remaster",
+          "artist": "The Smiths",
+          "uri": "spotify:track:1YrnDTqvcnUKxAIeXyaEmU",
+          "ms": 408173
+        },
+        {
+          "title": "Moonlight on the River",
+          "artist": "Mac DeMarco",
+          "uri": "spotify:track:2fhOljbX79loRcdl47SFye",
+          "ms": 422613
+        },
+        {
+          "title": "How to Save a Life",
+          "artist": "The Fray",
+          "uri": "spotify:track:5fVZC9GiM4e8vu99W0Xf6J",
+          "ms": 262533
+        },
+        {
+          "title": "Fake Plastic Trees",
+          "artist": "Radiohead",
+          "uri": "spotify:track:73CKjW3vsUXRpy3NnX4H7F",
+          "ms": 290706
+        },
+        {
+          "title": "Just Like Heaven - Remastered 2006",
+          "artist": "The Cure",
+          "uri": "spotify:track:4NnWuGQujzWUEg0uZokO5M",
+          "ms": 212013
+        },
+        {
+          "title": "All I Need",
+          "artist": "Radiohead",
+          "uri": "spotify:track:5Qv2Nby1xTr9pQyjkrc94J",
+          "ms": 228746
+        },
+        {
+          "title": "Sparks",
+          "artist": "Coldplay",
+          "uri": "spotify:track:7D0RhFcb3CrfPuTJ0obrod",
+          "ms": 227093
+        },
+        {
+          "title": "K.",
+          "artist": "Cigarettes After Sex",
+          "uri": "spotify:track:2xGjfbXZnI8uQDhukoQURQ",
+          "ms": 319560
+        },
+        {
+          "title": "Yellow",
+          "artist": "Coldplay",
+          "uri": "spotify:track:3AJwUDP919kvQ9QcozQPxg",
+          "ms": 266773
+        }
+      ]
+    },
+    {
+      "id": "7aiwxnNFYIBe4FL6no9HDW",
+      "name": "Estudio estoico",
+      "uri": "spotify:playlist:7aiwxnNFYIBe4FL6no9HDW",
+      "url": "https://open.spotify.com/playlist/7aiwxnNFYIBe4FL6no9HDW",
+      "cover": "/music/playlist-7aiwxnNFYIBe4FL6no9HDW.webp",
+      "count": 47,
+      "tracks": [
+        {
+          "title": "Can You Hear The Music",
+          "artist": "Ludwig Göransson",
+          "uri": "spotify:track:4VnDmjYCZkyeqeb0NIKqdA",
+          "ms": 110160
+        },
+        {
+          "title": "Cornfield Chase",
+          "artist": "Hans Zimmer",
+          "uri": "spotify:track:6pWgRkpqVfxnj3WuIcJ7WP",
+          "ms": 126959
+        },
+        {
+          "title": "No Time for Caution",
+          "artist": "Hans Zimmer",
+          "uri": "spotify:track:5aaXqH8rgKZxg61HjECldi",
+          "ms": 246271
+        },
+        {
+          "title": "Low Key Gliding",
+          "artist": "K08beatz, Hal Walker",
+          "uri": "spotify:track:6RtKJK788NrWLXboGtnZbj",
+          "ms": 172956
+        },
+        {
+          "title": "Ondas Gamma Para Concentración Y Memoria",
+          "artist": "Javiwiss",
+          "uri": "spotify:track:2snSHxt23UxPU7RRxKKlit",
+          "ms": 5394804
+        },
+        {
+          "title": "Day One (Interstellar Theme)",
+          "artist": "Hans Zimmer",
+          "uri": "spotify:track:4WmB04GBqS4xPMYN9dHgBw",
+          "ms": 199422
+        },
+        {
+          "title": "Quantum Mechanics",
+          "artist": "Ludwig Göransson",
+          "uri": "spotify:track:09I8yYd9egMHOLDRFenYrV",
+          "ms": 180013
+        },
+        {
+          "title": "White Noise 3 Hour Long",
+          "artist": "White Noise Therapy",
+          "uri": "spotify:track:04boE4u1AupbrGlI62WvoO",
+          "ms": 10828190
+        },
+        {
+          "title": "Sound to Stop Overthinking",
+          "artist": "nBeats",
+          "uri": "spotify:track:18K2oVFKm7e7iL31k8P3lt",
+          "ms": 155033
+        },
+        {
+          "title": "Idea 22",
+          "artist": "Gibran Alcocer",
+          "uri": "spotify:track:18OvVTXtC3lx1Iym9E0RyT",
+          "ms": 152000
+        },
+        {
+          "title": "Idea 10",
+          "artist": "Gibran Alcocer",
+          "uri": "spotify:track:1lb3H41lbvAN28N7yqRNL9",
+          "ms": 128000
+        },
+        {
+          "title": "Shootout",
+          "artist": "Izzamuzzic, Julien Marchal",
+          "uri": "spotify:track:4pTkDIlpFNoeWbahu8pVXW",
+          "ms": 295308
+        }
+      ]
+    },
+    {
+      "id": "69xYTaMr7GWCHXpmMdUoA5",
+      "name": "chillin",
+      "uri": "spotify:playlist:69xYTaMr7GWCHXpmMdUoA5",
+      "url": "https://open.spotify.com/playlist/69xYTaMr7GWCHXpmMdUoA5",
+      "cover": "/music/playlist-69xYTaMr7GWCHXpmMdUoA5.webp",
+      "count": 100,
+      "tracks": [
+        {
+          "title": "End of Beginning",
+          "artist": "Djo",
+          "uri": "spotify:track:3qhlB30KknSejmIvZZLjOD",
+          "ms": 159245
+        },
+        {
+          "title": "Scar Tissue",
+          "artist": "Red Hot Chili Peppers",
+          "uri": "spotify:track:1G391cbiT3v3Cywg8T7DM1",
+          "ms": 215906
+        },
+        {
+          "title": "By the Way",
+          "artist": "Red Hot Chili Peppers",
+          "uri": "spotify:track:1f2V8U1BiWaC9aJWmpOARe",
+          "ms": 216933
+        },
+        {
+          "title": "The Zephyr Song",
+          "artist": "Red Hot Chili Peppers",
+          "uri": "spotify:track:1ndGB6rvxKYN9seCYO1dTF",
+          "ms": 231933
+        },
+        {
+          "title": "Snow (Hey Oh)",
+          "artist": "Red Hot Chili Peppers",
+          "uri": "spotify:track:2aibwv5hGXSgw7Yru8IYTO",
+          "ms": 334666
+        },
+        {
+          "title": "Alive",
+          "artist": "Pearl Jam",
+          "uri": "spotify:track:1L94M3KIu7QluZe63g64rv",
+          "ms": 340974
+        },
+        {
+          "title": "Dark Necessities",
+          "artist": "Red Hot Chili Peppers",
+          "uri": "spotify:track:2oaK4JLVnmRGIO9ytBE1bt",
+          "ms": 302000
+        },
+        {
+          "title": "So Lonely",
+          "artist": "The Police",
+          "uri": "spotify:track:2wnsBaxrmkthIFAm6vqCuX",
+          "ms": 289586
+        },
+        {
+          "title": "Walking On The Moon",
+          "artist": "The Police",
+          "uri": "spotify:track:62uLNJgVZaFiEiKV4LpoYJ",
+          "ms": 300826
+        },
+        {
+          "title": "Where The Streets Have No Name",
+          "artist": "U2",
+          "uri": "spotify:track:2TlXPShOrPn4K51fP0Fykd",
+          "ms": 275040
+        },
+        {
+          "title": "On Melancholy Hill",
+          "artist": "Gorillaz",
+          "uri": "spotify:track:0q6LuUqGLUiCPP1cbdwFs3",
+          "ms": 233866
+        },
+        {
+          "title": "Run To You (Classic Version)",
+          "artist": "Bryan Adams",
+          "uri": "spotify:track:0gLEDVr1QbNtqTR00P1D8N",
+          "ms": 257834
+        }
+      ]
+    }
+  ]
+}

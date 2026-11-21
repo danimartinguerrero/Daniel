@@ -7,7 +7,8 @@
     "dev": "astro dev",
     "build": "node scripts/letterboxd.mjs --soft && astro build",
     "preview": "astro preview",
-    "letterboxd": "node scripts/letterboxd.mjs"
+    "letterboxd": "node scripts/letterboxd.mjs",
+    "spotify": "node scripts/spotify.mjs"
   },
   "dependencies": {
     "@fontsource-variable/inter-tight": "^5.3.0",

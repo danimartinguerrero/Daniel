@@ -1,6 +1,6 @@
 ---
 /**
- * Fig. 7: thin-film interference, a soap film draining under gravity. Light reflected from the film's
+ * Fig. 11: thin-film interference, a soap film draining under gravity. Light reflected from the film's
  * two faces interferes: at normal incidence the reflectance at wavelength λ goes as sin²(2πnt/λ), so
  * each thickness t has its own colour (summed across the visible spectrum into a lookup table). Where
  * the film is thinnest it reflects nothing: the black film at the top. The pointer thickens it locally.
@@ -58,7 +58,7 @@
     loop(box, (t) => {
       const { ctx, w, h } = s;
       const cols = Math.ceil(w / CELL), rows = Math.ceil(h / CELL);
-      if (low.width !== cols || low.height !== rows) { low.width = cols; low.height = rows; img = lctx.createImageData(cols, rows); }
+      if (!img || low.width !== cols || low.height !== rows) { low.width = cols; low.height = rows; img = lctx.createImageData(cols, rows); }
       const d = img!.data;
       bump += ((pointer.k ? 1 : 0) - bump) * 0.06;
       const ar = w / h;

@@ -1,0 +1,133 @@
+---
+/**
+ * Fig. 6: Fraunhofer diffraction, the far-field pattern of an aperture: its Fourier transform, squared.
+ * Slit: sinc²(πax/λz). Double slit: the same times cos²(πdx/λz). Circular hole: Airy, [2 J₁(v)/v]².
+ * Square: sinc² in x times sinc² in y. Grating of N slits: sharp orders under the single-slit envelope.
+ * Crystal lattice (hexagonal, like graphene) and square mesh: a large array of small holes, whose pattern
+ * is its reciprocal lattice: sharp spots at every G, under the single hole's Airy envelope.
+ * Shown on a log scale, as a camera with a wide dynamic range would record it. The page renders the
+ * aperture buttons ([data-ap]) in the figure's caption.
+ */
+---
+<div class="fraun" data-fraun data-ap="cristal">
+  <canvas aria-hidden="true"></canvas>
+</div>
+
+<style>
+  .fraun { position: relative; aspect-ratio: 16 / 6; }
+  .fraun canvas { position: absolute; inset: 0; width: 100%; height: 100%; }
+  @media (max-width: 700px) { .fraun { aspect-ratio: 4 / 3.2; } }
+</style>
+
+<script>
+  import { loop, surface, wavelengthRGB } from '@/lib/figure';
+
+  // J₁ by the polynomial approximations of Abramowitz & Stegun (9.4.4, 9.4.6).
+  function j1(x: number) {
+    const ax = Math.abs(x);
+    if (ax < 8) {
+      const y = x * x;
+      const a = x * (72362614232 + y * (-7895059235 + y * (242396853.1 + y * (-2972611.439 + y * (15704.4826 + y * -30.16036606)))));
+      const b = 144725228442 + y * (2300535178 + y * (18583304.74 + y * (99447.43394 + y * (376.9991397 + y))));
+      return a / b;
+    }
+    const z = 8 / ax, y = z * z, xx = ax - 2.356194491;
+    const p = 1 + y * (0.183105e-2 + y * (-0.3516396496e-4 + y * (0.2457520174e-5 + y * -0.240337019e-6)));
+    const q = 0.04687499995 + y * (-0.2002690873e-3 + y * (0.8449199096e-5 + y * (-0.88228987e-6 + y * 0.105787412e-6)));
+    const r = Math.sqrt(0.636619772 / ax) * (Math.cos(xx) * p - z * Math.sin(xx) * q);
+    return x < 0 ? -r : r;
+  }
+  const sinc2 = (u: number) => (u === 0 ? 1 : (Math.sin(u) / u) ** 2);
+  // The spots of a large crystal: a narrow peak on each reciprocal-lattice vector G = m·b₁ + n·b₂,
+  // summed over the nearest ones (b₁, b₂ in the units of the figure).
+  const spots = (u: number, v: number, b1: [number, number], b2: [number, number], sigma: number) => {
+    const det = b1[0] * b2[1] - b1[1] * b2[0];
+    const m0 = Math.round((u * b2[1] - v * b2[0]) / det), n0 = Math.round((v * b1[0] - u * b1[1]) / det);
+    let I = 0;
+    for (let m = m0 - 1; m <= m0 + 1; m++) for (let n = n0 - 1; n <= n0 + 1; n++) {
+      const gx = m * b1[0] + n * b2[0], gy = m * b1[1] + n * b2[1];
+      I += Math.exp(-((u - gx) ** 2 + (v - gy) ** 2) / (2 * sigma * sigma));
+    }
+    return I;
+  };
+  const HEX: [[number, number], [number, number]] = [[1.04, -0.6], [0, 1.2]]; // reciprocal of a hexagonal lattice
+  const SQ: [[number, number], [number, number]] = [[1.05, 0], [0, 1.05]];
+  const airy = (r: number) => (r === 0 ? 1 : (2 * j1(r) / r) ** 2);
+
+  const box = document.querySelector<HTMLElement>('[data-fraun]');
+  if (box) {
+    const canvas = box.querySelector('canvas')!;
+    const fig = box.closest('figure');
+    const btns = [...(fig?.querySelectorAll<HTMLButtonElement>('[data-ap]') ?? [])].filter((b) => b !== box);
+    const s = surface(canvas, () => { dirty = true; view.redraw(); });
+    // A green laser, softened towards the page's warm white and kept below full brightness.
+    const [cr, cg, cb] = wavelengthRGB(532).map((c, i) => Math.round((c * 0.6 + [236, 235, 230][i] * 0.4) * 0.82));
+    let ap = box.dataset.ap!, dirty = true, shown = 0;
+    const low = document.createElement('canvas'); const lctx = low.getContext('2d')!;
+
+    const intensity = (u: number, v: number) => {
+      switch (ap) {
+        case 'rendija': return sinc2(u * 2.2);
+        case 'doble': return sinc2(u * 1.2) * Math.cos(u * 5.4) ** 2;
+        case 'cuadrada': return sinc2(u * 2) * sinc2(v * 2);
+        case 'red': { const a = u * 7, N = 6; const num = Math.sin(N * a), den = N * Math.sin(a); return sinc2(u * 1.1) * (Math.abs(den) < 1e-6 ? 1 : (num / den) ** 2); }
+        case 'cristal': return spots(u, v, HEX[0], HEX[1], 0.05) * airy(Math.hypot(u, v) * 0.55);
+        case 'cuadricula': return spots(u, v, SQ[0], SQ[1], 0.05) * airy(Math.hypot(u, v) * 0.55);
+        default: return airy(Math.hypot(u, v) * 7.5);
+      }
+    };
+    const render = () => {
+      const W = Math.min(520, Math.round(s.w / 2)), H = Math.round(W * s.h / s.w);
+      low.width = W; low.height = H;
+      const im = lctx.createImageData(W, H), d = im.data;
+      const scale = 10; // u, v range ±scale/2 across the width
+      for (let j = 0; j < H; j++) for (let i = 0; i < W; i++) {
+        const u = (i / W - 0.5) * scale, v = (j / H - 0.5) * scale * (H / W);
+        const I = intensity(u, ap === 'rendija' || ap === 'doble' || ap === 'red' ? 0 : v) * (ap === 'rendija' || ap === 'doble' || ap === 'red' ? Math.exp(-((j / H - 0.5) ** 2) * 22) : 1);
+        const decades = ap === 'cristal' || ap === 'cuadricula' ? 2.4 : ap === 'circular' ? 3.2 : 2.4;
+        const L = Math.max(0, 1 + Math.log10(I + 1e-6) / decades);
+        const o = (j * W + i) * 4;
+        d[o] = 10 + cr * L ** 1.6; d[o + 1] = 10 + cg * L ** 1.6; d[o + 2] = 11 + cb * L ** 1.6; d[o + 3] = 255;
+      }
+      lctx.putImageData(im, 0, 0);
+      dirty = false;
+    };
+    const drawAperture = (ctx: CanvasRenderingContext2D, x: number, y: number, r: number) => {
+      ctx.fillStyle = '#0a0a0b'; ctx.strokeStyle = 'rgba(236,235,230,0.35)';
+      ctx.fillRect(x - r, y - r, r * 2, r * 2); ctx.strokeRect(x - r + 0.5, y - r + 0.5, r * 2 - 1, r * 2 - 1);
+      ctx.fillStyle = 'rgba(236,235,230,0.9)';
+      if (ap === 'rendija') ctx.fillRect(x - 1.5, y - r * 0.7, 3, r * 1.4);
+      if (ap === 'doble') { ctx.fillRect(x - 6, y - r * 0.7, 2.5, r * 1.4); ctx.fillRect(x + 3.5, y - r * 0.7, 2.5, r * 1.4); }
+      if (ap === 'red') for (let k = -2.5; k <= 2.5; k++) ctx.fillRect(x + k * 6 - 1, y - r * 0.7, 2, r * 1.4);
+      if (ap === 'circular') { ctx.beginPath(); ctx.arc(x, y, r * 0.22, 0, Math.PI * 2); ctx.fill(); }
+      if (ap === 'cuadrada') ctx.fillRect(x - r * 0.2, y - r * 0.2, r * 0.4, r * 0.4);
+      if (ap === 'cristal' || ap === 'cuadricula') {
+        for (let a = -2; a <= 2; a++) for (let b = -2; b <= 2; b++) {
+          const px = ap === 'cristal' ? x + (a + b * 0.5) * 6 : x + a * 6, py = ap === 'cristal' ? y + b * 6 * 0.866 : y + b * 6;
+          if (Math.abs(px - x) < r * 0.8 && Math.abs(py - y) < r * 0.8) ctx.fillRect(px - 1, py - 1, 2, 2);
+        }
+      }
+      ctx.fillStyle = 'rgba(236,235,230,0.42)'; ctx.font = '11px "JetBrains Mono Variable", monospace';
+      ctx.fillText('abertura', x - r, y + r + 16);
+    };
+
+    const view = loop(box, (t) => {
+      const { ctx, w, h } = s;
+      if (dirty) render();
+      shown = Math.min(1, shown + 0.04);
+      ctx.clearRect(0, 0, w, h);
+      ctx.globalAlpha = shown;
+      ctx.imageSmoothingEnabled = true; ctx.imageSmoothingQuality = 'high';
+      ctx.drawImage(low, 0, 0, w, h);
+      ctx.globalAlpha = 1;
+      drawAperture(ctx, 34, 34, 22);
+      void t;
+    });
+
+    btns.forEach((b) => b.addEventListener('click', () => {
+      ap = b.dataset.ap!; box.dataset.ap = ap; dirty = true; shown = 0.35;
+      btns.forEach((o) => o.setAttribute('aria-pressed', String(o === b)));
+      view.redraw();
+    }));
+  }
+</script>

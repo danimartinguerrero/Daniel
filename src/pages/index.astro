@@ -8,6 +8,13 @@ import Malus from '@/components/fig/Malus.astro';
 import Fiber from '@/components/fig/Fiber.astro';
 import Glove from '@/components/fig/Glove.astro';
 import ThinFilm from '@/components/fig/ThinFilm.astro';
+import Prism from '@/components/fig/Prism.astro';
+import Michelson from '@/components/fig/Michelson.astro';
+import Fraunhofer from '@/components/fig/Fraunhofer.astro';
+import Chladni from '@/components/fig/Chladni.astro';
+import Sky from '@/components/Sky.astro';
+import Tools from '@/components/Tools.astro';
+import Records from '@/components/Records.astro';
 import { entries, favorites, poster, profile, stars } from '@/data/cine';
 import { href } from '@/lib/paths';
 
@@ -68,11 +75,18 @@ const img = (name: string) => ({
       </figure>
     </div>
     <div class="wrap sec__grid">
+      <div class="sec__main sky-intro">
+        <p class="label">El cielo, en fotografías</p>
+        <p class="body">Lo que miramos en Supernova y contamos en la radio, visto por Hubble, Webb y Artemis. Desliza; cada imagen abre su original a máxima resolución.</p>
+      </div>
+    </div>
+    <Sky />
+    <div class="wrap sec__grid">
       <div class="sec__main">
         <ol class="rows">
           <li class="row"><p class="row__when">25 sep 2026</p><p class="row__what">«Houston, tenemos un telescopio»</p><p class="row__more">Organicé y dirigí esta actividad de astronomía de tres horas, abierta al público, en la Noche Europea de los Investigadores Marie Skłodowska-Curie, con la UCC+i de la Universidad de Salamanca.</p></li>
           <li class="row"><p class="row__when">Desde 2026</p><p class="row__what">Cosmosofía, en Radio USAL</p><p class="row__more">Coordenadas, polvo de estrellas, la frontera del «¿por qué no?» y lo que nos debemos unos a otros. Nucleosíntesis, Cecilia Payne y Carl Sagan.</p></li>
-          <li class="row"><p class="row__when">En curso</p><p class="row__what">Física en vertical, sin sonido</p><p class="row__more">Vídeos de física y matemáticas en <a class="link" href={links.tiktok}>TikTok, @_.danielmg</a>: de la astrofísica y el electromagnetismo a la ley de inercia de Sylvester o el teorema de Stokes generalizado.</p></li>
+          <li class="row"><p class="row__when">En curso</p><p class="row__what">Física en vertical</p><p class="row__more">Vídeos cortos de física y matemáticas en <a class="link" href={links.tiktok}>TikTok, @_.danielmg</a>: de la astrofísica, el electromagnetismo y la termodinámica a la ley de inercia de Sylvester, las formas diferenciales o el teorema de Stokes generalizado.</p></li>
         </ol>
         <figure class="fig" data-balmer-root>
           <div class="fig__stage"><Balmer /></div>
@@ -118,10 +132,61 @@ const img = (name: string) => ({
     </div>
   </section>
 
-  <!-- 03 Filosofía -->
+  <!-- 03 Óptica y fotónica -->
+  <section class="sec" id="optica" aria-labelledby="t-optica">
+    <div class="wrap sec__grid" data-reveal>
+      <div class="sec__side sec__rule"><p class="sec__num">03</p><p class="label">Óptica y fotónica</p></div>
+      <div class="sec__main sec__rule">
+        <h2 class="title" id="t-optica">La luz, <em>de cerca.</em></h2>
+        <p class="body">La rama de la física que más me tira. Formo parte del <strong>OSAL Student Chapter</strong>, la asociación de estudiantes que divulga la óptica y la fotónica en la Universidad de Salamanca, y soy miembro de <strong>Optica</strong>, la sociedad internacional de óptica y fotónica: <em lang="en">Advancing Optics and Photonics Worldwide</em>.</p>
+      </div>
+    </div>
+    <div class="wrap sec__grid">
+      <figure class="fig sec__wide">
+        <div class="fig__stage"><Prism /></div>
+        <figcaption class="fig__bar"><p class="fig__cap"><b>Fig. 4</b>Dispersión en un prisma de vidrio BK7. Cada longitud de onda se refracta con su propio índice, n(λ) = A + B/λ², y la luz blanca sale abierta en espectro. Sube y baja el cursor para cambiar el ángulo de incidencia. <span class="fig__read" data-prism-read></span></p></figcaption>
+      </figure>
+    </div>
+    <div class="wrap sec__grid">
+      <div class="sec__main">
+        <ol class="rows">
+          <li class="row"><p class="row__when">Miembro</p><p class="row__what">OSAL Student Chapter</p><p class="row__more">Divulgación de óptica y fotónica en la Universidad de Salamanca: talleres, demostraciones y charlas.</p></li>
+          <li class="row"><p class="row__when">Hasta sep 2027</p><p class="row__what">Optica, miembro individual</p><p class="row__more">La sociedad internacional de óptica y fotónica, fundada en 1916 como Optical Society of America.</p></li>
+          <li class="row"><p class="row__when">Seminario</p><p class="row__what">Computación cuántica</p><p class="row__more">Cúbits, puertas y circuitos cuánticos: la otra cara de la fotónica.</p></li>
+        </ol>
+      </div>
+    </div>
+    <div class="wrap sec__grid">
+      <figure class="fig sec__wide">
+        <div class="fig__stage"><Michelson /></div>
+        <figcaption class="fig__bar">
+          <p class="fig__cap"><b>Fig. 5</b>Interferómetro de Michelson. Un láser de He-Ne se divide en dos brazos que vuelven a juntarse. Con un espejo apenas inclinado, franjas rectas, como las de Young, que se desplazan una entera cada vez que M₂ avanza λ/2; alineados, anillos. <span class="fig__read" data-mich-read></span></p>
+          <div class="fig__ctl">
+            <button class="ctl" type="button" data-mich-mode aria-pressed="false">Alinear los espejos</button>
+            <label class="slider"><span class="sr-only">Posición del espejo M₂</span><input type="range" min="0" max="1600" value="0" step="1" data-mich-range /></label>
+          </div>
+        </figcaption>
+      </figure>
+      <figure class="fig sec__wide">
+        <div class="fig__stage"><Fraunhofer /></div>
+        <figcaption class="fig__bar">
+          <p class="fig__cap"><b>Fig. 6</b>Difracción de Fraunhofer: lo que una abertura hace con la luz, lejos de ella, es su transformada de Fourier al cuadrado. Una red cristalina hexagonal, como la del grafeno, devuelve su red recíproca: puntos con simetría de seis; un pinhole, el disco de Airy. En escala logarítmica, como lo registraría una cámara.</p>
+          <div class="fig__ctl" role="group" aria-label="Abertura">
+            <button class="ctl" type="button" data-ap="doble" aria-pressed="false">Doble rendija</button>
+            <button class="ctl" type="button" data-ap="red" aria-pressed="false">Red</button>
+            <button class="ctl" type="button" data-ap="cristal" aria-pressed="true">Red cristalina</button>
+            <button class="ctl" type="button" data-ap="cuadricula" aria-pressed="false">Cuadrícula</button>
+            <button class="ctl" type="button" data-ap="circular" aria-pressed="false">Pinhole</button>
+          </div>
+        </figcaption>
+      </figure>
+    </div>
+  </section>
+
+  <!-- 04 Filosofía -->
   <section class="sec" id="filosofia" aria-labelledby="t-filosofia" data-malus-root style="--malus: 0.75">
     <div class="wrap sec__grid" data-reveal>
-      <div class="sec__side sec__rule"><p class="sec__num">03</p><p class="label">Filosofía</p></div>
+      <div class="sec__side sec__rule"><p class="sec__num">04</p><p class="label">Filosofía</p></div>
       <div class="sec__main sec__rule">
         <h2 class="title" id="t-filosofia">La física responde cómo. <em>La filosofía insiste en por qué.</em></h2>
         <p class="body">No quiero elegir entre las dos. De ahí salió Cosmosofía, y también lo que escribo y defiendo en voz alta.</p>
@@ -131,7 +196,7 @@ const img = (name: string) => ({
       <figure class="fig sec__wide">
         <div class="fig__stage"><Malus /></div>
         <figcaption class="fig__bar">
-          <p class="fig__cap"><b>Fig. 4</b>Ley de Malus. Tras un polarizador, la luz vibra en un solo plano; un segundo filtro girado θ deja pasar I₀ cos²θ. Gira el analizador: la frase de abajo recibe esa luz. <span class="fig__read" data-malus-read></span></p>
+          <p class="fig__cap"><b>Fig. 7</b>Ley de Malus. Tras un polarizador, la luz vibra en un solo plano; un segundo filtro girado θ deja pasar I₀ cos²θ. Gira el analizador: la frase de abajo recibe esa luz. <span class="fig__read" data-malus-read></span></p>
           <label class="slider"><span class="sr-only">Ángulo del analizador</span><input type="range" min="0" max="90" value="30" step="1" data-malus-range /></label>
         </figcaption>
       </figure>
@@ -150,10 +215,10 @@ const img = (name: string) => ({
     </div>
   </section>
 
-  <!-- 04 Trayectoria -->
+  <!-- 05 Trayectoria -->
   <section class="sec" id="trayectoria" aria-labelledby="t-trayectoria">
     <div class="wrap sec__grid" data-reveal>
-      <div class="sec__side sec__rule"><p class="sec__num">04</p><p class="label">Trayectoria</p></div>
+      <div class="sec__side sec__rule"><p class="sec__num">05</p><p class="label">Trayectoria</p></div>
       <div class="sec__main sec__rule">
         <h2 class="title" id="t-trayectoria">Física en Salamanca, promoción de 2029.</h2>
         <dl class="figures">
@@ -175,16 +240,16 @@ const img = (name: string) => ({
             <li class="row" data-node><p class="row__when">Ahora</p><p class="row__what">Segundo curso</p><p class="row__more">Curso 2026–27. Óptica y fotónica, astrofísica, mecánica cuántica.</p></li>
             <li class="row row--next" data-node><p class="row__when">Próximo</p><p class="row__what">PLANCKS 2027</p><p class="row__more">La competición internacional de física teórica.</p></li>
           </Fiber>
-          <figcaption class="fig__bar"><p class="fig__cap"><b>Fig. 5</b>Reflexión total interna. Más allá del ángulo crítico (unos 42° entre vidrio y aire), la luz no escapa del núcleo y avanza rebotando: así viajan los datos por fibra óptica. Aquí avanza al ritmo de la lectura.</p></figcaption>
+          <figcaption class="fig__bar"><p class="fig__cap"><b>Fig. 8</b>Reflexión total interna. Más allá del ángulo crítico (unos 42° entre vidrio y aire), la luz no escapa del núcleo y avanza rebotando: así viajan los datos por fibra óptica. Aquí avanza al ritmo de la lectura.</p></figcaption>
         </figure>
       </div>
     </div>
   </section>
 
-  <!-- 05 Proyectos -->
+  <!-- 06 Proyectos -->
   <section class="sec" id="proyectos" aria-labelledby="t-proyectos">
     <div class="wrap sec__grid" data-reveal>
-      <div class="sec__side sec__rule"><p class="sec__num">05</p><p class="label">Proyectos</p></div>
+      <div class="sec__side sec__rule"><p class="sec__num">06</p><p class="label">Proyectos</p></div>
       <div class="sec__main sec__rule">
         <h2 class="title" id="t-proyectos">Talking Hands.</h2>
         <p class="body">Un guante que traduce el alfabeto dactilológico español a texto, para que quien no puede hablar se entienda con quien no conoce la lengua de signos. Cinco sensores de flexión en divisores de tensión sobre un Arduino Mega 2560; firmware en C/C++ que los calibra y clasifica cada gesto por umbrales, y una app que muestra la letra y la lee en voz alta. Con Rubén González Sánchez, en el IES Federico García Bernalt, 2024–2025.</p>
@@ -194,23 +259,44 @@ const img = (name: string) => ({
       <div class="sec__main">
         <figure class="fig">
           <div class="fig__stage"><Glove /></div>
-          <figcaption class="fig__bar"><p class="fig__cap"><b>Fig. 6</b>Lecturas de los cinco sensores (ADC de 10 bits) y la letra que forman, escribiendo por el puerto serie. Simulación.</p></figcaption>
+          <figcaption class="fig__bar"><p class="fig__cap"><b>Fig. 9</b>Lecturas de los cinco sensores (ADC de 10 bits) y la letra que forman, escribiendo por el puerto serie. Simulación.</p></figcaption>
         </figure>
         <dl class="facts">
           <div><dt class="label">Mecánica cuántica</dt><dd>Apuntes en LaTeX sobre espacios de Hilbert y el formalismo de Dirac: L²(ℝ), bras y kets, operadores hermíticos, descomposición espectral, regla de Born. Ahora, cúbits y puertas cuánticas.</dd></div>
           <div><dt class="label">Modelización con IA</dt><dd>Simulaciones físicas, de variedades parametrizadas a ajustes por mínimos cuadrados, con Claude, Gemini, modelos abiertos y NotebookLM. La IA propone; cada paso lo compruebo yo.</dd></div>
-          <div><dt class="label">Herramientas</dt><dd>Python, MATLAB, Mathematica, LaTeX, Arduino (C/C++), LabVIEW, PHYWE measure y SAOImage DS9 para imágenes astronómicas.</dd></div>
-          <div><dt class="label">Asociaciones</dt><dd>Supernova (USAL) · OSAL Student Chapter, óptica y fotónica · Optica, miembro individual · Delegación Charra del Grupo de Estudiantes de la RSEF.</dd></div>
+          <div><dt class="label">Asociaciones</dt><dd>Supernova, asociación astronómica de la USAL · OSAL Student Chapter · Optica, miembro individual · Delegación Charra del Grupo de Estudiantes de la RSEF.</dd></div>
           <div><dt class="label">Idiomas</dt><dd>Español, nativo. Inglés, avanzado (formación C1).</dd></div>
         </dl>
+        <p class="label tools-label">Con qué trabajo</p>
       </div>
+    </div>
+    <Tools />
+  </section>
+
+  <!-- 07 Música -->
+  <section class="sec" id="musica" aria-labelledby="t-musica">
+    <div class="wrap sec__grid" data-reveal>
+      <div class="sec__side sec__rule"><p class="sec__num">07</p><p class="label">Música</p></div>
+      <div class="sec__main sec__rule">
+        <h2 class="title" id="t-musica">Lo que suena <em>mientras estudio.</em></h2>
+        <p class="body">Bandas sonoras para concentrarme, rock de siempre y alguna lista para no pensar. Pulsa un disco y sonará mientras sigues leyendo; el reproductor espera abajo, en la esquina.</p>
+      </div>
+    </div>
+    <div class="wrap">
+      <Records />
+    </div>
+    <div class="wrap sec__grid">
+      <figure class="fig sec__wide">
+        <div class="fig__stage"><Chladni /></div>
+        <figcaption class="fig__bar"><p class="fig__cap"><b>Fig. 10</b>Figuras de Chladni. Arena sobre placas que vibran: se aparta de lo que se mueve y se queda en las líneas nodales de cada modo. Con la música sonando, las placas vibran con fuerza y cambian de modo; pulsa una para cambiarlo tú. <span class="fig__read" data-chladni-read></span></p></figcaption>
+      </figure>
     </div>
   </section>
 
-  <!-- 06 Cine -->
+  <!-- 08 Cine -->
   <section class="sec" id="cine" aria-labelledby="t-cine">
     <div class="wrap sec__grid" data-reveal>
-      <div class="sec__side sec__rule"><p class="sec__num">06</p><p class="label">Cine</p></div>
+      <div class="sec__side sec__rule"><p class="sec__num">08</p><p class="label">Cine</p></div>
       <div class="sec__main sec__rule">
         <h2 class="title" id="t-cine"><em lang="en">«{profile.quote}.»</em></h2>
         <p class="body">— <em>{profile.quoteSource}</em>. La frase que me cambió la forma de mirar. {profile.films} películas en Letterboxd, {profile.thisYear} este año; siempre vuelvo a Tarkovski, Lynch, Bergman y Kurosawa.</p>
@@ -236,10 +322,10 @@ const img = (name: string) => ({
     </div>
   </section>
 
-  <!-- 07 Contacto -->
+  <!-- 09 Contacto -->
   <section class="sec contact" id="contacto" aria-labelledby="t-contacto">
     <div class="wrap sec__grid" data-reveal>
-      <div class="sec__side sec__rule"><p class="sec__num">07</p><p class="label">Contacto</p></div>
+      <div class="sec__side sec__rule"><p class="sec__num">09</p><p class="label">Contacto</p></div>
       <div class="sec__main sec__rule">
         <h2 class="title" id="t-contacto">Escríbeme.</h2>
         <p class="contact__mail"><a class="link" href={`mailto:${email}`}>{email}</a></p>
@@ -255,7 +341,7 @@ const img = (name: string) => ({
     <div class="wrap sec__grid">
       <figure class="fig sec__wide">
         <div class="fig__stage"><ThinFilm /></div>
-        <figcaption class="fig__bar"><p class="fig__cap"><b>Fig. 7</b>Interferencia en una lámina delgada: una pompa de jabón que se adelgaza hacia arriba. Cada grosor refleja su color; donde es más fina, ninguno. Pasa el cursor.</p></figcaption>
+        <figcaption class="fig__bar"><p class="fig__cap"><b>Fig. 11</b>Interferencia en una lámina delgada: una pompa de jabón que se adelgaza hacia arriba. Cada grosor refleja su color; donde es más fina, ninguno. Pasa el cursor.</p></figcaption>
       </figure>
     </div>
   </section>
@@ -292,7 +378,7 @@ const img = (name: string) => ({
     .page:first-child { grid-column: 1 / -1; width: 72%; }
   }
 
-  /* The talk, lit by the light Fig. 4 lets through. */
+  /* The talk, lit by the light Fig. 7 lets through. */
   .talk { margin: clamp(48px, 6vw, 80px) 0 0; }
   .talk__title { margin-top: 18px; font-family: var(--serif); font-style: italic; font-weight: 300; font-size: clamp(2.6rem, 6.4vw, 6rem); line-height: 0.98; letter-spacing: -0.03em; color: var(--gold); opacity: calc(0.12 + 0.88 * var(--malus)); transition: opacity 120ms linear; }
   .talk__sub { margin-top: 18px; max-width: 46ch; font-family: var(--serif); font-size: clamp(1.15rem, 1.6vw, 1.4rem); line-height: 1.4; color: var(--ink-2); }
@@ -338,6 +424,9 @@ const img = (name: string) => ({
   @media (max-width: 700px) { .strip { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
 
   /* Contact. */
+  .sky-intro { margin-top: clamp(48px, 6vw, 80px); }
+  .sky-intro .body { margin-top: 12px; }
+  .tools-label { margin-top: clamp(48px, 6vw, 72px); }
   .contact__mail { margin-top: clamp(24px, 3vw, 36px); font-family: var(--serif); font-weight: 300; font-size: clamp(1.7rem, 4.4vw, 3.6rem); letter-spacing: -0.02em; line-height: 1.1; overflow-wrap: anywhere; }
   .contact__list { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 0 24px; margin-top: clamp(36px, 5vw, 56px); }
   .contact__list div { padding: 16px 0; border-top: 1px solid var(--line); }

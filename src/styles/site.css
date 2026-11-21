@@ -85,6 +85,7 @@ button { font: inherit; color: inherit; }
   border-bottom: 1px solid transparent;
 }
 .head.is-solid { background: rgba(10, 10, 11, 0.92); border-bottom-color: var(--line); }
+.head__beam { position: absolute; left: 0; right: 0; bottom: -1px; height: 1px; background: linear-gradient(90deg, rgba(226, 194, 125, 0.15), var(--gold)); transform: scaleX(0); transform-origin: left; box-shadow: 0 0 8px rgba(226, 194, 125, 0.6); pointer-events: none; }
 .head__in { height: 100%; display: flex; align-items: center; justify-content: space-between; gap: 2rem; }
 .head__name { font-family: var(--serif); font-size: 19px; font-weight: 400; letter-spacing: -0.01em; text-decoration: none; white-space: nowrap; }
 .head__nav ol { display: flex; gap: clamp(14px, 1.8vw, 28px); }
@@ -92,7 +93,7 @@ button { font: inherit; color: inherit; }
 .head__nav a:hover, .head__nav a[aria-current] { color: var(--ink); }
 .head__nav a span { color: var(--ink-3); margin-right: 0.45em; }
 .head__menu { display: none; background: none; border: 0; padding: 8px 0; font-family: var(--mono); font-size: 11.5px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--ink-2); cursor: pointer; }
-@media (max-width: 1080px) {
+@media (max-width: 1240px) {
   .head__menu { display: block; }
   .head__nav { position: fixed; inset: var(--head) 0 auto; background: var(--bg); border-bottom: 1px solid var(--line); padding: 8px var(--pad) 20px; display: none; }
   .head.is-open { background: var(--bg); border-bottom-color: var(--line); }
@@ -107,7 +108,10 @@ button { font: inherit; color: inherit; }
 .sec__grid { display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); column-gap: clamp(16px, 2vw, 32px); }
 .sec__side { grid-column: 1 / span 3; }
 .sec__main { grid-column: 4 / -1; min-width: 0; }
-.sec__rule { border-top: 1px solid var(--line); padding-top: 18px; }
+.sec__rule { position: relative; border-top: 1px solid var(--line); padding-top: 18px; }
+/* With the script, the rule is a vibrating string drawn on a canvas (lib/waves.ts). */
+.sec__rule.has-wave { border-top-color: transparent; }
+.rule-canvas { position: absolute; left: 0; top: -10px; pointer-events: none; }
 .sec__num { font-family: var(--mono); font-size: 11.5px; letter-spacing: 0.12em; color: var(--gold); }
 .sec__side .label { margin-top: 6px; }
 .sec__main > .title { max-width: 18ch; }

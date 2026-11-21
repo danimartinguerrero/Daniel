@@ -1,0 +1,105 @@
+---
+/**
+ * Daniel's public Spotify playlists as records: the sleeve is the playlist's cover (640 px), the record
+ * slides out of it and turns under the pointer, and pressing it sends the playlist to the player.
+ * The featured song sits first, larger, with its own record.
+ */
+import spotify from '@/data/spotify.json';
+import { href } from '@/lib/paths';
+
+const f = spotify.featured;
+const mins = (ms: number) => `${Math.floor(ms / 60000)}:${String(Math.round((ms % 60000) / 1000)).padStart(2, '0')}`;
+---
+<div class="records">
+  <button class="lp lp--featured" type="button" data-play-uri={f.uri} data-play-title={f.title} data-play-artist={f.artist} data-play-cover={href(f.cover ?? '')} data-record>
+    <span class="lp__stage">
+      <span class="lp__disc" aria-hidden="true"><span class="lp__label" style={`background-image: url('${href(f.cover ?? '')}')`}></span></span>
+      <img class="lp__sleeve" src={href(f.cover ?? '')} alt="" width="640" height="640" loading="lazy" decoding="async" />
+    </span>
+    <span class="lp__meta">
+      <span class="label lp__kicker">La que suena · {mins(f.ms)}</span>
+      <span class="lp__name">{f.title}</span>
+      <span class="lp__by">{f.artist}</span>
+      <span class="lp__play">Reproducir</span>
+    </span>
+  </button>
+
+  <ul class="shelf" aria-label="Mis listas en Spotify">
+    {spotify.playlists.map((p) => (
+      <li>
+        <button class="lp" type="button" data-play-uri={p.uri} data-play-title={p.name} data-play-artist={`Lista · ${p.count} canciones`} data-play-cover={href(p.cover ?? '')} data-record>
+          <span class="lp__stage">
+            <span class="lp__disc" aria-hidden="true"><span class="lp__label" style={`background-image: url('${href(p.cover ?? '')}')`}></span></span>
+            <img class="lp__sleeve" src={href(p.cover ?? '')} alt="" width="640" height="640" loading="lazy" decoding="async" />
+          </span>
+          <span class="lp__meta">
+            <span class="lp__name">{p.name}</span>
+            <span class="lp__by">{p.count} canciones · {p.tracks.slice(0, 2).map((t) => t.artist.split(',')[0]).join(', ')}…</span>
+          </span>
+        </button>
+      </li>
+    ))}
+  </ul>
+  <p class="records__more"><a class="link arrow" href={spotify.profile}>Mi perfil en Spotify</a></p>
+</div>
+
+<style>
+  .records { margin-top: clamp(48px, 6vw, 80px); }
+  .lp { appearance: none; background: none; border: 0; padding: 0; cursor: pointer; text-align: left; display: grid; gap: 14px; width: 100%; }
+  .lp__stage { position: relative; display: block; aspect-ratio: 1; margin-right: 18%; }
+  .lp__sleeve { position: relative; z-index: 1; width: 100%; height: 100%; object-fit: cover; outline: 1px solid var(--line); outline-offset: -1px; box-shadow: 12px 0 24px -12px rgba(0, 0, 0, 0.8); }
+  /* The record: grooves drawn with a repeating gradient, the cover as its label. */
+  .lp__disc {
+    position: absolute; inset: 3%; border-radius: 50%;
+    background:
+      radial-gradient(circle, transparent 0 31%, rgba(255, 255, 255, 0.05) 31.5%, transparent 32.5%),
+      repeating-radial-gradient(circle, #121214 0 1.2px, #0b0b0c 1.2px 2.6px),
+      #0b0b0c;
+    box-shadow: inset 0 0 0 1px rgba(236, 235, 230, 0.1);
+    transition: transform 900ms var(--ease);
+  }
+  .lp__disc::after { content: ''; position: absolute; inset: 0; border-radius: 50%; background: conic-gradient(from 210deg, transparent 0 10%, rgba(255, 255, 255, 0.07) 14%, transparent 20% 60%, rgba(255, 255, 255, 0.05) 64%, transparent 70%); }
+  .lp__label { position: absolute; inset: 34%; border-radius: 50%; background-size: cover; background-position: center; box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.6); }
+  .lp__label::after { content: ''; position: absolute; inset: 44%; border-radius: 50%; background: var(--bg); }
+  .lp:hover .lp__disc, .lp:focus-visible .lp__disc, .lp.is-on .lp__disc { transform: translateX(22%) rotate(200deg); }
+  .lp.is-playing .lp__disc { transform: translateX(22%); animation: turn 1.8s linear infinite; }
+  @keyframes turn { from { rotate: 0deg; } to { rotate: 360deg; } }
+  @media (prefers-reduced-motion: reduce) { .lp__disc { transition: none; } .lp.is-playing .lp__disc { animation: none; } }
+  .lp__meta { display: grid; gap: 2px; }
+  .lp__name { font-family: var(--serif); font-size: 1.25rem; line-height: 1.2; color: var(--ink); }
+  .lp__by { font-size: 13.5px; color: var(--ink-3); }
+  .lp:hover .lp__name { color: var(--gold); }
+
+  .lp--featured { grid-template-columns: minmax(0, 5fr) minmax(0, 6fr); align-items: end; gap: clamp(24px, 4vw, 64px); margin-bottom: clamp(56px, 7vw, 96px); }
+  .lp--featured .lp__stage { margin-right: 22%; }
+  .lp--featured .lp__name { font-size: clamp(2.6rem, 6vw, 5.4rem); line-height: 0.95; letter-spacing: -0.03em; font-weight: 300; }
+  .lp--featured .lp__by { font-size: clamp(1.05rem, 1.4vw, 1.25rem); color: var(--ink-2); margin-top: 8px; }
+  .lp__kicker { color: var(--gold); margin-bottom: 14px; }
+  .lp__play { justify-self: start; margin-top: 24px; padding: 8px 14px; border: 1px solid var(--line-2); font-family: var(--mono); font-size: 12px; color: var(--ink-2); transition: color 160ms var(--ease), border-color 160ms var(--ease); }
+  .lp--featured:hover .lp__play { color: var(--ink); border-color: var(--ink-3); }
+  .lp--featured.is-playing .lp__play { color: var(--bg); background: var(--ink); border-color: var(--ink); }
+
+  .shelf { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: clamp(16px, 2vw, 28px); }
+  @media (max-width: 1000px) { .shelf { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+  @media (max-width: 560px) { .shelf { grid-template-columns: repeat(2, minmax(0, 1fr)); } .lp--featured { grid-template-columns: 1fr; } }
+  .records__more { margin-top: 32px; }
+</style>
+
+<script>
+  // The record that is playing turns; the one pressed last stays out of its sleeve.
+  const records = [...document.querySelectorAll<HTMLElement>('[data-record]')];
+  let current = '';
+  document.addEventListener('click', (e) => {
+    const r = (e.target as HTMLElement).closest<HTMLElement>('[data-record]');
+    if (r) current = r.dataset.playUri!;
+  });
+  document.addEventListener('music:state', (e) => {
+    const { playing, uri } = (e as CustomEvent).detail as { playing: boolean; uri: string };
+    const now = current || uri;
+    records.forEach((r) => {
+      r.classList.toggle('is-on', r.dataset.playUri === now);
+      r.classList.toggle('is-playing', playing && r.dataset.playUri === now);
+      const play = r.querySelector('.lp__play'); if (play) play.textContent = playing && r.dataset.playUri === now ? 'Sonando' : 'Reproducir';
+    });
+  });
+</script>
