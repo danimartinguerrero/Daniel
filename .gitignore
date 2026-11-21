@@ -10,7 +10,16 @@ playwright-report/
 __pycache__/
 .worktrees/
 .private-exclusions.json
-.claude/skills/
+.claude/skills/*
+# MIT-licensed skills installed for this site (see .claude/SKILLS.md)
+!.claude/skills/design-taste/
+!.claude/skills/taste-typography/
+!.claude/skills/taste-color/
+!.claude/skills/editorial-minimal/
+!.claude/skills/dark-tech/
+!.claude/skills/emil-design-eng/
+!.claude/skills/review-animations/
+!.claude/skills/animate-text/
 .agents/
 
 # Local performance plans and agent reviews (do not publish)
