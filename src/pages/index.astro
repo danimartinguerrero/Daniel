@@ -16,6 +16,8 @@ import Sky from '@/components/Sky.astro';
 import Tools from '@/components/Tools.astro';
 import Records from '@/components/Records.astro';
 import Photos from '@/components/Photos.astro';
+import Plan from '@/components/Plan.astro';
+import Library from '@/components/Library.astro';
 import { entries, favorites, poster, profile, stars } from '@/data/cine';
 import { href } from '@/lib/paths';
 
@@ -26,9 +28,6 @@ const links = {
   github: 'https://github.com/danimartinguerrero',
   tiktok: 'https://www.tiktok.com/@_.danielmg',
 };
-// Pages Daniel signs as author (21 Nov 2026): Mecánica I, temas 1-3 (107) and its formulario (1);
-// capítulo 8 (19), tema 4 parte 1 (31), tema 5 parte 1 (29); Sturm–Liouville y Hermite (14).
-const notePages = 201;
 const recent = entries.filter((e, i, all) => e.poster && all.findIndex((o) => o.slug === e.slug) === i).slice(0, 6);
 const img = (name: string) => ({
   src: href(`/notes/${name}-800.webp`),
@@ -120,17 +119,25 @@ const img = (name: string) => ({
     </div>
   </section>
 
-  <!-- 02 Apuntes -->
-  <section class="sec" id="apuntes" aria-labelledby="t-apuntes">
+  <!-- 02 Física -->
+  <section class="sec" id="fisica" aria-labelledby="t-fisica">
     <div class="wrap sec__grid" data-reveal>
-      <div class="sec__side sec__rule"><p class="sec__num">02</p><p class="label">Apuntes</p></div>
+      <div class="sec__side sec__rule"><p class="sec__num">02</p><p class="label">Física</p></div>
       <div class="sec__main sec__rule">
-        <h2 class="title" id="t-apuntes">Del cuaderno a LaTeX.</h2>
-        <p class="body">Lo que escribo a mano en clase acaba en apuntes formales: cada definición en su caja, cada paso justificado, las figuras redibujadas. Fondo negro, azul, lavanda y dorado: el mismo estilo para toda la carrera. <strong>{notePages} páginas firmadas</strong> hasta hoy, de la mecánica clásica a los métodos matemáticos.</p>
-        <p class="body"><a class="link arrow" href={`${links.github}/Hermite`}>Mecánica I</a>&ensp;&ensp;<a class="link arrow" href={`${links.github}/classical-mechanics`}>Más temas</a></p>
+        <h2 class="title" id="t-fisica">La carrera, <em>por dentro.</em></h2>
+        <p class="body">El Grado en Física de la Universidad de Salamanca: 240 créditos en cuatro años. Primero, superado, con Matrícula de Honor en el Laboratorio de Física; segundo, en curso. Lo que escribo y lo que mido, aquí, en PDF.</p>
       </div>
     </div>
     <div class="wrap sec__grid">
+      <div class="sec__wide"><Plan /></div>
+    </div>
+
+    <div class="wrap sec__grid">
+      <div class="sec__main sub">
+        <p class="label">Apuntes</p>
+        <h3 class="sub__title">Del cuaderno a LaTeX.</h3>
+        <p class="body">Lo que escribo a mano en clase acaba en apuntes formales: cada definición en su caja, cada paso justificado, las figuras redibujadas. Fondo negro, azul, lavanda y dorado: el mismo estilo para toda la carrera.</p>
+      </div>
       <div class="pages sec__wide">
         <figure class="page"><img {...img('hermite-cuaderno')} sizes="(max-width: 900px) 46vw, 30vw" alt="Página manuscrita: la ecuación de Hermite resuelta por series, hasta la fórmula de Rodrigues" width="800" height="1067" loading="lazy" decoding="async" /><figcaption class="label">El cuaderno</figcaption></figure>
         <figure class="page"><img {...img('hermite-portada')} sizes="(max-width: 900px) 46vw, 30vw" alt="Portada de los apuntes Operador de Sturm–Liouville y ecuación de Hermite, con las funciones de Hermite en un pozo parabólico" width="800" height="1132" loading="lazy" decoding="async" /><figcaption class="label">Sturm–Liouville y Hermite</figcaption></figure>
@@ -147,7 +154,40 @@ const img = (name: string) => ({
           </div>
         </figcaption>
       </figure>
+      <div class="sec__wide"><Library /></div>
     </div>
+
+    <div class="wrap sec__grid">
+      <div class="sec__main sub">
+        <p class="label">Laboratorio</p>
+        <h3 class="sub__title">Medir, que es otra forma de entender.</h3>
+        <ol class="rows">
+          <li class="row"><p class="row__when">1.º · Lab. de Física</p><p class="row__what">Práctica 3. La imagen y fuentes de luz. Láser y espectroscopía</p><p class="row__more">Refracción y difracción, espectroscopía y holografía: la reconstrucción de la imagen del holograma y su visualización en la placa holográfica.</p></li>
+          <li class="row"><p class="row__when">1.º · Lab. de Física</p><p class="row__what">Práctica 6. Medida de la constante de Hubble</p><p class="row__more">Galaxias en imágenes FITS con SAOImage DS9: contornos, diámetro angular y, con su velocidad de recesión, la expansión del universo.</p></li>
+          <li class="row"><p class="row__when">1.º · Lab. de Física</p><p class="row__what">Experiencia 1. Dependencia de la resistencia con la temperatura</p><p class="row__more">Con un baño termostático y, por otro lado, un hilo de cobre calentado por efecto Joule: la temperatura, por infrarrojos con un termómetro láser; la resistencia, R = V/I.</p></li>
+          <li class="row"><p class="row__when">2.º · Mecánica y Ondas</p><p class="row__what">Momento de inercia y teorema de Steiner, ondas estacionarias, péndulos acoplados, tubo de Quincke y efecto Doppler con ultrasonidos</p><p class="row__more">Con sus informes, en la biblioteca de arriba: <a class="link" href="#pdf-laboratorio-de-mecanica-y-ondas">Laboratorio de Mecánica y Ondas</a>.</p></li>
+          <li class="row"><p class="row__when">2.º · Instrumentación</p><p class="row__what">Electrónica analógica y teoría de circuitos</p><p class="row__more">Amplificadores operacionales, filtros de primer y segundo orden, un conversor de 4 bits, osciladores sinusoidal y de relajación, oscilogramas, el fenómeno de Gibbs en series de Fourier, diodos y tensiones umbral.</p></li>
+        </ol>
+      </div>
+    </div>
+    <Photos label="En el laboratorio" items={[
+      { id: 'laser-difraccion', title: 'Difracción de un láser', note: 'Práctica 3 · Láser y espectroscopía' },
+      { id: 'laser-pantalla', title: 'Refracción y difracción', note: 'Práctica 3' },
+      { id: 'prisma-goniometro', title: 'Espectroscopía', note: 'Práctica 3 · El espectro en el goniómetro' },
+      { id: 'holografia-montaje', title: 'Reconstrucción del holograma', note: 'Práctica 3 · Holografía' },
+      { id: 'holografia', title: 'La imagen en la placa holográfica', note: 'Práctica 3 · Holografía' },
+      { id: 'termometria', title: 'Resistencia y temperatura', note: 'Experiencia 1 · Efecto Joule y termómetro de infrarrojos' },
+      { id: 'momento-inercia', title: 'Teorema de Steiner', note: 'Mecánica y Ondas · Momento de inercia' },
+      { id: 'ondas-cuerda', title: 'Ondas estacionarias', note: 'Mecánica y Ondas · Nodos y vientres en una cuerda' },
+      { id: 'pendulos-acoplados', title: 'Péndulos acoplados', note: 'Mecánica y Ondas · Dos osciladores que se pasan la energía' },
+      { id: 'pulsaciones', title: 'Pulsaciones', note: 'Mecánica y Ondas · La energía va y viene' },
+      { id: 'pendulo-pohl', title: 'Péndulo de Pohl', note: 'Mecánica y Ondas · Oscilaciones forzadas y amortiguadas' },
+      { id: 'osciloscopio-senales', title: 'Oscilogramas', note: 'Instrumentación electrónica' },
+      { id: 'oscilogramas', title: 'Oscilador de relajación', note: 'Instrumentación electrónica' },
+      { id: 'entrenador-at700', title: 'Circuitos en el entrenador', note: 'Instrumentación electrónica · Electrónica analógica' },
+      { id: 'protoboard', title: 'Filtros y amplificadores', note: 'Instrumentación electrónica · Protoboard' },
+      { id: 'pizarra', title: 'La pizarra', note: 'Facultad de Ciencias' },
+    ]} />
   </section>
 
   <!-- 03 Óptica y fotónica -->
@@ -186,14 +226,9 @@ const img = (name: string) => ({
         </blockquote>
       </div>
     </div>
-    <Photos label="Del bit al qubit y óptica con OSAL" items={[
+    <Photos label="Del bit al qubit" items={[
       { id: 'seminario-qubit-portada', title: 'Del bit al qubit', note: 'Universidad de Salamanca y NTT DATA' },
       { id: 'seminario-qubit-grupo', title: 'Tras el taller', note: 'Con Nacho Benito Fiz, en la Facultad de Ciencias' },
-      { id: 'laser-difraccion', title: 'Difracción de un láser rojo', note: 'Anillos alrededor del máximo central' },
-      { id: 'holografia-montaje', title: 'Holografía', note: 'El montaje, a la luz del láser' },
-      { id: 'holografia', title: 'Un holograma', note: 'La imagen reconstruida tras la placa' },
-      { id: 'prisma-goniometro', title: 'Prisma y espectro', note: 'Dispersión medida en un goniómetro' },
-      { id: 'laser-pantalla', title: 'Láser y pantalla', note: 'El haz, del diodo a la pantalla' },
     ]} />
     <div class="wrap sec__grid">
       <figure class="fig sec__wide">
@@ -281,20 +316,8 @@ const img = (name: string) => ({
           </Fiber>
           <figcaption class="fig__bar"><p class="fig__cap"><b>Fig. 8</b>Reflexión total interna. Más allá del ángulo crítico (unos 42° entre vidrio y aire), la luz no escapa del núcleo y avanza rebotando: así viajan los datos por fibra óptica. Aquí avanza al ritmo de la lectura.</p></figcaption>
         </figure>
-        <p class="label lab-label">En el laboratorio</p>
       </div>
     </div>
-    <Photos label="En el laboratorio" items={[
-      { id: 'pendulos-acoplados', title: 'Péndulos acoplados', note: 'Dos osciladores que se pasan la energía' },
-      { id: 'pulsaciones', title: 'Pulsaciones', note: 'La energía va y viene entre los dos péndulos' },
-      { id: 'pendulo-pohl', title: 'Péndulo de Pohl', note: 'Oscilaciones libres, amortiguadas y forzadas' },
-      { id: 'ondas-cuerda', title: 'Ondas estacionarias', note: 'Nodos y vientres en una cuerda' },
-      { id: 'osciloscopio', title: 'Osciloscopio', note: 'Dos señales y su desfase' },
-      { id: 'protoboard', title: 'Circuitos en protoboard', note: 'Montaje y medida' },
-      { id: 'momento-inercia', title: 'Dinámica de rotación', note: 'Momentos de inercia y pares' },
-      { id: 'banco-sensores', title: 'Adquisición de datos', note: 'Sensores, interfaz y ordenador' },
-      { id: 'termometria', title: 'Medidas de temperatura', note: 'Termopares y multímetros' },
-    ]} />
   </section>
 
   <!-- 06 Proyectos -->
@@ -489,7 +512,8 @@ const img = (name: string) => ({
   @media (max-width: 700px) { .members { grid-template-columns: 1fr; } }
   .feynman { margin: clamp(36px, 4vw, 56px) 0 0; display: grid; gap: 12px; }
   .feynman p:first-child { font-family: var(--serif); font-weight: 300; font-style: italic; font-size: clamp(1.5rem, 2.6vw, 2.2rem); line-height: 1.2; letter-spacing: -0.01em; max-width: 30ch; }
-  .lab-label { margin-top: clamp(56px, 7vw, 88px); }
+  .sub { margin-top: clamp(72px, 9vw, 120px); }
+  .sub__title { margin: 10px 0 18px; font-family: var(--serif); font-weight: 300; font-size: clamp(1.7rem, 3vw, 2.6rem); line-height: 1.08; letter-spacing: -0.02em; }
   .sky-intro .body { margin-top: 12px; }
   .tools-label { margin-top: clamp(48px, 6vw, 72px); }
   .contact__mail { margin-top: clamp(24px, 3vw, 36px); font-family: var(--serif); font-weight: 300; font-size: clamp(1.7rem, 4.4vw, 3.6rem); letter-spacing: -0.02em; line-height: 1.1; overflow-wrap: anywhere; }

@@ -166,5 +166,33 @@
    1280
   ],
   "ratio": 1.7778
+ },
+ "oscilogramas": {
+  "w": [
+   900,
+   1800
+  ],
+  "ratio": 1.3333
+ },
+ "entrenador-at700": {
+  "w": [
+   900,
+   1500
+  ],
+  "ratio": 0.75
+ },
+ "pizarra": {
+  "w": [
+   900,
+   1800
+  ],
+  "ratio": 2.1672
+ },
+ "osciloscopio-senales": {
+  "w": [
+   900,
+   1800
+  ],
+  "ratio": 1.3333
  }
 }

@@ -26,3 +26,7 @@ __pycache__/
 /docs/plan-rendimiento.md
 /docs/fable-performance-plan.md
 /docs/fable-performance-consensus.md
+
+# Notes and lab reports, synced from danimartinguerrero/apuntes at build time (scripts/apuntes.mjs)
+/public/apuntes/
+/.cache/
