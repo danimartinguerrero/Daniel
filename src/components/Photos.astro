@@ -1,0 +1,77 @@
+---
+/**
+ * Daniel's own photographs, in a strip that scrolls by hand (like the sky's, but lower): each image is
+ * served at its native resolution and half of it, uncovers itself on arrival and drifts slightly.
+ * Items name a file in public/photos/ (see src/data/photos.json for its sizes).
+ */
+import meta from '@/data/photos.json';
+import { href } from '@/lib/paths';
+
+interface Item { id: keyof typeof meta; title: string; note?: string }
+interface Props { items: Item[]; label: string; tall?: boolean }
+const { items, label, tall = false } = Astro.props;
+const src = (id: string, w: number) => href(`/photos/${id}-${w}.webp`);
+---
+<div class:list={['photos', { 'photos--tall': tall }]} data-photos>
+  <ol class="photos__strip" tabindex="0" aria-label={label}>
+    {items.map((it) => {
+      const m = meta[it.id];
+      return (
+        <li class="photos__plate" style={`--ratio: ${m.ratio}`}>
+          <a href={src(it.id, m.w[m.w.length - 1])} class="photos__frame" aria-label={`${it.title}, a tamaño completo`}>
+            <img src={src(it.id, m.w[0])} srcset={m.w.map((w) => `${src(it.id, w)} ${w}w`).join(', ')}
+              sizes="(max-width: 700px) 70vw, 30vw" alt={it.title} width={m.w[0]} height={Math.round(m.w[0] / m.ratio)}
+              loading="lazy" decoding="async" data-photo />
+          </a>
+          <p class="photos__cap"><span class="photos__t">{it.title}</span>{it.note && <span class="photos__n">{it.note}</span>}</p>
+        </li>
+      );
+    })}
+  </ol>
+</div>
+
+<style>
+  .photos { margin-top: clamp(40px, 5vw, 64px); }
+  .photos__strip { display: flex; gap: clamp(10px, 1.4vw, 20px); overflow-x: auto; scroll-snap-type: x mandatory; padding: 0 var(--pad) 16px; scrollbar-width: thin; scrollbar-color: var(--line-2) transparent; }
+  .photos__plate { --h: clamp(240px, 40vh, 420px); flex: none; scroll-snap-align: start; height: var(--h); width: calc(var(--h) * var(--ratio)); max-width: 86vw; display: grid; grid-template-rows: minmax(0, 1fr) auto; gap: 12px; }
+  .photos--tall .photos__plate { --h: clamp(300px, 52vh, 560px); }
+  .photos__frame { display: block; overflow: hidden; outline: 1px solid var(--line); outline-offset: -1px; background: #000; }
+  .photos__frame img { width: 100%; height: 100%; object-fit: cover; transform: scale(1.06); transition: filter 400ms var(--ease); filter: saturate(0.92); }
+  .photos__frame:hover img { filter: saturate(1.05); }
+  .photos__cap { display: grid; gap: 2px; font-size: 13.5px; line-height: 1.4; max-width: 46ch; }
+  .photos__t { font-family: var(--serif); font-size: 1.08rem; color: var(--ink); }
+  .photos__n { color: var(--ink-3); }
+  @media (prefers-reduced-motion: no-preference) {
+    :global(html.js) .photos__frame { clip-path: inset(0 100% 0 0); transition: clip-path 1200ms var(--ease); }
+    :global(html.js) .photos__plate.is-in .photos__frame { clip-path: inset(0 0 0 0); }
+  }
+</style>
+
+<script>
+  import { reduceMotion } from '@/lib/figure';
+
+  document.querySelectorAll<HTMLElement>('[data-photos]').forEach((root) => {
+    const strip = root.querySelector<HTMLElement>('.photos__strip')!;
+    const plates = [...root.querySelectorAll<HTMLElement>('.photos__plate')];
+    const io = new IntersectionObserver((entries) => {
+      for (const e of entries) if (e.isIntersecting) { e.target.classList.add('is-in'); io.unobserve(e.target); }
+    }, { threshold: 0.12 });
+    plates.forEach((p) => io.observe(p));
+    if (reduceMotion()) return;
+    let queued = false;
+    const drift = () => {
+      queued = false;
+      for (const p of plates) {
+        const r = p.getBoundingClientRect();
+        if (r.right < 0 || r.left > innerWidth || r.bottom < 0 || r.top > innerHeight) continue;
+        const dx = ((r.left + r.width / 2) / innerWidth - 0.5) * -18;
+        const dy = ((r.top + r.height / 2) / innerHeight - 0.5) * -14;
+        (p.querySelector('[data-photo]') as HTMLElement).style.transform = `scale(1.06) translate(${dx}px, ${dy}px)`;
+      }
+    };
+    const ask = () => { if (!queued) { queued = true; requestAnimationFrame(drift); } };
+    strip.addEventListener('scroll', ask, { passive: true });
+    addEventListener('scroll', ask, { passive: true });
+    drift();
+  });
+</script>

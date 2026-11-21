@@ -1,0 +1,88 @@
+---
+/**
+ * The sky, in photographs: NASA and ESA/Webb images at up to 4K, in a horizontal strip that scrolls by
+ * hand. Each image uncovers itself as it comes into view and drifts slightly against the scroll.
+ * NASA images are public domain; ESA/Webb images are CC BY 4.0, credited as the agency asks.
+ */
+import { href } from '@/lib/paths';
+
+const plates = [
+  { id: 'webb-acantilados', w: [1200, 2400, 3840], ratio: 14570 / 8452, title: 'Acantilados cósmicos, nebulosa de Carina', what: 'James Webb, NIRCam · 2022', credit: 'NASA, ESA, CSA, STScI', link: 'https://esawebb.org/images/carinanebula3/', wide: true },
+  { id: 'hubble-pilares', w: [1200, 2400, 3249], ratio: 3249 / 3045, title: 'Pilares de la Creación, en infrarrojo', what: 'Hubble, WFC3 · 2015', credit: 'NASA, ESA y Hubble Heritage Team', link: 'https://images.nasa.gov/details/GSFC_20171208_Archive_e000842' },
+  { id: 'artemis-ii-tierra', w: [1200, 2400, 3840], ratio: 5568 / 3712, title: 'La Tierra se pone tras la Luna', what: 'Artemis II, desde Orion · 2026', credit: 'NASA', link: 'https://images.nasa.gov/details/art002e021278', wide: true },
+  { id: 'artemis-i', w: [1200, 2400, 2924], ratio: 2924 / 4048, title: 'Lanzamiento de Artemis I', what: 'SLS y Orion, plataforma 39B · 2022', credit: 'NASA / Joel Kowsky', link: 'https://images.nasa.gov/details/NHQ202211160009' },
+  { id: 'hubble-xdf', w: [1200, 2382], ratio: 2382 / 2078, title: 'Hubble eXtreme Deep Field', what: 'Unas 5 500 galaxias en un punto del cielo · 2012', credit: 'NASA, ESA, G. Illingworth, D. Magee, P. Oesch, R. Bouwens y el equipo HUDF09', link: 'https://images.nasa.gov/details/GSFC_20171208_Archive_e001651' },
+  { id: 'falcon-heavy', w: [1200, 2400, 3004], ratio: 3004 / 4077, title: 'Falcon Heavy, la noche antes', what: 'SpaceX, misión STP-2 · 2019', credit: 'NASA / Joel Kowsky', link: 'https://images.nasa.gov/details/NHQ201906240104' },
+];
+const src = (p: typeof plates[number], w: number) => href(`/space/${p.id}-${w}.webp`);
+---
+<div class="sky" data-sky>
+  <ol class="sky__strip" tabindex="0" aria-label="Fotografías del cielo">
+    {plates.map((p, i) => (
+      <li class:list={['sky__plate', { 'sky__plate--wide': p.wide }]} style={`--ratio: ${p.ratio}`}>
+        <a href={src(p, p.w[p.w.length - 1])} class="sky__frame" aria-label={`${p.title}, a máxima resolución`}>
+          <img
+            src={src(p, 1200)}
+            srcset={p.w.map((w) => `${src(p, w)} ${w}w`).join(', ')}
+            sizes="(max-width: 700px) 86vw, 62vw"
+            alt={p.title} width="1200" height={Math.round(1200 / p.ratio)}
+            loading={i < 2 ? 'eager' : 'lazy'} decoding="async" data-sky-img />
+        </a>
+        <p class="sky__cap"><span class="sky__n">{String(i + 1).padStart(2, '0')}</span><span class="sky__t">{p.title}</span><span class="sky__w">{p.what}</span><a class="sky__c" href={p.link}>{p.credit}</a></p>
+      </li>
+    ))}
+  </ol>
+</div>
+
+<style>
+  .sky { margin-top: clamp(48px, 6vw, 80px); }
+  .sky__strip { display: flex; gap: clamp(12px, 1.6vw, 24px); overflow-x: auto; scroll-snap-type: x mandatory; padding: 0 var(--pad) 18px; scrollbar-width: thin; scrollbar-color: var(--line-2) transparent; }
+  .sky__strip:focus-visible { outline-offset: -1px; }
+  .sky__plate { flex: none; scroll-snap-align: start; height: clamp(320px, 62vh, 640px); width: calc(clamp(320px, 62vh, 640px) * var(--ratio)); max-width: 88vw; display: grid; grid-template-rows: minmax(0, 1fr) auto; gap: 14px; }
+  .sky__frame { display: block; overflow: hidden; outline: 1px solid var(--line); outline-offset: -1px; background: #000; }
+  .sky__frame img { width: 100%; height: 100%; object-fit: cover; transform: scale(1.08); will-change: transform; }
+  .sky__cap { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 2px 12px; font-size: 13.5px; line-height: 1.45; }
+  .sky__n { grid-row: span 3; font-family: var(--mono); font-size: 11.5px; color: var(--gold); padding-top: 2px; }
+  .sky__t { font-family: var(--serif); font-size: 1.15rem; line-height: 1.25; color: var(--ink); }
+  .sky__w { color: var(--ink-2); }
+  .sky__c { font-family: var(--mono); font-size: 10.5px; letter-spacing: 0.04em; color: var(--ink-3); text-decoration: none; }
+  .sky__c:hover { color: var(--gold); }
+  /* Each photograph uncovers itself once, as a shutter would. */
+  @media (prefers-reduced-motion: no-preference) {
+    :global(html.js) .sky__frame { clip-path: inset(0 100% 0 0); transition: clip-path 1400ms var(--ease); }
+    :global(html.js) .sky__plate.is-in .sky__frame { clip-path: inset(0 0 0 0); }
+  }
+  @media (max-width: 700px) { .sky__plate { height: 56vh; } }
+</style>
+
+<script>
+  import { reduceMotion } from '@/lib/figure';
+
+  document.querySelectorAll<HTMLElement>('[data-sky]').forEach((root) => {
+    const strip = root.querySelector<HTMLElement>('.sky__strip')!;
+    const plates = [...root.querySelectorAll<HTMLElement>('.sky__plate')];
+    const io = new IntersectionObserver((entries) => {
+      for (const e of entries) if (e.isIntersecting) { e.target.classList.add('is-in'); io.unobserve(e.target); }
+    }, { root: null, threshold: 0.15 });
+    plates.forEach((p) => io.observe(p));
+    if (reduceMotion()) { root.querySelectorAll<HTMLElement>('[data-sky-img]').forEach((i) => (i.style.transform = 'none')); return; }
+    // A slight drift of each image inside its frame, against the strip's and the page's movement.
+    let queued = false;
+    const drift = () => {
+      queued = false;
+      const vw = innerWidth, vh = innerHeight;
+      for (const p of plates) {
+        const r = p.getBoundingClientRect();
+        if (r.right < 0 || r.left > vw || r.bottom < 0 || r.top > vh) continue;
+        const dx = ((r.left + r.width / 2) / vw - 0.5) * -24;
+        const dy = ((r.top + r.height / 2) / vh - 0.5) * -18;
+        (p.querySelector('[data-sky-img]') as HTMLElement).style.transform = `scale(1.08) translate(${dx}px, ${dy}px)`;
+      }
+    };
+    const ask = () => { if (!queued) { queued = true; requestAnimationFrame(drift); } };
+    strip.addEventListener('scroll', ask, { passive: true });
+    addEventListener('scroll', ask, { passive: true });
+    addEventListener('resize', ask);
+    drift();
+  });
+</script>

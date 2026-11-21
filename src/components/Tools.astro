@@ -1,0 +1,73 @@
+---
+/**
+ * The tools Daniel works with, as two rows that drift past in opposite directions (stopping under the
+ * pointer), each logo in the page's ink and linked to the tool's own site. Logos from Simple Icons
+ * (CC0) and, for MATLAB, Wikimedia Commons; SAOImage DS9 and PHYWE measure are typeset, as they have no
+ * published vector mark.
+ */
+import { href } from '@/lib/paths';
+
+type Tool = { name: string; url: string; icon?: string; mark?: string; note: string };
+const rows: Tool[][] = [
+  [
+    { name: 'Python', url: 'https://www.python.org/', icon: 'python.svg', note: 'cálculo y simulación' },
+    { name: 'MATLAB', url: 'https://www.mathworks.com/products/matlab.html', icon: 'matlab.png', note: 'análisis numérico' },
+    { name: 'Mathematica', url: 'https://www.wolfram.com/mathematica/', icon: 'wolframmathematica.svg', note: 'cálculo simbólico' },
+    { name: 'LaTeX', url: 'https://www.latex-project.org/', icon: 'latex.svg', note: 'apuntes, nivel avanzado' },
+    { name: 'SAOImage DS9', url: 'https://sites.google.com/cfa.harvard.edu/saoimageds9', mark: 'DS9', note: 'imágenes astronómicas' },
+    { name: 'Jupyter', url: 'https://jupyter.org/', icon: 'jupyter.svg', note: 'cuadernos' },
+    { name: 'NumPy', url: 'https://numpy.org/', icon: 'numpy.svg', note: 'arrays y álgebra lineal' },
+  ],
+  [
+    { name: 'PHYWE measure', url: 'https://www.phywe.com/', mark: 'PHYWE', note: 'laboratorio' },
+    { name: 'LabVIEW', url: 'https://www.ni.com/labview', icon: 'labview.svg', note: 'instrumentación' },
+    { name: 'Arduino', url: 'https://www.arduino.cc/', icon: 'arduino.svg', note: 'C/C++, prototipos' },
+    { name: 'Overleaf', url: 'https://www.overleaf.com/', icon: 'overleaf.svg', note: 'LaTeX en la nube' },
+    { name: 'Claude', url: 'https://claude.ai/', icon: 'claude.svg', note: 'modelización con IA' },
+    { name: 'Gemini', url: 'https://gemini.google.com/', icon: 'googlegemini.svg', note: 'modelización con IA' },
+    { name: 'NotebookLM', url: 'https://notebooklm.google/', icon: 'notebooklm.svg', note: 'estudio con fuentes' },
+  ],
+];
+---
+<div class="tools" data-tools>
+  {rows.map((row, r) => (
+    <div class:list={['tools__row', { 'tools__row--back': r === 1 }]}>
+      <ul class="tools__track">
+        {[...row, ...row].map((t, i) => (
+          <li aria-hidden={i >= row.length ? 'true' : undefined}>
+            <a class="tool" href={t.url} tabindex={i >= row.length ? -1 : undefined}>
+              {t.icon
+                ? <span class="tool__ico" style={`--icon: url('${href(`/tools/${t.icon}`)}')`} aria-hidden="true"></span>
+                : <span class="tool__mark" aria-hidden="true">{t.mark}</span>}
+              <span class="tool__txt"><span class="tool__name">{t.name}</span><span class="tool__note">{t.note}</span></span>
+            </a>
+          </li>
+        ))}
+      </ul>
+    </div>
+  ))}
+</div>
+
+<style>
+  .tools { margin-top: clamp(40px, 5vw, 64px); display: grid; gap: 12px; mask-image: linear-gradient(90deg, transparent, #000 8%, #000 92%, transparent); -webkit-mask-image: linear-gradient(90deg, transparent, #000 8%, #000 92%, transparent); }
+  .tools__row { overflow: hidden; }
+  .tools__track { display: flex; width: max-content; }
+  .tools__track li { flex: none; }
+  .tool { display: flex; align-items: center; gap: 14px; padding: 14px 28px 14px 0; margin-right: 28px; border-right: 1px solid var(--line); text-decoration: none; color: var(--ink-2); transition: color 200ms var(--ease); }
+  .tool:hover { color: var(--ink); }
+  .tool__ico { width: 30px; height: 30px; flex: none; background: currentColor; mask: var(--icon) center / contain no-repeat; -webkit-mask: var(--icon) center / contain no-repeat; }
+  .tool__mark { width: 30px; height: 30px; flex: none; display: grid; place-items: center; font-family: var(--mono); font-size: 9.5px; font-weight: 600; letter-spacing: 0.04em; border: 1px solid currentColor; }
+  .tool__txt { display: grid; }
+  .tool__name { font-family: var(--serif); font-size: 1.25rem; line-height: 1.2; color: var(--ink); }
+  .tool__note { font-family: var(--mono); font-size: 10.5px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--ink-3); }
+  @media (prefers-reduced-motion: no-preference) {
+    .tools__track { animation: drift 70s linear infinite; }
+    .tools__row--back .tools__track { animation-direction: reverse; animation-duration: 80s; }
+    .tools__row:hover .tools__track, .tools__row:focus-within .tools__track { animation-play-state: paused; }
+  }
+  @keyframes drift { to { transform: translateX(-50%); } }
+  @media (prefers-reduced-motion: reduce) {
+    .tools__track { width: auto; flex-wrap: wrap; }
+    .tools__track li[aria-hidden='true'] { display: none; }
+  }
+</style>

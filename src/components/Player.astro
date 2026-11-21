@@ -1,0 +1,151 @@
+---
+/**
+ * The music that can play while the site is read: a small pill fixed to the corner of the screen, with
+ * the cover turning like a record while it sounds. Playback is Spotify's official embed player, loaded
+ * through its iFrame API on the first press (browsers only let sound start after a gesture). Without a
+ * Spotify session the embed plays 30-second previews; signed in, whole songs. Anything on the page
+ * with [data-play-uri] sends its playlist or track here.
+ */
+import spotify from '@/data/spotify.json';
+import { href } from '@/lib/paths';
+
+const f = spotify.featured;
+---
+<aside class="player" data-player data-uri={f.uri} aria-label="Música">
+  <div class="player__panel" data-player-panel>
+    <div class="player__embed" data-player-embed></div>
+  </div>
+  <div class="player__bar">
+    <button class="player__disc" type="button" data-player-toggle aria-label={`Reproducir ${f.title}, de ${f.artist}`}>
+      <img src={href(f.cover ?? '')} alt="" width="40" height="40" data-player-cover />
+      <span class="player__hole" aria-hidden="true"></span>
+      <span class="player__icon" aria-hidden="true"><svg viewBox="0 0 16 16" data-player-icon><path d="M5 3.5v9l7-4.5z" /></svg></span>
+    </button>
+    <div class="player__meta">
+      <p class="player__label" data-player-state>Escúchala mientras lees</p>
+      <p class="player__title"><span data-player-title>{f.title}</span> · <span data-player-artist>{f.artist}</span></p>
+    </div>
+    <button class="player__more" type="button" data-player-more aria-expanded="false" aria-label="Mostrar el reproductor de Spotify">
+      <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M3.5 10 8 5.5l4.5 4.5" /></svg>
+    </button>
+  </div>
+</aside>
+
+<style>
+  /* At rest only the record shows, so it never covers the page; it opens under the pointer, on focus,
+     for a few seconds when the music changes, and while Spotify's own player is out. */
+  .player {
+    position: fixed; left: max(12px, env(safe-area-inset-left)); bottom: max(12px, env(safe-area-inset-bottom)); z-index: 60;
+    width: 62px; overflow: hidden;
+    transition: transform 700ms var(--ease), width 500ms var(--ease);
+    background: rgba(15, 15, 17, 0.94); border: 1px solid var(--line-2);
+    font-family: var(--sans);
+    transform: translateY(calc(100% + 24px));
+  }
+  .player:hover, .player:focus-within, .player.is-open, .player.is-telling { width: min(340px, calc(100vw - 24px)); }
+  .player__bar { min-width: min(340px, calc(100vw - 24px)); }
+  .player.is-ready { transform: none; }
+  .player__panel { display: grid; grid-template-rows: 0fr; transition: grid-template-rows 500ms var(--ease); }
+  .player.is-open .player__panel { grid-template-rows: 1fr; }
+  .player__embed { overflow: hidden; min-height: 0; }
+  .player__embed :global(iframe) { display: block; width: 100%; height: 152px; border: 0; }
+  .player__bar { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 12px; padding: 8px 8px 8px 8px; }
+  .player__disc { position: relative; width: 44px; height: 44px; padding: 0; border: 0; border-radius: 50%; overflow: hidden; cursor: pointer; background: #000; }
+  .player__disc img { width: 100%; height: 100%; object-fit: cover; border-radius: 50%; }
+  .player.is-playing .player__disc img { animation: spin 6s linear infinite; }
+  @media (prefers-reduced-motion: reduce) { .player.is-playing .player__disc img { animation: none; } }
+  @keyframes spin { to { transform: rotate(1turn); } }
+  .player__hole { position: absolute; inset: 50% auto auto 50%; width: 8px; height: 8px; margin: -4px 0 0 -4px; border-radius: 50%; background: rgba(15, 15, 17, 0.94); box-shadow: 0 0 0 1px rgba(236, 235, 230, 0.25); }
+  .player__icon { position: absolute; inset: 0; display: grid; place-items: center; background: rgba(10, 10, 11, 0.42); transition: background-color 200ms var(--ease); }
+  .player__icon svg { width: 14px; height: 14px; fill: var(--ink); }
+  .player.is-playing .player__icon { background: transparent; }
+  .player.is-playing .player__icon svg { opacity: 0; }
+  .player__disc:hover .player__icon svg, .player__disc:focus-visible .player__icon svg { opacity: 1; }
+  .player__disc:hover .player__icon { background: rgba(10, 10, 11, 0.42); }
+  .player__label { font-family: var(--mono); font-size: 10.5px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--gold); }
+  .player__title { font-size: 13.5px; line-height: 1.35; color: var(--ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .player__title span:last-child { color: var(--ink-2); }
+  .player__more { width: 32px; height: 32px; display: grid; place-items: center; background: none; border: 1px solid var(--line-2); cursor: pointer; color: var(--ink-2); }
+  .player__more svg { width: 14px; height: 14px; fill: none; stroke: currentColor; stroke-width: 1.4; transition: transform 300ms var(--ease); }
+  .player.is-open .player__more svg { transform: rotate(180deg); }
+  .player__more:hover { color: var(--ink); border-color: var(--ink-3); }
+</style>
+
+<script>
+  type Controller = { loadUri(uri: string): void; play(): void; togglePlay(): void; resume(): void; pause(): void; addListener(e: string, cb: (ev: { data: { isPaused: boolean; position: number; duration: number } }) => void): void };
+  type IFrameAPI = { createController(el: HTMLElement, opts: { uri: string; width?: string | number; height?: number; theme?: string }, cb: (c: Controller) => void): void };
+
+  const root = document.querySelector<HTMLElement>('[data-player]');
+  if (root) {
+    const embed = root.querySelector<HTMLElement>('[data-player-embed]')!;
+    const toggle = root.querySelector<HTMLButtonElement>('[data-player-toggle]')!;
+    const more = root.querySelector<HTMLButtonElement>('[data-player-more]')!;
+    const state = root.querySelector<HTMLElement>('[data-player-state]')!;
+    const title = root.querySelector<HTMLElement>('[data-player-title]')!;
+    const artist = root.querySelector<HTMLElement>('[data-player-artist]')!;
+    const cover = root.querySelector<HTMLImageElement>('[data-player-cover]')!;
+    let controller: Controller | null = null;
+    let pending: Promise<Controller> | null = null;
+    let uri = root.dataset.uri!;
+    let playing = false;
+
+    // The pill rises once the first screen has been seen.
+    setTimeout(() => { root.classList.add('is-ready'); tell(); }, 1600);
+
+    const announce = () => {
+      root.classList.toggle('is-playing', playing);
+      state.textContent = playing ? 'Sonando' : controller ? 'En pausa' : 'Escúchala mientras lees';
+      toggle.setAttribute('aria-label', `${playing ? 'Pausar' : 'Reproducir'} ${title.textContent}, de ${artist.textContent}`);
+      document.dispatchEvent(new CustomEvent('music:state', { detail: { playing, uri } }));
+      tell();
+    };
+    // Opens for a moment to say what changed.
+    let telling = 0;
+    const tell = () => { root.classList.add('is-telling'); clearTimeout(telling); telling = window.setTimeout(() => root.classList.remove('is-telling'), 4000); };
+
+    const open = (v: boolean) => { root.classList.toggle('is-open', v); more.setAttribute('aria-expanded', String(v)); };
+    more.addEventListener('click', () => open(!root.classList.contains('is-open')));
+
+    const load = () => pending ??= new Promise<Controller>((resolve) => {
+      (window as unknown as { onSpotifyIframeApiReady: (api: IFrameAPI) => void }).onSpotifyIframeApiReady = (api) => {
+        const host = document.createElement('div');
+        embed.append(host);
+        api.createController(host, { uri, width: '100%', height: 152, theme: 'dark' }, (c) => {
+          c.addListener('playback_update', (e) => { const p = !e.data.isPaused; if (p !== playing) { playing = p; announce(); } });
+          controller = c; resolve(c);
+        });
+      };
+      const s = document.createElement('script');
+      s.src = 'https://open.spotify.com/embed/iframe-api/v1';
+      s.async = true;
+      document.head.append(s);
+    });
+
+    const play = async (next?: { uri: string; title?: string; artist?: string; cover?: string }) => {
+      if (next) {
+        uri = next.uri;
+        if (next.title) title.textContent = next.title;
+        if (next.artist) artist.textContent = next.artist;
+        if (next.cover) cover.src = next.cover;
+      }
+      const first = !controller;
+      const c = await load();
+      if (next && !first) c.loadUri(uri);
+      // Some browsers only let the embed start from a press inside it: show it the first time.
+      if (first) open(true);
+      setTimeout(() => c.play(), first ? 600 : 50);
+    };
+
+    toggle.addEventListener('click', () => {
+      if (!controller) return void play();
+      controller.togglePlay();
+    });
+    document.addEventListener('click', (e) => {
+      const el = (e.target as HTMLElement).closest<HTMLElement>('[data-play-uri]');
+      if (!el) return;
+      e.preventDefault();
+      root.classList.add('is-ready');
+      play({ uri: el.dataset.playUri!, title: el.dataset.playTitle, artist: el.dataset.playArtist, cover: el.dataset.playCover });
+    });
+  }
+</script>

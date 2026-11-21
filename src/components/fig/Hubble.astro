@@ -1,0 +1,135 @@
+---
+/**
+ * Fig. 4: Hubble's law with Daniel's own measurements (Laboratorio de Física, práctica 6, 19 April 2026).
+ * 27 galaxies: the distance from each one's angular diameter in DS9, assuming D ≈ 20 kpc (d ≃ D/θ),
+ * against its recession velocity (Kennicutt, 1992). The fits are the report's, computed here from the
+ * same table: through the origin, without the Sa galaxies, with D = 10 kpc, and a free line.
+ */
+const data: [string, string, number, number][] = [
+  ['NGC 1357', 'Sa', 28.621, 2100], ['NGC 1832', 'SBb', 29.154, 1860], ['NGC 2276', 'Sc', 28.383, 2650],
+  ['NGC 2775', 'Sa', 54.091, 1200], ['NGC 2903', 'Sc', 10.024, 470], ['NGC 3034', 'I0', 11.041, 410],
+  ['NGC 3147', 'Sb', 22.46, 2900], ['NGC 3227', 'Sb', 18.772, 1100], ['NGC 3245', 'S0', 26.642, 1210],
+  ['NGC 3310', 'Sbc', 30.595, 1070], ['NGC 3368', 'Sab', 13.711, 760], ['NGC 3471', 'Sa', 43.51, 2140],
+  ['NGC 3516', 'S0', 37.453, 2840], ['NGC 3623', 'Sa', 13.809, 680], ['NGC 3627', 'Sb', 13.763, 590],
+  ['NGC 3941', 'SB0', 22.556, 940], ['NGC 4472', 'S0', 14.179, 820], ['NGC 4631', 'Sc', 13.294, 610],
+  ['NGC 4775', 'Sc', 35.37, 1380], ['NGC 5248', 'Sbc', 18.687, 1050], ['NGC 5548', 'Sa', 43.319, 4960],
+  ['NGC 5866', 'S0', 14.127, 820], ['NGC 6181', 'Sc', 27.679, 2440], ['NGC 6217', 'SBbc', 29.485, 1600],
+  ['NGC 6643', 'Sc', 22.881, 1740], ['NGC 6764', 'SBb', 29.48, 2410], ['NGC 7469', 'Sa', 53.882, 5120],
+];
+---
+<div class="hub" data-hubble data-points={JSON.stringify(data)}>
+  <svg viewBox="0 0 1000 460" role="img" aria-labelledby="hub-title" data-hub-svg>
+    <title id="hub-title">Velocidad de recesión frente a distancia de 27 galaxias, con la recta de Hubble ajustada.</title>
+    <g data-hub-grid></g>
+    <line data-hub-line class="hub__line" />
+    <line data-hub-ref="67.4" class="hub__ref" /><text data-hub-reflabel="67.4" class="hub__reftext">Planck 2018 · 67,4</text>
+    <line data-hub-ref="73" class="hub__ref" /><text data-hub-reflabel="73" class="hub__reftext">SH0ES · 73</text>
+    <g data-hub-points></g>
+  </svg>
+  <p class="hub__tip" data-hub-tip hidden></p>
+</div>
+
+<style>
+  .hub { position: relative; padding: 20px 0 8px; }
+  .hub svg { display: block; width: 100%; height: auto; overflow: visible; }
+  .hub :global(.hub__axis) { stroke: var(--line-2); stroke-width: 1; }
+  .hub :global(.hub__tick) { stroke: var(--line); stroke-width: 1; }
+  .hub :global(text) { font-family: var(--mono); font-size: 12px; fill: var(--ink-3); }
+  .hub__line { stroke: var(--gold); stroke-width: 1.6; transition: all 700ms var(--ease); }
+  .hub__ref { stroke: var(--ink-3); stroke-width: 1; stroke-dasharray: 3 5; opacity: 0.6; }
+  .hub__reftext { font-size: 11px !important; fill: var(--ink-3) !important; }
+  .hub :global(.hub__pt) { fill: var(--ink); transition: cx 700ms var(--ease), opacity 400ms var(--ease), r 200ms var(--ease); cursor: pointer; }
+  .hub :global(.hub__pt.is-sa) { fill: none; stroke: var(--ink); stroke-width: 1.2; }
+  .hub :global(.hub__pt.is-out) { opacity: 0.18; }
+  .hub :global(.hub__pt:hover) { r: 6; }
+  .hub__tip { position: absolute; pointer-events: none; padding: 6px 9px; background: var(--bg); border: 1px solid var(--line-2); font-family: var(--mono); font-size: 11.5px; color: var(--ink); white-space: nowrap; transform: translate(-50%, calc(-100% - 12px)); }
+</style>
+
+<script>
+  import { reduceMotion } from '@/lib/figure';
+
+  document.querySelectorAll<HTMLElement>('[data-hubble]').forEach((root) => {
+    const fig = root.closest('figure')!;
+    const data = JSON.parse(root.dataset.points!) as [string, string, number, number][];
+    const svg = root.querySelector<SVGSVGElement>('[data-hub-svg]')!;
+    const gGrid = svg.querySelector('[data-hub-grid]')!, gPts = svg.querySelector('[data-hub-points]')!;
+    const line = svg.querySelector<SVGLineElement>('[data-hub-line]')!;
+    const tip = root.querySelector<HTMLElement>('[data-hub-tip]')!;
+    const read = fig.querySelector<HTMLElement>('[data-hub-read]');
+    const btns = [...fig.querySelectorAll<HTMLButtonElement>('[data-hub-mode]')];
+    const NS = 'http://www.w3.org/2000/svg';
+    const L = 70, R = 980, T = 16, B = 410, DMAX = 60, VMAX = 5500;
+    const X = (d: number) => L + (d / DMAX) * (R - L), Y = (v: number) => B - (v / VMAX) * (B - T);
+    const el = (n: string, a: Record<string, string | number>, parent: Element) => { const e = document.createElementNS(NS, n); for (const k in a) e.setAttribute(k, String(a[k])); parent.append(e); return e; };
+
+    // Axes and ticks.
+    el('line', { x1: L, y1: B, x2: R, y2: B, class: 'hub__axis' }, gGrid);
+    el('line', { x1: L, y1: T, x2: L, y2: B, class: 'hub__axis' }, gGrid);
+    for (let d = 0; d <= DMAX; d += 10) { el('line', { x1: X(d), y1: B, x2: X(d), y2: B + 5, class: 'hub__axis' }, gGrid); el('text', { x: X(d), y: B + 22, 'text-anchor': 'middle' }, gGrid).textContent = String(d); }
+    for (let v = 1000; v <= 5000; v += 1000) { el('line', { x1: L, y1: Y(v), x2: R, y2: Y(v), class: 'hub__tick' }, gGrid); el('text', { x: L - 10, y: Y(v) + 4, 'text-anchor': 'end' }, gGrid).textContent = v.toLocaleString('es-ES'); }
+    el('text', { x: R, y: B + 42, 'text-anchor': 'end' }, gGrid).textContent = 'distancia (Mpc)';
+    el('text', { x: L, y: T - 2, 'text-anchor': 'start', dx: 8 }, gGrid).textContent = 'v (km/s)';
+
+    const pts = data.map(([name, type, d, v]) => {
+      const c = el('circle', { cx: X(d), cy: Y(v), r: 4, class: `hub__pt${type === 'Sa' ? ' is-sa' : ''}` }, gPts) as SVGCircleElement;
+      c.addEventListener('pointerenter', () => {
+        const r = root.getBoundingClientRect(), b = c.getBoundingClientRect();
+        tip.hidden = false; tip.style.left = `${b.left + b.width / 2 - r.left}px`; tip.style.top = `${b.top - r.top}px`;
+        tip.textContent = `${name} · ${type} · ${(mode === 'd10' ? d / 2 : d).toFixed(1).replace('.', ',')} Mpc · ${v.toLocaleString('es-ES')} km/s`;
+      });
+      c.addEventListener('pointerleave', () => { tip.hidden = true; });
+      return { name, type, d, v, c };
+    });
+
+    // Least squares through the origin (and free), with the slope's standard error as in the report.
+    const fitOrigin = (xs: number[], ys: number[]) => {
+      const sxx = xs.reduce((s, x) => s + x * x, 0), sxy = xs.reduce((s, x, i) => s + x * ys[i], 0);
+      const a = sxy / sxx; const s = Math.sqrt(xs.reduce((q, x, i) => q + (ys[i] - a * x) ** 2, 0) / (xs.length - 1));
+      return { a, b: 0, err: s / Math.sqrt(sxx) };
+    };
+    const fitFree = (xs: number[], ys: number[]) => {
+      const n = xs.length, mx = xs.reduce((s, x) => s + x, 0) / n, my = ys.reduce((s, y) => s + y, 0) / n;
+      const sxx = xs.reduce((s, x) => s + (x - mx) ** 2, 0), a = xs.reduce((s, x, i) => s + (x - mx) * (ys[i] - my), 0) / sxx, b = my - a * mx;
+      const s = Math.sqrt(xs.reduce((q, x, i) => q + (ys[i] - a * x - b) ** 2, 0) / (n - 2));
+      return { a, b, err: s / Math.sqrt(sxx) };
+    };
+    let mode = 'todas';
+    const round = (x: number, e: number) => { const k = e >= 10 && e < 20 ? 0 : Math.floor(Math.log10(e)); const f = 10 ** k; return [Math.round(x / f) * f, Math.round(e / f) * f]; };
+    const show = () => {
+      const keep = pts.filter((p) => mode !== 'sinSa' || p.type !== 'Sa');
+      const scale = mode === 'd10' ? 0.5 : 1;
+      const xs = keep.map((p) => p.d * scale), ys = keep.map((p) => p.v);
+      const f = mode === 'libre' ? fitFree(xs, ys) : fitOrigin(xs, ys);
+      for (const p of pts) {
+        p.c.setAttribute('cx', String(X(p.d * scale)));
+        p.c.classList.toggle('is-out', mode === 'sinSa' && p.type === 'Sa');
+      }
+      const x0 = mode === 'libre' ? Math.max(0, -f.b / f.a) : 0, x1 = Math.min(DMAX, (VMAX - f.b) / f.a);
+      line.setAttribute('x1', String(X(x0))); line.setAttribute('y1', String(Y(f.a * x0 + f.b)));
+      line.setAttribute('x2', String(X(x1))); line.setAttribute('y2', String(Y(f.a * x1 + f.b)));
+      for (const h of [67.4, 73]) {
+        const ref = svg.querySelector(`[data-hub-ref="${h}"]`)!, lab = svg.querySelector(`[data-hub-reflabel="${h}"]`)!;
+        // The published values are v = H₀ d whatever size we assume for galaxies.
+        const xe = Math.min(DMAX, VMAX / h);
+        ref.setAttribute('x1', String(X(0))); ref.setAttribute('y1', String(Y(0)));
+        ref.setAttribute('x2', String(X(xe))); ref.setAttribute('y2', String(Y(h * xe)));
+        lab.setAttribute('x', String(X(xe) - 6)); lab.setAttribute('y', String(Y(h * xe) + (h === 73 ? -6 : 14))); lab.setAttribute('text-anchor', 'end');
+      }
+      const [H, E] = round(f.a, f.err);
+      if (read) read.textContent = `H₀ = ${H} ± ${E} km s⁻¹ Mpc⁻¹${mode === 'libre' ? ` · ordenada ${Math.round(f.b)} km/s` : ''} · ${keep.length} galaxias`;
+    };
+    btns.forEach((b) => b.addEventListener('click', () => {
+      mode = b.dataset.hubMode!; btns.forEach((o) => o.setAttribute('aria-pressed', String(o === b))); show();
+    }));
+    show();
+    // The points arrive one by one the first time the figure is seen.
+    if (!reduceMotion()) {
+      pts.forEach((p) => p.c.style.opacity = '0'); line.style.opacity = '0';
+      new IntersectionObserver(([e], io) => {
+        if (!e.isIntersecting) return; io.disconnect();
+        pts.forEach((p, i) => setTimeout(() => { p.c.style.opacity = ''; }, 40 * i));
+        setTimeout(() => { line.style.opacity = ''; }, 40 * pts.length + 200);
+      }, { threshold: 0.4 }).observe(root);
+    }
+  });
+</script>

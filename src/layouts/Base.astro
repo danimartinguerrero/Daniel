@@ -1,6 +1,7 @@
 ---
 import '@/styles/site.css';
 import { href } from '@/lib/paths';
+import Player from '@/components/Player.astro';
 
 interface Props { title: string; description: string; path?: string; page?: 'home' | 'cine' }
 const { title, description, path = '/', page = 'home' } = Astro.props;
@@ -9,10 +10,12 @@ const { title, description, path = '/', page = 'home' } = Astro.props;
 const at = (id: string) => (page === 'home' ? `#${id}` : `${href('/')}#${id}`);
 const nav = [
   { n: '01', id: 'divulgacion', label: 'Divulgación' },
-  { n: '02', id: 'apuntes', label: 'Apuntes' },
-  { n: '03', id: 'filosofia', label: 'Filosofía' },
-  { n: '04', id: 'trayectoria', label: 'Trayectoria' },
-  { n: '05', id: 'proyectos', label: 'Proyectos' },
+  { n: '02', id: 'fisica', label: 'Física' },
+  { n: '03', id: 'optica', label: 'Óptica' },
+  { n: '04', id: 'filosofia', label: 'Filosofía' },
+  { n: '05', id: 'trayectoria', label: 'Trayectoria' },
+  { n: '06', id: 'proyectos', label: 'Proyectos' },
+  { n: '07', id: 'musica', label: 'Música' },
 ];
 ---
 <!doctype html>
@@ -47,16 +50,19 @@ const nav = [
         <nav class="head__nav" id="nav" aria-label="Índice">
           <ol>
             {nav.map((l) => <li><a href={at(l.id)}><span>{l.n}</span>{l.label}</a></li>)}
-            <li><a href={href('/cine')} aria-current={page === 'cine' ? 'page' : undefined}><span>06</span>Cine</a></li>
-            <li><a href={at('contacto')}><span>07</span>Contacto</a></li>
+            <li><a href={href('/cine')} aria-current={page === 'cine' ? 'page' : undefined}><span>08</span>Cine</a></li>
+            <li><a href={at('contacto')}><span>09</span>Contacto</a></li>
           </ol>
         </nav>
       </div>
+      <span class="head__beam" data-beam aria-hidden="true"></span>
     </header>
 
     <main id="main">
       <slot />
     </main>
+
+    <Player />
 
     <footer class="foot">
       <div class="wrap foot__in">
@@ -66,6 +72,8 @@ const nav = [
     </footer>
 
     <script>
+      import { initWaves } from '@/lib/waves';
+      initWaves();
       // The header gets its surface once the page has moved off the top; the index opens on small screens.
       const head = document.querySelector<HTMLElement>('[data-head]')!;
       const menu = document.querySelector<HTMLButtonElement>('[data-menu]')!;
