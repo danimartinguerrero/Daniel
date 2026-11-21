@@ -2,6 +2,8 @@
 // the diary, his reviews and the posters, which it downloads at 1000×1500 and stores as WebP at two widths.
 // Run with `npm run letterboxd`; it rewrites src/data/letterboxd.json and public/cine/p/.
 // It only reads the RSS feed and the poster images the feed links to.
+// With --soft (as `npm run build` runs it) a failure is reported and the saved data is kept, so a build
+// never fails because Letterboxd could not be reached.
 import { mkdir, readdir, rm, writeFile } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
 import sharp from 'sharp';
@@ -23,6 +25,9 @@ const tag = (xml, name) => {
 };
 const slugOf = (link) => link.match(/\/film\/([^/]+)\//)?.[1] ?? '';
 
+const soft = process.argv.includes('--soft');
+
+async function refresh() {
 const res = await fetch(FEED, { headers: { 'user-agent': 'danimartinguerrero.github.io site build (RSS reader)' } });
 if (!res.ok) throw new Error(`Feed: HTTP ${res.status}`);
 const xml = await res.text();
@@ -83,3 +88,11 @@ for (const f of await readdir(OUT_DIR)) if (!wanted.has(f)) await rm(new URL(f, 
 for (const e of entries) delete e.posterSource;
 await writeFile(DATA, `${JSON.stringify({ user: USER, fetched: new Date().toISOString().slice(0, 10), entries, lists }, null, 2)}\n`);
 console.log(`${entries.length} diary entries, ${lists.length} lists`);
+}
+
+try {
+  await refresh();
+} catch (err) {
+  if (!soft) throw err;
+  console.warn(`Letterboxd not refreshed (${err.cause?.code ?? err.message}); building with the saved data.`);
+}
