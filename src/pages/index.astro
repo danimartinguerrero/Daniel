@@ -17,6 +17,7 @@ import Tools from '@/components/Tools.astro';
 import Records from '@/components/Records.astro';
 import Photos from '@/components/Photos.astro';
 import Plan from '@/components/Plan.astro';
+import Hubble from '@/components/fig/Hubble.astro';
 import Library from '@/components/Library.astro';
 import { entries, favorites, poster, profile, stars } from '@/data/cine';
 import { href } from '@/lib/paths';
@@ -163,13 +164,45 @@ const img = (name: string) => ({
         <h3 class="sub__title">Medir, que es otra forma de entender.</h3>
         <ol class="rows">
           <li class="row"><p class="row__when">1.º · Lab. de Física</p><p class="row__what">Práctica 3. La imagen y fuentes de luz. Láser y espectroscopía</p><p class="row__more">Refracción y difracción, espectroscopía y holografía: la reconstrucción de la imagen del holograma y su visualización en la placa holográfica.</p></li>
-          <li class="row"><p class="row__when">1.º · Lab. de Física</p><p class="row__what">Práctica 6. Medida de la constante de Hubble</p><p class="row__more">Galaxias en imágenes FITS con SAOImage DS9: contornos, diámetro angular y, con su velocidad de recesión, la expansión del universo.</p></li>
+          <li class="row"><p class="row__when">1.º · Lab. de Física</p><p class="row__what">Práctica 6. Medida de la constante de Hubble</p><p class="row__more">27 galaxias en imágenes de SkyView con SAOImage DS9: el contorno al 10 % del brillo, el diámetro angular θ y, suponiendo D ≈ 20 kpc, la distancia d ≃ D/θ. Con su velocidad de recesión, la ley de Hubble. <a class="link" href="#hubble">La práctica, de cerca</a>.</p></li>
           <li class="row"><p class="row__when">1.º · Lab. de Física</p><p class="row__what">Experiencia 1. Dependencia de la resistencia con la temperatura</p><p class="row__more">Con un baño termostático y, por otro lado, un hilo de cobre calentado por efecto Joule: la temperatura, por infrarrojos con un termómetro láser; la resistencia, R = V/I.</p></li>
           <li class="row"><p class="row__when">2.º · Mecánica y Ondas</p><p class="row__what">Momento de inercia y teorema de Steiner, ondas estacionarias, péndulos acoplados, tubo de Quincke y efecto Doppler con ultrasonidos</p><p class="row__more">Con sus informes, en la biblioteca de arriba: <a class="link" href="#pdf-laboratorio-de-mecanica-y-ondas">Laboratorio de Mecánica y Ondas</a>.</p></li>
           <li class="row"><p class="row__when">2.º · Instrumentación</p><p class="row__what">Electrónica analógica y teoría de circuitos</p><p class="row__more">Amplificadores operacionales, filtros de primer y segundo orden, un conversor de 4 bits, osciladores sinusoidal y de relajación, oscilogramas, el fenómeno de Gibbs en series de Fourier, diodos y tensiones umbral.</p></li>
         </ol>
       </div>
     </div>
+    <div class="wrap sec__grid" id="hubble">
+      <div class="sec__main sub sub--tight">
+        <p class="label">Práctica 6, de cerca</p>
+        <h3 class="sub__title">Medir la expansión del universo con una regla.</h3>
+        <p class="body">Ninguna galaxia trae escrita su distancia. Pero si todas midieran unos 20 kpc, su tamaño aparente la delataría: d ≃ D/θ. Con DS9 delimité cada una donde su brillo cae al 10 % del núcleo, tomé los extremos de su eje mayor y calculé el ángulo entre ellos sobre la esfera celeste. Frente a la velocidad con que se alejan, sale la constante de Hubble.</p>
+        <a class="report" href={href('/docs/practica-6-constante-de-hubble.pdf')} target="_blank" rel="noopener">
+          <img src={href('/docs/practica-6-constante-de-hubble.webp')} alt="" width="720" height="1018" loading="lazy" decoding="async" />
+          <span><span class="label">Informe · 11 pp. · 19 de abril de 2026</span><span class="report__t">Práctica 6: medida de la constante de Hubble</span><span class="report__m">H₀ = 66 ± 6 km s⁻¹ Mpc⁻¹, ajuste forzado al origen, r = 0,91</span></span>
+        </a>
+      </div>
+      <figure class="fig sec__wide">
+        <div class="fig__stage"><Hubble /></div>
+        <figcaption class="fig__bar">
+          <p class="fig__cap"><b>Fig. 4</b>La ley de Hubble con mis medidas: velocidad de recesión frente a distancia de 27 galaxias (círculos huecos, tipo Sa). La recta dorada es el ajuste; las discontinuas, los valores de Planck y de SH0ES. Pasa el cursor por un punto. <span class="fig__read" data-hub-read></span></p>
+          <div class="fig__ctl" role="group" aria-label="Ajuste">
+            <button class="ctl" type="button" data-hub-mode="todas" aria-pressed="true">Por el origen</button>
+            <button class="ctl" type="button" data-hub-mode="sinSa" aria-pressed="false">Sin las Sa</button>
+            <button class="ctl" type="button" data-hub-mode="d10" aria-pressed="false">D = 10 kpc</button>
+            <button class="ctl" type="button" data-hub-mode="libre" aria-pressed="false">Recta libre</button>
+          </div>
+        </figcaption>
+      </figure>
+    </div>
+    <Photos label="La práctica 6 en DS9" items={[
+      { id: 'ds9-ngc-1357', title: 'NGC 1357, el ejemplo', note: 'Contorno al 10 % del brillo y eje mayor P1–P2' },
+      { id: 'ds9-ngc-1832', title: 'NGC 1832', note: 'Espiral barrada, SBb' },
+      { id: 'ds9-ngc-2275', title: 'NGC 2275 y NGC 2274', note: 'Arp 140: medir una galaxia junto a su compañera' },
+      { id: 'ds9-ngc-2276', title: 'NGC 2276', note: 'Espiral Sc, con una estrella brillante al lado' },
+      { id: 'ds9-ngc-3147', title: 'NGC 3147', note: 'Espiral Sb, que se aleja a 2 900 km/s' },
+      { id: 'arp-140', title: 'Arp 140', note: 'NGC 2275 y NGC 2274, dos galaxias que interactúan' },
+      { id: 'arp-94', title: 'Arp 94', note: 'NGC 3227 y NGC 3226' },
+    ]} />
     <Photos label="En el laboratorio" items={[
       { id: 'laser-difraccion', title: 'Difracción de un láser', note: 'Práctica 3 · Láser y espectroscopía' },
       { id: 'laser-pantalla', title: 'Refracción y difracción', note: 'Práctica 3' },
@@ -203,7 +236,7 @@ const img = (name: string) => ({
     <div class="wrap sec__grid">
       <figure class="fig sec__wide">
         <div class="fig__stage"><Prism /></div>
-        <figcaption class="fig__bar"><p class="fig__cap"><b>Fig. 4</b>Dispersión en un prisma de vidrio BK7. Cada longitud de onda se refracta con su propio índice, n(λ) = A + B/λ², y la luz blanca sale abierta en espectro. Sube y baja el cursor para cambiar el ángulo de incidencia. <span class="fig__read" data-prism-read></span></p></figcaption>
+        <figcaption class="fig__bar"><p class="fig__cap"><b>Fig. 5</b>Dispersión en un prisma de vidrio BK7. Cada longitud de onda se refracta con su propio índice, n(λ) = A + B/λ², y la luz blanca sale abierta en espectro. Sube y baja el cursor para cambiar el ángulo de incidencia. <span class="fig__read" data-prism-read></span></p></figcaption>
       </figure>
     </div>
     <div class="wrap sec__grid">
@@ -235,7 +268,7 @@ const img = (name: string) => ({
       <figure class="fig sec__wide">
         <div class="fig__stage"><Michelson /></div>
         <figcaption class="fig__bar">
-          <p class="fig__cap"><b>Fig. 5</b>Interferómetro de Michelson. Un láser de He-Ne se divide en dos brazos que vuelven a juntarse. Con un espejo apenas inclinado, franjas rectas, como las de Young, que se desplazan una entera cada vez que M₂ avanza λ/2; alineados, anillos. <span class="fig__read" data-mich-read></span></p>
+          <p class="fig__cap"><b>Fig. 6</b>Interferómetro de Michelson. Un láser de He-Ne se divide en dos brazos que vuelven a juntarse. Con un espejo apenas inclinado, franjas rectas, como las de Young, que se desplazan una entera cada vez que M₂ avanza λ/2; alineados, anillos. <span class="fig__read" data-mich-read></span></p>
           <div class="fig__ctl">
             <button class="ctl" type="button" data-mich-mode aria-pressed="false">Alinear los espejos</button>
             <label class="slider"><span class="sr-only">Posición del espejo M₂</span><input type="range" min="0" max="1600" value="0" step="1" data-mich-range /></label>
@@ -245,7 +278,7 @@ const img = (name: string) => ({
       <figure class="fig sec__wide">
         <div class="fig__stage"><Fraunhofer /></div>
         <figcaption class="fig__bar">
-          <p class="fig__cap"><b>Fig. 6</b>Difracción de Fraunhofer: lo que una abertura hace con la luz, lejos de ella, es su transformada de Fourier al cuadrado. Una red cristalina hexagonal, como la del grafeno, devuelve su red recíproca: puntos con simetría de seis; un pinhole, el disco de Airy. En escala logarítmica, como lo registraría una cámara.</p>
+          <p class="fig__cap"><b>Fig. 7</b>Difracción de Fraunhofer: lo que una abertura hace con la luz, lejos de ella, es su transformada de Fourier al cuadrado. Una red cristalina hexagonal, como la del grafeno, devuelve su red recíproca: puntos con simetría de seis; un pinhole, el disco de Airy. En escala logarítmica, como lo registraría una cámara.</p>
           <div class="fig__ctl" role="group" aria-label="Abertura">
             <button class="ctl" type="button" data-ap="doble" aria-pressed="false">Doble rendija</button>
             <button class="ctl" type="button" data-ap="red" aria-pressed="false">Red</button>
@@ -271,7 +304,7 @@ const img = (name: string) => ({
       <figure class="fig sec__wide">
         <div class="fig__stage"><Malus /></div>
         <figcaption class="fig__bar">
-          <p class="fig__cap"><b>Fig. 7</b>Ley de Malus. Tras un polarizador, la luz vibra en un solo plano; un segundo filtro girado θ deja pasar I₀ cos²θ. Gira el analizador: la frase de abajo recibe esa luz. <span class="fig__read" data-malus-read></span></p>
+          <p class="fig__cap"><b>Fig. 8</b>Ley de Malus. Tras un polarizador, la luz vibra en un solo plano; un segundo filtro girado θ deja pasar I₀ cos²θ. Gira el analizador: la frase de abajo recibe esa luz. <span class="fig__read" data-malus-read></span></p>
           <label class="slider"><span class="sr-only">Ángulo del analizador</span><input type="range" min="0" max="90" value="30" step="1" data-malus-range /></label>
         </figcaption>
       </figure>
@@ -315,7 +348,7 @@ const img = (name: string) => ({
             <li class="row" data-node><p class="row__when">Ahora</p><p class="row__what">Segundo curso</p><p class="row__more">Curso 2026–27. Óptica y fotónica, astrofísica, mecánica cuántica.</p></li>
             <li class="row row--next" data-node><p class="row__when">Próximo</p><p class="row__what">PLANCKS 2027</p><p class="row__more">La competición internacional de física teórica.</p></li>
           </Fiber>
-          <figcaption class="fig__bar"><p class="fig__cap"><b>Fig. 8</b>Reflexión total interna. Más allá del ángulo crítico (unos 42° entre vidrio y aire), la luz no escapa del núcleo y avanza rebotando: así viajan los datos por fibra óptica. Aquí avanza al ritmo de la lectura.</p></figcaption>
+          <figcaption class="fig__bar"><p class="fig__cap"><b>Fig. 9</b>Reflexión total interna. Más allá del ángulo crítico (unos 42° entre vidrio y aire), la luz no escapa del núcleo y avanza rebotando: así viajan los datos por fibra óptica. Aquí avanza al ritmo de la lectura.</p></figcaption>
         </figure>
       </div>
     </div>
@@ -334,7 +367,7 @@ const img = (name: string) => ({
       <div class="sec__main">
         <figure class="fig">
           <div class="fig__stage"><Glove /></div>
-          <figcaption class="fig__bar"><p class="fig__cap"><b>Fig. 9</b>Lecturas de los cinco sensores (ADC de 10 bits) y la letra que forman, escribiendo por el puerto serie. Simulación.</p></figcaption>
+          <figcaption class="fig__bar"><p class="fig__cap"><b>Fig. 10</b>Lecturas de los cinco sensores (ADC de 10 bits) y la letra que forman, escribiendo por el puerto serie. Simulación.</p></figcaption>
         </figure>
         <dl class="facts">
           <div><dt class="label">Mecánica cuántica</dt><dd>Apuntes en LaTeX sobre espacios de Hilbert y el formalismo de Dirac: L²(ℝ), bras y kets, operadores hermíticos, descomposición espectral, regla de Born. Ahora, cúbits y puertas cuánticas.</dd></div>
@@ -363,7 +396,7 @@ const img = (name: string) => ({
     <div class="wrap sec__grid">
       <figure class="fig sec__wide">
         <div class="fig__stage"><Chladni /></div>
-        <figcaption class="fig__bar"><p class="fig__cap"><b>Fig. 10</b>Figuras de Chladni. Arena sobre placas que vibran: se aparta de lo que se mueve y se queda en las líneas nodales de cada modo. Con la música sonando, las placas vibran con fuerza y cambian de modo; pulsa una para cambiarlo tú. <span class="fig__read" data-chladni-read></span></p></figcaption>
+        <figcaption class="fig__bar"><p class="fig__cap"><b>Fig. 11</b>Figuras de Chladni. Arena sobre placas que vibran: se aparta de lo que se mueve y se queda en las líneas nodales de cada modo. Con la música sonando, las placas vibran con fuerza y cambian de modo; pulsa una para cambiarlo tú. <span class="fig__read" data-chladni-read></span></p></figcaption>
       </figure>
     </div>
   </section>
@@ -416,7 +449,7 @@ const img = (name: string) => ({
     <div class="wrap sec__grid">
       <figure class="fig sec__wide">
         <div class="fig__stage"><ThinFilm /></div>
-        <figcaption class="fig__bar"><p class="fig__cap"><b>Fig. 11</b>Interferencia en una lámina delgada: una pompa de jabón que se adelgaza hacia arriba. Cada grosor refleja su color; donde es más fina, ninguno. Pasa el cursor.</p></figcaption>
+        <figcaption class="fig__bar"><p class="fig__cap"><b>Fig. 12</b>Interferencia en una lámina delgada: una pompa de jabón que se adelgaza hacia arriba. Cada grosor refleja su color; donde es más fina, ninguno. Pasa el cursor.</p></figcaption>
       </figure>
     </div>
   </section>
@@ -514,6 +547,14 @@ const img = (name: string) => ({
   .feynman { margin: clamp(36px, 4vw, 56px) 0 0; display: grid; gap: 12px; }
   .feynman p:first-child { font-family: var(--serif); font-weight: 300; font-style: italic; font-size: clamp(1.5rem, 2.6vw, 2.2rem); line-height: 1.2; letter-spacing: -0.01em; max-width: 30ch; }
   .sub { margin-top: clamp(72px, 9vw, 120px); }
+  .sub--tight { margin-top: clamp(56px, 7vw, 88px); }
+  .report { display: grid; grid-template-columns: 96px minmax(0, 1fr); gap: 20px; align-items: center; margin-top: 28px; padding: 16px 0; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); text-decoration: none; }
+  .report img { width: 96px; height: auto; outline: 1px solid var(--line); transition: transform 400ms var(--ease); }
+  .report:hover img { transform: translateY(-3px); }
+  .report > span { display: grid; gap: 4px; }
+  .report__t { font-family: var(--serif); font-size: 1.3rem; line-height: 1.2; color: var(--ink); }
+  .report:hover .report__t { color: var(--gold); }
+  .report__m { font-size: 14px; color: var(--ink-2); }
   .sub__title { margin: 10px 0 18px; font-family: var(--serif); font-weight: 300; font-size: clamp(1.7rem, 3vw, 2.6rem); line-height: 1.08; letter-spacing: -0.02em; }
   .sky-intro .body { margin-top: 12px; }
   .tools-label { margin-top: clamp(48px, 6vw, 72px); }
